@@ -1,0 +1,580 @@
+{% comment %}
+  Section: Google Reviews Banner
+  Affiche les avis Google en haut de la page d'accueil.
+  Requiert: Google Places API key + Place ID configurés dans l'admin Shopify.
+{% endcomment %}
+
+{%- if section.settings.api_key != blank and section.settings.place_id != blank -%}
+<div
+  id="google-reviews-section"
+  class="google-reviews-section"
+  data-place-id="{{ section.settings.place_id | escape }}"
+  data-api-key="{{ section.settings.api_key | escape }}"
+  data-max-reviews="{{ section.settings.max_reviews }}"
+  data-min-rating="{{ section.settings.min_rating }}"
+>
+  <div class="google-reviews-inner">
+    <div class="google-reviews-header">
+      <svg class="google-logo" viewBox="0 0 272 92" xmlns="http://www.w3.org/2000/svg" aria-label="Google">
+        <path d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z" fill="#EA4335"/>
+        <path d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.85 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z" fill="#FBBC05"/>
+        <path d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z" fill="#4285F4"/>
+        <path d="M225 3v65h-9.5V3h9.5z" fill="#34A853"/>
+        <path d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z" fill="#EA4335"/>
+        <path d="M35.29 41.41V32h31.36c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 35.28.36 16.67 16.32 1.21 34.95 1.21c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.97-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.14.27z" fill="#4285F4"/>
+      </svg>
+      <div class="google-reviews-summary" id="gr-summary">
+        <div class="gr-skeleton gr-skeleton-summary"></div>
+      </div>
+    </div>
+
+    <div class="google-reviews-track-wrapper">
+      <button class="gr-nav gr-nav-prev" id="gr-prev" aria-label="Précédent">&#8249;</button>
+      <div class="google-reviews-track-outer">
+        <div class="google-reviews-track" id="gr-track">
+          <div class="gr-loading">
+            <div class="gr-skeleton gr-skeleton-card"></div>
+            <div class="gr-skeleton gr-skeleton-card"></div>
+            <div class="gr-skeleton gr-skeleton-card"></div>
+          </div>
+        </div>
+      </div>
+      <button class="gr-nav gr-nav-next" id="gr-next" aria-label="Suivant">&#8250;</button>
+    </div>
+
+    <div class="google-reviews-cta">
+      <a
+        href="https://search.google.com/local/reviews?placeid={{ section.settings.place_id | escape }}"
+        target="_blank"
+        rel="noopener"
+        class="gr-cta-link"
+      >
+        Voir tous les avis sur Google
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
+{%- else -%}
+<div class="google-reviews-setup-notice">
+  <p>
+    ⚙️ <strong>Section Avis Google :</strong>
+    Configurez votre <em>Clé API Google</em> et votre <em>Place ID</em> dans les paramètres de cette section.
+  </p>
+</div>
+{%- endif -%}
+
+<style>
+  .google-reviews-section {
+    background: {{ section.settings.background_color }};
+    padding: {{ section.settings.padding_top }}px 0 {{ section.settings.padding_bottom }}px;
+    border-bottom: 1px solid #e8e8e8;
+    overflow: hidden;
+  }
+
+  .google-reviews-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .google-reviews-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .google-logo {
+    height: 28px;
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .google-reviews-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #555;
+  }
+
+  .gr-rating-score {
+    font-size: 22px;
+    font-weight: 700;
+    color: #202124;
+    line-height: 1;
+  }
+
+  .gr-stars {
+    display: flex;
+    gap: 2px;
+  }
+
+  .gr-star {
+    width: 18px;
+    height: 18px;
+    fill: #fbbc04;
+  }
+
+  .gr-star.half {
+    fill: url(#half-star-gradient);
+  }
+
+  .gr-star.empty {
+    fill: #dadce0;
+  }
+
+  .gr-total {
+    color: #70757a;
+  }
+
+  .google-reviews-track-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .google-reviews-track-outer {
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .google-reviews-track {
+    display: flex;
+    gap: 16px;
+    transition: transform 0.35s ease;
+    will-change: transform;
+  }
+
+  .gr-review-card {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    padding: 16px;
+    min-width: 260px;
+    max-width: 300px;
+    flex: 0 0 calc(33.333% - 11px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gr-reviewer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .gr-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #4285f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    overflow: hidden;
+  }
+
+  .gr-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .gr-reviewer-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .gr-reviewer-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #202124;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gr-review-date {
+    font-size: 12px;
+    color: #70757a;
+  }
+
+  .gr-card-stars {
+    display: flex;
+    gap: 2px;
+  }
+
+  .gr-card-star {
+    width: 14px;
+    height: 14px;
+    fill: #fbbc04;
+  }
+
+  .gr-card-star.empty {
+    fill: #dadce0;
+  }
+
+  .gr-review-text {
+    font-size: 13px;
+    color: #3c4043;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .gr-nav {
+    background: #fff;
+    border: 1px solid #dadce0;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #5f6368;
+    transition: box-shadow 0.2s, background 0.2s;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .gr-nav:hover {
+    background: #f8f9fa;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  .gr-nav:disabled {
+    opacity: 0.35;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  .google-reviews-cta {
+    margin-top: 14px;
+    text-align: center;
+  }
+
+  .gr-cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #4285f4;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .gr-cta-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Skeletons */
+  .gr-loading {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .gr-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: gr-shimmer 1.4s infinite;
+    border-radius: 8px;
+  }
+
+  .gr-skeleton-card {
+    min-width: 260px;
+    height: 130px;
+    flex: 0 0 calc(33.333% - 11px);
+  }
+
+  .gr-skeleton-summary {
+    width: 200px;
+    height: 24px;
+  }
+
+  @keyframes gr-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .google-reviews-setup-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px;
+    font-size: 14px;
+    color: #856404;
+  }
+
+  /* Error state */
+  .gr-error {
+    font-size: 13px;
+    color: #70757a;
+    padding: 16px 0;
+  }
+
+  @media (max-width: 768px) {
+    .gr-review-card {
+      min-width: 240px;
+      flex: 0 0 80%;
+    }
+
+    .gr-skeleton-card {
+      flex: 0 0 80%;
+    }
+
+    .google-reviews-header {
+      gap: 12px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .gr-review-card {
+      flex: 0 0 90%;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  const section = document.getElementById('google-reviews-section');
+  if (!section) return;
+
+  const PLACE_ID = section.dataset.placeId;
+  const API_KEY  = section.dataset.apiKey;
+  const MAX      = parseInt(section.dataset.maxReviews) || 5;
+  const MIN_RATING = parseFloat(section.dataset.minRating) || 4;
+
+  const track   = document.getElementById('gr-track');
+  const summary = document.getElementById('gr-summary');
+  const prevBtn = document.getElementById('gr-prev');
+  const nextBtn = document.getElementById('gr-next');
+
+  let currentIndex = 0;
+  let cards = [];
+
+  /* ---------- helpers ---------- */
+  function starsHTML(rating, size = 18, cls = 'gr-star') {
+    let html = '<svg width="0" height="0"><defs><linearGradient id="hsg" x1="0" x2="1" y1="0" y2="0"><stop offset="50%" stop-color="#fbbc04"/><stop offset="50%" stop-color="#dadce0"/></linearGradient></defs></svg>';
+    html += '<div class="gr-stars" style="display:flex;gap:2px">';
+    for (let i = 1; i <= 5; i++) {
+      const full = i <= Math.floor(rating);
+      const half = !full && i === Math.ceil(rating) && rating % 1 >= 0.5;
+      html += `<svg class="${cls}${half ? ' half' : full ? '' : ' empty'}" width="${size}" height="${size}" viewBox="0 0 24 24">
+        ${half ? '<defs><linearGradient id="hsg'+i+'"><stop offset="50%" stop-color="#fbbc04"/><stop offset="50%" stop-color="#dadce0"/></linearGradient></defs>' : ''}
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="${half ? 'url(#hsg'+i+')' : 'inherit'}"/>
+      </svg>`;
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function avatarHTML(review) {
+    const name = review.author_name || '?';
+    const initial = name.charAt(0).toUpperCase();
+    if (review.profile_photo_url) {
+      return `<div class="gr-avatar"><img src="${review.profile_photo_url}" alt="${name}" loading="lazy"></div>`;
+    }
+    const colors = ['#4285f4','#ea4335','#fbbc04','#34a853','#ff6d00','#46bdc6'];
+    const color = colors[name.charCodeAt(0) % colors.length];
+    return `<div class="gr-avatar" style="background:${color}">${initial}</div>`;
+  }
+
+  function renderReviews(reviews, placeRating, totalRatings) {
+    /* summary */
+    summary.innerHTML = `
+      <span class="gr-rating-score">${placeRating.toFixed(1)}</span>
+      ${starsHTML(placeRating)}
+      <span class="gr-total">(${totalRatings.toLocaleString('fr-CA')} avis)</span>
+    `;
+
+    /* filter & limit */
+    const filtered = reviews
+      .filter(r => r.rating >= MIN_RATING)
+      .slice(0, MAX);
+
+    if (!filtered.length) {
+      track.innerHTML = '<p class="gr-error">Aucun avis disponible pour le moment.</p>';
+      return;
+    }
+
+    track.innerHTML = filtered.map(r => `
+      <div class="gr-review-card">
+        <div class="gr-reviewer">
+          ${avatarHTML(r)}
+          <div class="gr-reviewer-info">
+            <div class="gr-reviewer-name">${r.author_name}</div>
+            <div class="gr-review-date">${r.relative_time_description}</div>
+          </div>
+        </div>
+        <div class="gr-card-stars">${starsHTML(r.rating, 14, 'gr-card-star')}</div>
+        ${r.text ? `<p class="gr-review-text">${r.text}</p>` : ''}
+      </div>
+    `).join('');
+
+    cards = track.querySelectorAll('.gr-review-card');
+    updateNav();
+  }
+
+  function getCardWidth() {
+    if (!cards.length) return 0;
+    return cards[0].offsetWidth + 16; /* + gap */
+  }
+
+  function getVisibleCount() {
+    const ow = track.parentElement.offsetWidth;
+    const cw = getCardWidth();
+    return cw ? Math.floor(ow / cw) : 1;
+  }
+
+  function updateNav() {
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex >= cards.length - getVisibleCount();
+    track.style.transform = `translateX(-${currentIndex * getCardWidth()}px)`;
+  }
+
+  prevBtn.addEventListener('click', () => { if (currentIndex > 0) { currentIndex--; updateNav(); } });
+  nextBtn.addEventListener('click', () => { if (currentIndex < cards.length - getVisibleCount()) { currentIndex++; updateNav(); } });
+
+  /* ---------- fetch via Places JS API (new) ---------- */
+  function loadPlaces() {
+    if (typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+
+    const service = new google.maps.places.PlacesService(document.createElement('div'));
+    service.getDetails(
+      {
+        placeId: PLACE_ID,
+        fields: ['rating', 'user_ratings_total', 'reviews'],
+        language: 'fr'
+      },
+      function(place, status) {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+          renderReviews(
+            place.reviews || [],
+            place.rating || 0,
+            place.user_ratings_total || 0
+          );
+        } else {
+          showError();
+        }
+      }
+    );
+  }
+
+  function showError() {
+    track.innerHTML = '<p class="gr-error">Impossible de charger les avis Google pour le moment.</p>';
+    summary.innerHTML = '';
+  }
+
+  /* Load Google Maps JS API */
+  window.__grCallback = loadPlaces;
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=__grCallback&language=fr`;
+  script.async = true;
+  script.defer = true;
+  script.onerror = showError;
+  document.head.appendChild(script);
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Avis Google",
+  "tag": "div",
+  "class": "google-reviews-wrapper",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Configuration Google"
+    },
+    {
+      "type": "text",
+      "id": "api_key",
+      "label": "Clé API Google Maps",
+      "info": "Créez une clé sur console.cloud.google.com avec l'API Places activée."
+    },
+    {
+      "type": "text",
+      "id": "place_id",
+      "label": "Place ID Google",
+      "info": "Trouvez votre Place ID sur developers.google.com/maps/documentation/places/web-service/place-id"
+    },
+    {
+      "type": "header",
+      "content": "Filtres"
+    },
+    {
+      "type": "range",
+      "id": "max_reviews",
+      "label": "Nombre maximum d'avis",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "type": "select",
+      "id": "min_rating",
+      "label": "Note minimale",
+      "options": [
+        { "value": "1", "label": "1 étoile et plus" },
+        { "value": "2", "label": "2 étoiles et plus" },
+        { "value": "3", "label": "3 étoiles et plus" },
+        { "value": "4", "label": "4 étoiles et plus" },
+        { "value": "5", "label": "5 étoiles seulement" }
+      ],
+      "default": "4"
+    },
+    {
+      "type": "header",
+      "content": "Apparence"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Couleur de fond",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "Espacement haut (px)",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "Espacement bas (px)",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "default": 20
+    }
+  ],
+  "presets": [
+    {
+      "name": "Avis Google"
+    }
+  ]
+}
+{% endschema %}
