@@ -1,0 +1,113 @@
+import { createClient } from './supabase-server'
+
+export interface LigneFacture {
+  id?: string
+  description: string
+  quantite: number
+  unite: string
+  prix_unitaire: number
+}
+
+export async function getFactures() {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('factures')
+    .select('*, clients(nom)')
+    .order('created_at', { ascending: false })
+
+  if (error) { console.error('[getFactures]', error); return [] }
+  return data ?? []
+}
+
+export async function getFactureById(id: string) {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('factures')
+    .select('*, clients(*), devis(numero)')
+    .eq('id', id)
+    .single()
+
+  if (error) { console.error('[getFactureById]', error); return null }
+  return data
+}
+
+export async function createFacture(payload: {
+  client_id: string
+  devis_id?: string
+  numero?: string
+  titre?: string
+  date_emission: string
+  date_echeance: string
+  mode_reglement: string
+  notes?: string
+  notes_internes?: string
+  lignes: LigneFacture[]
+  appliquer_tps: boolean
+  appliquer_tvq: boolean
+}) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+
+  const { data: profile } = await supabase
+    .from('profiles').select('company_id').eq('id', user.id).single()
+
+  // Numéro séquentiel sécurisé par company + année
+  const year = new Date().getFullYear()
+  const { count: existingCount } = await supabase
+    .from('factures')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', profile?.company_id)
+    .like('numero', `FAC-${year}-%`)
+  const seqNum = String((existingCount ?? 0) + 1).padStart(3, '0')
+  const autoNumero = payload.numero || `FAC-${year}-${seqNum}`
+
+  const TPS = 0.05
+  const TVQ = 0.09975
+  const montant_ht = payload.lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire, 0)
+  const tps = payload.appliquer_tps ? montant_ht * TPS : 0
+  const tvq = payload.appliquer_tvq ? montant_ht * TVQ : 0
+  const montant_ttc = montant_ht + tps + tvq
+
+  const lignesSansId = payload.lignes.map(({ id: _id, ...l }) => l)
+
+  const { data, error } = await supabase
+    .from('factures')
+    .insert({
+      company_id: profile?.company_id,
+      client_id: payload.client_id,
+      devis_id: payload.devis_id || null,
+      numero: autoNumero,
+      titre: payload.titre,
+      date_emission: payload.date_emission,
+      date_echeance: payload.date_echeance,
+      mode_reglement: payload.mode_reglement,
+      notes: payload.notes,
+      notes_internes: payload.notes_internes,
+      lignes: lignesSansId,
+      montant_ht,
+      tps,
+      tvq,
+      montant_ttc,
+      statut: 'brouillon',
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateFactureStatut(id: string, statut: string, datePaiement?: string) {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('factures')
+    .update({
+      statut,
+      date_paiement: datePaiement ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) throw error
+}

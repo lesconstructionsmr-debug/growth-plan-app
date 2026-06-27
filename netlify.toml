@@ -1,0 +1,31 @@
+# ── Netlify — ERP Construction (Next.js 14 App Router) ──────────
+# Plugin officiel Next.js : gère SSR, API routes, Server Components
+
+[build]
+  command   = "npm run build"
+  publish   = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Évite les erreurs de peer deps si nécessaire
+  # NPM_FLAGS = "--legacy-peer-deps"
+
+# ── Headers de sécurité ──────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+    Permissions-Policy     = "camera=(), microphone=(), geolocation=()"
+
+# ── Redirects ────────────────────────────────────────────────────
+# Netlify gère automatiquement les routes Next.js via le plugin.
+# Ajoute ici des redirects custom si nécessaire :
+# [[redirects]]
+#   from   = "/old-path"
+#   to     = "/new-path"
+#   status = 301
