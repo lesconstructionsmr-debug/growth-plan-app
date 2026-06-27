@@ -136,12 +136,13 @@ export default function LoginPage() {
           {/* Formulaire email/mot de passe */}
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
+              <label htmlFor="login-email" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
                 Adresse courriel
               </label>
               <input
+                id="login-email" name="email"
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="vous@exemple.com" required
+                placeholder="vous@exemple.com" autoComplete="email" required
                 style={{
                   width: '100%', background: 'var(--bg-2)',
                   border: '0.5px solid var(--line-2)', borderRadius: '7px',
@@ -154,16 +155,17 @@ export default function LoginPage() {
             </div>
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--txt-2)' }}>Mot de passe</label>
+                <label htmlFor="login-password" style={{ fontSize: '11px', color: 'var(--txt-2)' }}>Mot de passe</label>
                 <Link href="/forgot-password" style={{ fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
                   Oublié ?
                 </Link>
               </div>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="login-password" name="password"
                   type={showPw ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••" required
+                  placeholder="••••••••" autoComplete="current-password" required
                   style={{
                     width: '100%', background: 'var(--bg-2)',
                     border: '0.5px solid var(--line-2)', borderRadius: '7px',

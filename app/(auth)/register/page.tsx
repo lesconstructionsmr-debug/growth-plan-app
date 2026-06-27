@@ -116,20 +116,22 @@ export default function RegisterPage() {
 
             <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Prénom</label>
+                <label htmlFor="reg-prenom" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Prénom</label>
                 <input
+                  id="reg-prenom" name="prenom"
                   type="text" value={prenom} onChange={e => setPrenom(e.target.value)}
-                  placeholder="Jean" required
+                  placeholder="Jean" autoComplete="given-name" required
                   style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line-2)', borderRadius: '7px', padding: '9px 12px', fontSize: '13px', color: 'var(--txt-1)', outline: 'none' }}
                   onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
                   onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Nom</label>
+                <label htmlFor="reg-nom" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Nom</label>
                 <input
+                  id="reg-nom" name="nom"
                   type="text" value={nom} onChange={e => setNom(e.target.value)}
-                  placeholder="Tremblay" required
+                  placeholder="Tremblay" autoComplete="family-name" required
                   style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line-2)', borderRadius: '7px', padding: '9px 12px', fontSize: '13px', color: 'var(--txt-1)', outline: 'none' }}
                   onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
                   onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
@@ -138,10 +140,11 @@ export default function RegisterPage() {
             </div>
 
             <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Nom de l'entreprise</label>
+              <label htmlFor="reg-company" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Nom de l'entreprise</label>
               <input
+                id="reg-company" name="company"
                 type="text" value={company} onChange={e => setCompany(e.target.value)}
-                placeholder="Peinture JTL inc." required
+                placeholder="Peinture JTL inc." autoComplete="organization" required
                 style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line-2)', borderRadius: '7px', padding: '9px 12px', fontSize: '13px', color: 'var(--txt-1)', outline: 'none' }}
                 onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
                 onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
@@ -149,10 +152,11 @@ export default function RegisterPage() {
             </div>
 
             <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Adresse courriel</label>
+              <label htmlFor="reg-email" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Adresse courriel</label>
               <input
+                id="reg-email" name="email"
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="vous@exemple.com" required
+                placeholder="vous@exemple.com" autoComplete="email" required
                 style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line-2)', borderRadius: '7px', padding: '9px 12px', fontSize: '13px', color: 'var(--txt-1)', outline: 'none' }}
                 onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
                 onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
@@ -160,14 +164,15 @@ export default function RegisterPage() {
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
+              <label htmlFor="reg-password" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
                 Mot de passe <span style={{ color: 'var(--txt-3)' }}>(min. 8 caractères)</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="reg-password" name="password"
                   type={showPw ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••" required
+                  placeholder="••••••••" autoComplete="new-password" required
                   style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line-2)', borderRadius: '7px', padding: '9px 40px 9px 12px', fontSize: '13px', color: 'var(--txt-1)', outline: 'none' }}
                   onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
                   onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
