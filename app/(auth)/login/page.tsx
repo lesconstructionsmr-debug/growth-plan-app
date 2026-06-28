@@ -1,30 +1,17 @@
-'use client'
+﻿'use client'
 
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Building2, Eye, EyeOff, Loader2 } from 'lucide-react'
-
-// Icône Google SVG inline
-function GoogleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-    </svg>
-  )
-}
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
-  const [googleLoad, setGoogleLoad] = useState(false)
   const [error, setError]       = useState('')
   const supabase = createClient()
 
@@ -36,7 +23,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         if (error.message.toLowerCase().includes('email not confirmed')) {
-          setError('Courriel non confirmé — vérifiez votre boîte de réception et cliquez le lien de confirmation.')
+          setError('Courriel non confirme - verifiez votre boite de reception.')
         } else {
           setError('Email ou mot de passe incorrect.')
         }
@@ -45,26 +32,8 @@ export default function LoginPage() {
       }
       window.location.href = '/dashboard'
     } catch {
-      setError('Erreur réseau — vérifiez votre connexion.')
+      setError('Erreur reseau - verifiez votre connexion.')
       setLoading(false)
-    }
-  }
-
-  async function handleGoogle() {
-    setGoogleLoad(true)
-    setError("")
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
-      })
-      if (error) {
-        setError("Connexion Google échouée. Réessayez.")
-        setGoogleLoad(false)
-      }
-    } catch {
-      setError("Erreur réseau.")
-      setGoogleLoad(false)
     }
   }
 
@@ -74,7 +43,6 @@ export default function LoginPage() {
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
     }}>
       <div style={{ width: '100%', maxWidth: '380px' }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             width: '52px', height: '52px', borderRadius: '12px',
@@ -82,13 +50,15 @@ export default function LoginPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 1rem',
           }}>
-            <Building2 size={24} color="var(--gold)" strokeWidth={1.5} />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
           </div>
           <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '4px' }}>
-            ERP Construction
+            Growth Plan
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--txt-3)' }}>
-            Accès restreint — connectez-vous
+            Connectez-vous a votre espace
           </p>
         </div>
 
@@ -96,41 +66,6 @@ export default function LoginPage() {
           background: 'var(--bg-1)', border: '0.5px solid var(--line)',
           borderTop: '2px solid var(--gold-3)', borderRadius: '12px', padding: '1.75rem',
         }}>
-          {/* Bouton Google */}
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={googleLoad || loading}
-            style={{
-              width: '100%', background: 'var(--bg-2)',
-              border: '0.5px solid var(--line)', borderRadius: '7px', padding: '10px',
-              fontSize: '13px', fontWeight: 500, color: 'var(--txt-1)',
-              cursor: googleLoad ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-              marginBottom: '16px',
-              opacity: googleLoad ? 0.7 : 1,
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => { if (!googleLoad) (e.currentTarget as HTMLElement).style.background = 'var(--bg-3)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-2)' }}
-          >
-            {googleLoad
-              ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} />
-              : <GoogleIcon />
-            }
-            {googleLoad ? 'Redirection…' : 'Continuer avec Google'}
-          </button>
-
-          {/* Séparateur */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px',
-          }}>
-            <div style={{ flex: 1, height: '0.5px', background: 'var(--line)' }} />
-            <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>ou</span>
-            <div style={{ flex: 1, height: '0.5px', background: 'var(--line)' }} />
-          </div>
-
-          {/* Formulaire email/mot de passe */}
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '14px' }}>
               <label htmlFor="login-email" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
@@ -154,7 +89,7 @@ export default function LoginPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <label htmlFor="login-password" style={{ fontSize: '11px', color: 'var(--txt-2)' }}>Mot de passe</label>
                 <Link href="/forgot-password" style={{ fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
-                  Oublié ?
+                  Oublie ?
                 </Link>
               </div>
               <div style={{ position: 'relative' }}>
@@ -162,7 +97,7 @@ export default function LoginPage() {
                   id="login-password" name="password"
                   type={showPw ? 'text' : 'password'} value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••" autoComplete="current-password" required
+                  placeholder="..." autoComplete="current-password" required
                   style={{
                     width: '100%', background: 'var(--bg-2)',
                     border: '0.5px solid var(--line-2)', borderRadius: '7px',
@@ -193,7 +128,7 @@ export default function LoginPage() {
             )}
 
             <button
-              type="submit" disabled={loading || googleLoad}
+              type="submit" disabled={loading}
               style={{
                 width: '100%', background: 'var(--gold-3)',
                 border: '0.5px solid var(--gold)', borderRadius: '7px', padding: '10px',
@@ -213,15 +148,15 @@ export default function LoginPage() {
 
         <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--txt-3)', marginTop: '1.25rem' }}>
           Pas encore de compte ?{' '}
-          <Link href="/register" style={{ color: 'var(--gold-2)', textDecoration: 'none' }}>
-            Créer un compte
+          <Link href="/onboarding" style={{ color: 'var(--gold-2)', textDecoration: 'none', fontWeight: 500 }}>
+            Commencer gratuitement
           </Link>
         </p>
         <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--txt-3)', marginTop: '0.5rem' }}>
           <Link href="/politique-confidentialite" style={{ color: 'var(--txt-3)', textDecoration: 'underline' }}>
-            Politique de confidentialité
+            Politique de confidentialite
           </Link>
-          {' · '}Growth Plan © 2026
+          {' - '}Growth Plan 2026
         </p>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

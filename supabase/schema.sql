@@ -17,8 +17,14 @@ create table if not exists public.companies (
   tps_no      text,
   tvq_no      text,
   logo_url    text,
+  vertical    text default 'construction',  -- construction | marketing | courtier
+  team_size   text,                         -- solo | small | medium | large
   created_at  timestamptz default now()
 );
+
+-- Migration: ajouter vertical/team_size si la table existe déjà
+alter table public.companies add column if not exists vertical text default 'construction';
+alter table public.companies add column if not exists team_size text;
 
 -- Profils utilisateurs (étend auth.users)
 create table if not exists public.profiles (
