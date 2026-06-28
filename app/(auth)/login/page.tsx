@@ -50,9 +50,22 @@ export default function LoginPage() {
     }
   }
 
-  function handleGoogle() {
+  async function handleGoogle() {
     setGoogleLoad(true)
-    window.location.href = '/api/auth/google'
+    setError("")
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      })
+      if (error) {
+        setError("Connexion Google échouée. Réessayez.")
+        setGoogleLoad(false)
+      }
+    } catch {
+      setError("Erreur réseau.")
+      setGoogleLoad(false)
+    }
   }
 
   return (
