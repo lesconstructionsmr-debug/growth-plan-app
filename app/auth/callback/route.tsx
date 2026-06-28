@@ -56,7 +56,8 @@ export async function GET(request: NextRequest) {
     if (!codeError) {
       return applyTo(NextResponse.redirect(`${origin}${next}`))
     }
-    return NextResponse.redirect(`${origin}/login?error=code_exchange_failed`)
+    const msg = encodeURIComponent(codeError.message || 'code_exchange_failed')
+    return NextResponse.redirect(`${origin}/login?error=${msg}`)
   }
 
   return NextResponse.redirect(`${origin}/login?error=no_code`)
