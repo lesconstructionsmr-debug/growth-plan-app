@@ -27,8 +27,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   let response = NextResponse.next({ request })
 
-  // Rate limiting sur les routes d'authentification (10 req/min)
-  const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/api/auth']
+  // Rate limiting uniquement sur les API auth, pas les pages (les prefetch Next.js ?_rsc= déclencheraient les 429)
+  const AUTH_ROUTES = ['/api/auth']
   if (AUTH_ROUTES.some(p => pathname.startsWith(p))) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       ?? request.headers.get('x-real-ip')
