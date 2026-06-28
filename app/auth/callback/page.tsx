@@ -36,7 +36,9 @@ export default function AuthCallbackPage() {
     }
 
     if (code) {
+      console.log('[callback] cookies available:', document.cookie.split(';').map(c => c.trim().split('=')[0]))
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        console.log('[callback] exchange error:', error?.message)
         if (error) {
           router.replace(`/login?error=${encodeURIComponent(error.message)}`)
         } else {
