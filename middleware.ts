@@ -54,7 +54,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Connecté mais pas de compagnie → /onboarding
+  // Récupérer le profil (company_id)
   const { data: profile } = await supabase
     .from('profiles')
     .select('company_id')
@@ -65,9 +65,29 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/onboarding', request.url))
   }
 
+  // Vérifier l'abonnement actif
+  if (profile?.company_id) {
+    const now = new Date().toISOString()
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('status, trial_end, current_period_end')
+      .eq('company_id', profile.company_id)
+      .in('status', ['trialing', 'active', 'past_due'])
+      .single()
+
+    const hasAccess =
+      sub?.status === 'active' ||
+      sub?.status === 'past_due' ||
+      (sub?.status === 'trialing' && sub?.trial_end && sub.trial_end > now)
+
+    if (!hasAccess && pathname !== '/tarifs') {
+      return NextResponse.redirect(new URL('/tarifs?expire=1', request.url))
+    }
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

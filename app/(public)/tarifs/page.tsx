@@ -25,7 +25,7 @@ const FEATURES = [
 
 const PLANS = {
   mensuel: {
-    prix: 175,
+    prix: 165,
     unite: '/ mois',
     label: 'Mensuel',
     economie: null,
@@ -33,8 +33,8 @@ const PLANS = {
     periode: 'month',
   },
   annuel: {
-    prix: 167,       // 2000 / 12 = 166.67 ≈ 167
-    total: 2000,
+    prix: 129,       // 1550 / 12 = 129.16 ≈ 129
+    total: 1550,
     unite: '/ mois',
     label: 'Annuel',
     economie: '— économisez 100$ / an',
@@ -192,7 +192,7 @@ export default function TarifsPage() {
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', marginBottom: '4px', justifyContent: 'center' }}>
             <span style={{ fontSize: '48px', fontWeight: 800, color: 'var(--txt-1)', lineHeight: 1 }}>
-              {plan === 'annuel' ? '167' : '175'}
+              {plan === 'annuel' ? '129' : '165'}
             </span>
             <div style={{ paddingBottom: '8px' }}>
               <div style={{ fontSize: '16px', color: 'var(--txt-3)' }}>$CAD</div>
@@ -207,7 +207,7 @@ export default function TarifsPage() {
           )}
           {plan === 'mensuel' && (
             <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginBottom: '20px' }}>
-              Facturé 175$ / mois
+              Facturé 165$ / mois
             </div>
           )}
 

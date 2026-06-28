@@ -40,7 +40,7 @@ export default function SubscriptionBanner({ status, trialDaysLeft = 0 }: Subscr
           padding: '5px 14px', fontSize: '11px', fontWeight: 700, textDecoration: 'none',
           display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
         }}>
-          <Zap size={11} /> S'abonner — 175$/mois
+          <Zap size={11} /> S'abonner — 165$/mois
         </Link>
         <button onClick={() => setDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)', flexShrink: 0 }}>
           <X size={14} />
