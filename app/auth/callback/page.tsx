@@ -24,26 +24,17 @@ export default function AuthCallbackPage() {
 
     if (token_hash && type) {
       supabase.auth.verifyOtp({ token_hash, type }).then(({ error }) => {
-        if (error) {
-          router.replace('/login?error=otp_failed')
-        } else if (type === 'recovery') {
-          router.replace('/forgot-password?step=reset')
-        } else {
-          router.replace(next)
-        }
+        if (error) router.replace('/login?error=otp_failed')
+        else if (type === 'recovery') router.replace('/forgot-password?step=reset')
+        else router.replace(next)
       })
       return
     }
 
     if (code) {
-      console.log('[callback] cookies available:', document.cookie.split(';').map(c => c.trim().split('=')[0]))
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        console.log('[callback] exchange error:', error?.message)
-        if (error) {
-          router.replace(`/login?error=${encodeURIComponent(error.message)}`)
-        } else {
-          router.replace(next)
-        }
+        if (error) router.replace(`/login?error=${encodeURIComponent(error.message)}`)
+        else router.replace(next)
       })
       return
     }
