@@ -115,67 +115,31 @@ export default function OnboardingPage() {
 
     const supabase = createClient()
 
-    // 1. Créer le compte auth
+    // Le trigger handle_new_user crée automatiquement company + profile + subscription.
+    // On passe tout dans les métadonnées pour que le trigger ait toutes les infos.
     const { data: authData, error: signUpErr } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
         data: {
-          prenom: data.prenom,
-          nom: data.nom,
           full_name: `${data.prenom} ${data.nom}`,
+          company_name: data.companyName,
+          telephone: data.telephone || null,
+          ville: data.ville || null,
+          vertical: data.vertical,
+          team_size: data.teamSize,
         },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
 
-    if (signUpErr || !authData.user) {
-      setError(signUpErr?.message ?? 'Erreur lors de la création du compte.')
-      setLoading(false)
-      return
-    }
-
-    // 2. Créer la compagnie
-    const { data: company, error: companyErr } = await supabase
-      .from('companies')
-      .insert({
-        name: data.companyName,
-        telephone: data.telephone || null,
-        ville: data.ville || null,
-        vertical: data.vertical,
-        team_size: data.teamSize,
-      })
-      .select('id')
-      .single()
-
-    if (companyErr || !company) {
-      setError('Erreur lors de la création de l\'entreprise.')
-      setLoading(false)
-      return
-    }
-
-    // 3. Mettre à jour le profil
-    await supabase
-      .from('profiles')
-      .upsert({
-        id: authData.user.id,
-        company_id: company.id,
-        full_name: `${data.prenom} ${data.nom}`,
-        role: 'owner',
-      })
-
-    // 4. Créer une période d'essai (14 jours)
-    const trialEnd = new Date()
-    trialEnd.setDate(trialEnd.getDate() + 14)
-    await supabase.from('subscriptions').insert({
-      company_id: company.id,
-      status: 'trialing',
-      trial_end: trialEnd.toISOString(),
-    })
-
     setLoading(false)
 
-    // 5. Rediriger vers vérification email ou dashboard
+    if (signUpErr || !authData.user) {
+      setError(signUpErr?.message ?? 'Erreur lors de la création du compte.')
+      return
+    }
+
     if (authData.session) {
       router.push('/dashboard')
     } else {
