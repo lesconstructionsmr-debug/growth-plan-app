@@ -1,18 +1,23 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
+  const cookieStore = cookies()
   const { origin } = new URL(request.url)
-  const pendingCookies: { name: string; value: string; options?: CookieOptions }[] = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-          pendingCookies.push(...cookiesToSet)
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
         },
       },
     }
@@ -29,11 +34,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=oauth_init_failed`)
   }
 
-  // Redirect to Google and set the PKCE code verifier as an HTTP cookie
-  const response = NextResponse.redirect(data.url)
-  pendingCookies.forEach(({ name, value, options }) => {
-    response.cookies.set(name, value, options ?? {})
-  })
-
-  return response
+  return NextResponse.redirect(data.url)
 }
