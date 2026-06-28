@@ -6,6 +6,9 @@ export async function GET(request: Request) {
   const cookieStore = cookies()
   const { origin } = new URL(request.url)
 
+  // Collect cookies set during OAuth init so we can attach them to the redirect response
+  const cookiesSet: { name: string; value: string; options?: CookieOptions }[] = []
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -15,9 +18,7 @@ export async function GET(request: Request) {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
+          cookiesToSet.forEach((c) => cookiesSet.push(c))
         },
       },
     }
@@ -34,5 +35,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=oauth_init_failed`)
   }
 
-  return NextResponse.redirect(data.url)
+  // Attach PKCE cookies directly on the redirect response
+  const response = NextResponse.redirect(data.url)
+  cookiesSet.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options ?? {})
+  })
+
+  return response
 }
