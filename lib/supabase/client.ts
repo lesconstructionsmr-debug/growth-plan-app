@@ -29,7 +29,7 @@ export function createClient() {
           }
           return Object.entries(cookieMap).map(([name, value]) => ({ name, value }))
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           if (typeof document === 'undefined') return
           cookiesToSet.forEach(({ name, value, options }) => {
             const opts = (options as Record<string, unknown>) ?? {}
