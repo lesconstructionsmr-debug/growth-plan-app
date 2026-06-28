@@ -1,9 +1,9 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const { origin } = new URL(request.url)
-  const pendingCookies: { name: string; value: string; options?: Record<string, unknown> }[] = []
+  const pendingCookies: { name: string; value: string; options?: CookieOptions }[] = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) { pendingCookies.push(...cookiesToSet) },
+        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+          pendingCookies.push(...cookiesToSet)
+        },
       },
     }
   )
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
   // Redirect to Google and set the PKCE code verifier as an HTTP cookie
   const response = NextResponse.redirect(data.url)
   pendingCookies.forEach(({ name, value, options }) => {
-    response.cookies.set(name, value, (options as Parameters<typeof response.cookies.set>[2]) ?? {})
+    response.cookies.set(name, value, options ?? {})
   })
 
   return response
