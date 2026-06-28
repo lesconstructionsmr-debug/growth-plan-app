@@ -7,36 +7,9 @@ const PUBLIC_PATHS = [
   '/support', '/tarifs', '/join', '/onboarding',
 ]
 
-// Rate limiting simple en mémoire (edge-compatible via Map)
-// Limite : 10 req/min sur les routes auth
-const rateLimitMap = new Map<string, { count: number; reset: number }>()
-
-function checkRateLimit(ip: string, limit: number, windowMs: number): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.reset) {
-    rateLimitMap.set(ip, { count: 1, reset: now + windowMs })
-    return true
-  }
-  if (entry.count >= limit) return false
-  entry.count++
-  return true
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   let response = NextResponse.next({ request })
-
-  // Rate limiting uniquement sur les API auth, pas les pages (les prefetch Next.js ?_rsc= déclencheraient les 429)
-  const AUTH_ROUTES = ['/api/auth']
-  if (AUTH_ROUTES.some(p => pathname.startsWith(p))) {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      ?? request.headers.get('x-real-ip')
-      ?? '127.0.0.1'
-    if (!checkRateLimit(ip, 10, 60_000)) {
-      return NextResponse.json({ error: 'Trop de tentatives — réessayez dans 1 minute.' }, { status: 429 })
-    }
-  }
 
   // Security headers
   response.headers.set('X-Content-Type-Options', 'nosniff')
