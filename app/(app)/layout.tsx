@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .from('subscriptions')
           .select('status, trial_end')
           .eq('company_id', profile.company_id)
-          .single()
+          .single() as { data: { status: string; trial_end: string | null } | null }
 
         if (sub) {
           subStatus = sub.status as typeof subStatus
