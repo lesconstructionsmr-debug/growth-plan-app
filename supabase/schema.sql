@@ -284,18 +284,26 @@ as $$
 declare
   new_company_id uuid;
 begin
-  -- Créer la compagnie
-  insert into public.companies (name)
-  values (coalesce(new.raw_user_meta_data->>'company_name', 'Mon Entreprise'))
+  insert into public.companies (name, telephone, ville, vertical, team_size)
+  values (
+    coalesce(new.raw_user_meta_data->>'company_name', 'Mon Entreprise'),
+    new.raw_user_meta_data->>'telephone',
+    new.raw_user_meta_data->>'ville',
+    coalesce(new.raw_user_meta_data->>'vertical', 'construction'),
+    new.raw_user_meta_data->>'team_size'
+  )
   returning id into new_company_id;
 
-  -- Créer le profil lié à la compagnie
-  insert into public.profiles (id, company_id, full_name)
+  insert into public.profiles (id, company_id, full_name, role)
   values (
     new.id,
     new_company_id,
-    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1))
+    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    'owner'
   );
+
+  insert into public.subscriptions (company_id, status, trial_end)
+  values (new_company_id, 'trialing', now() + interval '14 days');
 
   return new;
 end;

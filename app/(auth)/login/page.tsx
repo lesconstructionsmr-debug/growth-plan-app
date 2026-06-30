@@ -2,9 +2,10 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -13,7 +14,8 @@ export default function LoginPage() {
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const supabase = createClient()
+  const supabase = useRef(createClient()).current
+  const router = useRouter()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -30,7 +32,8 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      window.location.href = '/dashboard'
+      router.refresh()
+      router.push('/dashboard')
     } catch {
       setError('Erreur reseau - verifiez votre connexion.')
       setLoading(false)

@@ -68,13 +68,13 @@ export async function middleware(request: NextRequest) {
   // Vérifier l'abonnement actif
   if (profile?.company_id) {
     const now = new Date().toISOString()
-    const { data: sub } = await supabase
+    const { data: subs } = await supabase
       .from('subscriptions')
       .select('status, trial_end, current_period_end')
       .eq('company_id', profile.company_id)
-      .in('status', ['trialing', 'active', 'past_due'])
-      .single()
+      .limit(1)
 
+    const sub = subs?.[0] ?? null
     const hasAccess =
       sub?.status === 'active' ||
       sub?.status === 'past_due' ||
