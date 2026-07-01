@@ -67,7 +67,7 @@ export default function DepensesPage() {
         .order('date_depense', { ascending: false }),
       supabase.from('jobs').select('id, titre').order('titre'),
     ])
-    setDepenses(dep || [])
+    setDepenses((dep as unknown as Depense[]) || [])
     setJobs(jobsData || [])
     setLoading(false)
   }, [])

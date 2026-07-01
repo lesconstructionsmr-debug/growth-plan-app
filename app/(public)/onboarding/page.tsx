@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useState, useTransition, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { signUp } from '@/app/actions/auth'
 import { Eye, EyeOff, Loader2, ChevronLeft, Check } from 'lucide-react'
 import Link from 'next/link'
 
@@ -272,52 +272,30 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-export default function OnboardingPage() {
-  const router = useRouter()
+function OnboardingContent() {
   const [step, setStep] = useState(0)
   const [vertical, setVertical] = useState<Vertical | null>(null)
   const [teamSize, setTeamSize] = useState<TeamSize | null>(null)
   const [companyData, setCompanyData] = useState<CompanyData>({ companyName: '', telephone: '', ville: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const searchParams = useSearchParams()
+  const signupError = searchParams.get('error')
 
   const canNextStep01 =
     (step === 0 && !!vertical) ||
     (step === 1 && !!teamSize)
 
-  async function handleSubmit(accountData: AccountData) {
-    setLoading(true)
-    setError('')
-    const supabase = createClient()
-
-    const { data: authData, error: signUpErr } = await supabase.auth.signUp({
-      email: accountData.email,
-      password: accountData.password,
-      options: {
-        data: {
-          full_name: `${accountData.prenom} ${accountData.nom}`,
-          company_name: companyData.companyName,
-          telephone: companyData.telephone || null,
-          ville: companyData.ville || null,
-          vertical,
-          team_size: teamSize,
-        },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    setLoading(false)
-
-    if (signUpErr || !authData.user) {
-      setError(signUpErr?.message ?? 'Erreur lors de la création du compte.')
-      return
-    }
-
-    if (authData.session) {
-      router.push('/dashboard')
-    } else {
-      router.push('/onboarding/confirmation?email=' + encodeURIComponent(accountData.email))
-    }
+  function handleSubmit(accountData: AccountData) {
+    const formData = new FormData()
+    formData.append('email', accountData.email)
+    formData.append('password', accountData.password)
+    formData.append('full_name', `${accountData.prenom} ${accountData.nom}`)
+    formData.append('company_name', companyData.companyName)
+    formData.append('telephone', companyData.telephone)
+    formData.append('ville', companyData.ville)
+    formData.append('vertical', vertical!)
+    formData.append('team_size', teamSize!)
+    startTransition(() => { signUp(formData) })
   }
 
   const subtitle = [
@@ -478,8 +456,8 @@ export default function OnboardingPage() {
             companyData={companyData}
             onBack={() => setStep(2)}
             onSubmit={handleSubmit}
-            loading={loading}
-            error={error}
+            loading={isPending}
+            error={signupError ? decodeURIComponent(signupError) : ''}
           />
         )}
       </div>
@@ -566,4 +544,12 @@ const inputStyle: React.CSSProperties = {
   border: '0.5px solid var(--line-2)', borderRadius: '7px',
   padding: '9px 12px', fontSize: '13px', color: 'var(--txt-1)', outline: 'none',
   boxSizing: 'border-box', transition: 'border-color 0.15s',
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense>
+      <OnboardingContent />
+    </Suspense>
+  )
 }
