@@ -12,12 +12,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
+  const [step, setStep]         = useState('')
   const [error, setError]       = useState('')
   const supabase = useRef(createClient()).current
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setStep('Connexion...')
     setError('')
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -25,23 +27,27 @@ export default function LoginPage() {
         if (error.message.toLowerCase().includes('email not confirmed')) {
           setError('Courriel non confirme - verifiez votre boite de reception.')
         } else {
-          setError('Email ou mot de passe incorrect.')
+          setError(`Erreur: ${error.message}`)
         }
         setLoading(false)
+        setStep('')
         return
       }
-      // Vérifier que la session est bien en mémoire avant de rediriger
+      setStep('Session...')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         setError('Session introuvable - veuillez reessayer.')
         setLoading(false)
+        setStep('')
         return
       }
-      // Hard redirect = full page reload = tous les cookies envoyés proprement
+      setStep('Redirection...')
       window.location.replace('/dashboard')
-    } catch {
-      setError('Erreur reseau - verifiez votre connexion.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue'
+      setError(`Erreur reseau: ${msg}`)
       setLoading(false)
+      setStep('')
     }
   }
 
@@ -149,7 +155,7 @@ export default function LoginPage() {
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold-2)' }}
             >
               {loading && <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} />}
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? (step || 'Connexion...') : 'Se connecter'}
             </button>
           </form>
         </div>
