@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic'
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -15,7 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const supabase = useRef(createClient()).current
-  const router = useRouter()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -32,8 +30,15 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      router.refresh()
-      router.push('/dashboard')
+      // Vérifier que la session est bien en mémoire avant de rediriger
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Session introuvable - veuillez reessayer.')
+        setLoading(false)
+        return
+      }
+      // Hard redirect = full page reload = tous les cookies envoyés proprement
+      window.location.replace('/dashboard')
     } catch {
       setError('Erreur reseau - verifiez votre connexion.')
       setLoading(false)
