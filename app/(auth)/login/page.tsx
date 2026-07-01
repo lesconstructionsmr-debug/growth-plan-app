@@ -21,13 +21,21 @@ export default function LoginPage() {
     setLoading(true)
     setStep('Connexion...')
     setError('')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'MANQUANT'
+    setStep(`→ ${supabaseUrl.replace('https://', '').slice(0, 28)}`)
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const loginPromise = supabase.auth.signInWithPassword({ email, password })
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout 10s - Supabase injoignable')), 10000)
+      )
+      const { error } = await Promise.race([loginPromise, timeoutPromise])
+
       if (error) {
         if (error.message.toLowerCase().includes('email not confirmed')) {
           setError('Courriel non confirme - verifiez votre boite de reception.')
         } else {
-          setError(`Erreur: ${error.message}`)
+          setError(`Auth error: ${error.message}`)
         }
         setLoading(false)
         setStep('')
@@ -36,7 +44,7 @@ export default function LoginPage() {
       setStep('Session...')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        setError('Session introuvable - veuillez reessayer.')
+        setError('Session introuvable apres login.')
         setLoading(false)
         setStep('')
         return
@@ -45,7 +53,7 @@ export default function LoginPage() {
       window.location.replace('/dashboard')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue'
-      setError(`Erreur reseau: ${msg}`)
+      setError(msg)
       setLoading(false)
       setStep('')
     }
