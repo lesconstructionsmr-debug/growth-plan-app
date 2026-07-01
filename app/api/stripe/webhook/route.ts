@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // POST /api/stripe/webhook
 // Reçoit les événements Stripe et met à jour les abonnements
@@ -84,7 +84,9 @@ export async function POST(request: NextRequest) {
 // ── Handlers ──────────────────────────────────────────────────────
 
 async function handleSubscriptionChange(sub: StripeSubscription) {
-  const supabase = createClient()
+  // Client service-role : un webhook n'a pas de session utilisateur,
+  // le client anon était bloqué par RLS → échec silencieux (S1.1)
+  const supabase = createAdminClient()
   const { error } = await supabase.from('subscriptions').upsert({
     stripe_customer_id:     sub.customer,
     stripe_subscription_id: sub.id,
@@ -94,17 +96,18 @@ async function handleSubscriptionChange(sub: StripeSubscription) {
     trial_end:              sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
   }, { onConflict: 'stripe_customer_id' })
 
-  if (error) console.error('[webhook] Erreur upsert subscription:', error)
-  else console.log(`[webhook] Abonnement mis à jour: ${sub.id} → ${sub.status}`)
+  // Erreur = throw → le handler renvoie 500 → Stripe réessaie (plus d'échec silencieux)
+  if (error) throw new Error(`[webhook] upsert subscription ${sub.id}: ${error.message}`)
+  console.log(`[webhook] Abonnement mis à jour: ${sub.id} → ${sub.status}`)
 }
 
 async function handleSubscriptionDeleted(sub: StripeSubscription) {
-  const supabase = createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase.from('subscriptions').update({ status: 'canceled' })
     .eq('stripe_subscription_id', sub.id)
 
-  if (error) console.error('[webhook] Erreur annulation subscription:', error)
-  else console.log(`[webhook] Abonnement annulé: ${sub.id}`)
+  if (error) throw new Error(`[webhook] annulation subscription ${sub.id}: ${error.message}`)
+  console.log(`[webhook] Abonnement annulé: ${sub.id}`)
 }
 
 async function notifyPaymentFailed(invoice: StripeInvoice) {
@@ -133,7 +136,7 @@ async function notifyPaymentFailed(invoice: StripeInvoice) {
 
 async function notifyTrialEnding(sub: StripeSubscription) {
   if (!process.env.RESEND_API_KEY) return
-  const supabase = createClient()
+  const supabase = createAdminClient()
   const { data: subscription } = await supabase
     .from('subscriptions')
     .select('companies(name, email)')
