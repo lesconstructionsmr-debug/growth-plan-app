@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
 
     // Envoyer email via Resend
     if (process.env.RESEND_API_KEY) {
-      const joinUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://app.growth-plan.ca'}/join?token=${data.id}`
+      // data.token = colonne token (gen_random_bytes) — PAS data.id (S2.1)
+      const joinUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://app.growth-plan.ca'}/join?token=${data.token}`
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
