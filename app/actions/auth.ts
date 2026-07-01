@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-export async function signIn(_prevState: { error: string } | null, formData: FormData) {
+export async function signIn(formData: FormData) {
   const email    = formData.get('email') as string
   const password = formData.get('password') as string
 
@@ -27,13 +27,11 @@ export async function signIn(_prevState: { error: string } | null, formData: For
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
+    let msg = 'Email ou mot de passe incorrect.'
     if (error.message.toLowerCase().includes('email not confirmed')) {
-      return { error: 'Courriel non confirme - verifiez votre boite de reception.' }
+      msg = 'Courriel non confirme - verifiez votre boite de reception.'
     }
-    if (error.message.toLowerCase().includes('invalid login')) {
-      return { error: 'Email ou mot de passe incorrect.' }
-    }
-    return { error: `Erreur: ${error.message}` }
+    redirect(`/login?error=${encodeURIComponent(msg)}`)
   }
 
   redirect('/dashboard')

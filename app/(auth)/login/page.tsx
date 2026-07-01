@@ -2,14 +2,37 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useActionState } from 'react'
+import { useState, Suspense } from 'react'
+import { useFormStatus } from 'react-dom'
+import { useSearchParams } from 'next/navigation'
 import { signIn } from '@/app/actions/auth'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
-export default function LoginPage() {
+function SubmitButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="submit" disabled={pending}
+      style={{
+        width: '100%', background: 'var(--gold-3)',
+        border: '0.5px solid var(--gold)', borderRadius: '7px', padding: '10px',
+        fontSize: '13px', fontWeight: 500, color: 'var(--gold-2)',
+        cursor: pending ? 'not-allowed' : 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+        opacity: pending ? 0.7 : 1, transition: 'all 0.15s',
+      }}
+    >
+      {pending && <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} />}
+      {pending ? 'Connexion...' : 'Se connecter'}
+    </button>
+  )
+}
+
+function LoginForm() {
   const [showPw, setShowPw] = useState(false)
-  const [state, action, pending] = useActionState(signIn, null)
+  const searchParams = useSearchParams()
+  const error = searchParams.get('error')
 
   return (
     <div style={{
@@ -40,7 +63,7 @@ export default function LoginPage() {
           background: 'var(--bg-1)', border: '0.5px solid var(--line)',
           borderTop: '2px solid var(--gold-3)', borderRadius: '12px', padding: '1.75rem',
         }}>
-          <form action={action}>
+          <form action={signIn}>
             <div style={{ marginBottom: '14px' }}>
               <label htmlFor="login-email" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
                 Adresse courriel
@@ -89,32 +112,17 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {state?.error && (
+            {error && (
               <div style={{
                 background: 'rgba(224,96,96,0.1)', border: '0.5px solid rgba(224,96,96,0.3)',
                 borderRadius: '6px', padding: '8px 12px',
                 fontSize: '12px', color: 'var(--red)', marginBottom: '14px',
               }}>
-                {state.error}
+                {decodeURIComponent(error)}
               </div>
             )}
 
-            <button
-              type="submit" disabled={pending}
-              style={{
-                width: '100%', background: 'var(--gold-3)',
-                border: '0.5px solid var(--gold)', borderRadius: '7px', padding: '10px',
-                fontSize: '13px', fontWeight: 500, color: 'var(--gold-2)',
-                cursor: pending ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                opacity: pending ? 0.7 : 1, transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { if (!pending) { (e.currentTarget as HTMLElement).style.background = 'var(--gold)'; (e.currentTarget as HTMLElement).style.color = '#0A0A0A' }}}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold-2)' }}
-            >
-              {pending && <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} />}
-              {pending ? 'Connexion...' : 'Se connecter'}
-            </button>
+            <SubmitButton />
           </form>
         </div>
 
@@ -133,5 +141,13 @@ export default function LoginPage() {
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
