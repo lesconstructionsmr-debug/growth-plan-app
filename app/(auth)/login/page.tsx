@@ -1,63 +1,15 @@
-﻿'use client'
+'use client'
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useActionState } from 'react'
+import { signIn } from '@/app/actions/auth'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [showPw, setShowPw]     = useState(false)
-  const [loading, setLoading]   = useState(false)
-  const [step, setStep]         = useState('')
-  const [error, setError]       = useState('')
-  const supabase = useRef(createClient()).current
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setStep('Connexion...')
-    setError('')
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'MANQUANT'
-    setStep(`→ ${supabaseUrl.replace('https://', '').slice(0, 28)}`)
-
-    try {
-      const loginPromise = supabase.auth.signInWithPassword({ email, password })
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout 10s - Supabase injoignable')), 10000)
-      )
-      const { error } = await Promise.race([loginPromise, timeoutPromise])
-
-      if (error) {
-        if (error.message.toLowerCase().includes('email not confirmed')) {
-          setError('Courriel non confirme - verifiez votre boite de reception.')
-        } else {
-          setError(`Auth error: ${error.message}`)
-        }
-        setLoading(false)
-        setStep('')
-        return
-      }
-      setStep('Session...')
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Session introuvable apres login.')
-        setLoading(false)
-        setStep('')
-        return
-      }
-      setStep('Redirection...')
-      window.location.replace('/dashboard')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur inconnue'
-      setError(msg)
-      setLoading(false)
-      setStep('')
-    }
-  }
+  const [showPw, setShowPw] = useState(false)
+  const [state, action, pending] = useActionState(signIn, null)
 
   return (
     <div style={{
@@ -88,15 +40,14 @@ export default function LoginPage() {
           background: 'var(--bg-1)', border: '0.5px solid var(--line)',
           borderTop: '2px solid var(--gold-3)', borderRadius: '12px', padding: '1.75rem',
         }}>
-          <form onSubmit={handleLogin}>
+          <form action={action}>
             <div style={{ marginBottom: '14px' }}>
               <label htmlFor="login-email" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
                 Adresse courriel
               </label>
               <input
                 id="login-email" name="email"
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="vous@exemple.com" autoComplete="email" required
+                type="email" placeholder="vous@exemple.com" autoComplete="email" required
                 style={{
                   width: '100%', background: 'var(--bg-2)',
                   border: '0.5px solid var(--line-2)', borderRadius: '7px',
@@ -117,8 +68,7 @@ export default function LoginPage() {
               <div style={{ position: 'relative' }}>
                 <input
                   id="login-password" name="password"
-                  type={showPw ? 'text' : 'password'} value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  type={showPw ? 'text' : 'password'}
                   placeholder="..." autoComplete="current-password" required
                   style={{
                     width: '100%', background: 'var(--bg-2)',
@@ -139,31 +89,31 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {error && (
+            {state?.error && (
               <div style={{
                 background: 'rgba(224,96,96,0.1)', border: '0.5px solid rgba(224,96,96,0.3)',
                 borderRadius: '6px', padding: '8px 12px',
                 fontSize: '12px', color: 'var(--red)', marginBottom: '14px',
               }}>
-                {error}
+                {state.error}
               </div>
             )}
 
             <button
-              type="submit" disabled={loading}
+              type="submit" disabled={pending}
               style={{
                 width: '100%', background: 'var(--gold-3)',
                 border: '0.5px solid var(--gold)', borderRadius: '7px', padding: '10px',
                 fontSize: '13px', fontWeight: 500, color: 'var(--gold-2)',
-                cursor: loading ? 'not-allowed' : 'pointer',
+                cursor: pending ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                opacity: loading ? 0.7 : 1, transition: 'all 0.15s',
+                opacity: pending ? 0.7 : 1, transition: 'all 0.15s',
               }}
-              onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLElement).style.background = 'var(--gold)'; (e.currentTarget as HTMLElement).style.color = '#0A0A0A' }}}
+              onMouseEnter={e => { if (!pending) { (e.currentTarget as HTMLElement).style.background = 'var(--gold)'; (e.currentTarget as HTMLElement).style.color = '#0A0A0A' }}}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold-2)' }}
             >
-              {loading && <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} />}
-              {loading ? (step || 'Connexion...') : 'Se connecter'}
+              {pending && <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} />}
+              {pending ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
         </div>
