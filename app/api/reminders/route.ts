@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireCompany, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/reminders — liste des devis en attente >24h + factures en retard
 export async function GET() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-
-  const { data: profile } = await supabase
-    .from('profiles').select('company_id').eq('id', user.id).single()
-  if (!profile?.company_id) return NextResponse.json({ error: 'Compagnie introuvable' }, { status: 400 })
+  try {
+  const { supabase, companyId } = await requireCompany()
 
   const il24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
   const aujourd = new Date().toISOString().split('T')[0]
@@ -20,14 +15,14 @@ export async function GET() {
     supabase
       .from('devis')
       .select('id, numero, montant_ttc, updated_at, clients(nom, email)')
-      .eq('company_id', profile.company_id)
+      .eq('company_id', companyId)
       .in('statut', ['envoye', 'vu'])
       .lt('updated_at', il24h)
       .order('updated_at', { ascending: true }),
     supabase
       .from('factures')
       .select('id, numero, montant_ttc, date_echeance, clients(nom, email)')
-      .eq('company_id', profile.company_id)
+      .eq('company_id', companyId)
       .in('statut', ['envoyee', 'vue', 'partielle'])
       .lt('date_echeance', aujourd)
       .order('date_echeance', { ascending: true }),
@@ -68,18 +63,15 @@ export async function GET() {
     factures_retard: factureReminders.length,
     reminders,
   })
+  } catch (err) {
+    return apiError(err, '[GET /api/reminders]')
+  }
 }
 
 // POST /api/reminders — envoyer un rappel manuel
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-
-    const { data: profile } = await supabase
-      .from('profiles').select('company_id').eq('id', user.id).single()
-    if (!profile?.company_id) return NextResponse.json({ error: 'Compagnie introuvable' }, { status: 400 })
+    const { supabase, companyId } = await requireCompany()
 
     const { id, type } = await request.json()
     if (!id || !type) return NextResponse.json({ error: 'id et type requis' }, { status: 400 })
@@ -94,7 +86,7 @@ export async function POST(request: NextRequest) {
       const { data: d } = await supabase
         .from('devis')
         .select('numero, montant_ttc, portal_token, clients(nom, email)')
-        .eq('id', id).eq('company_id', profile.company_id).single()
+        .eq('id', id).eq('company_id', companyId).maybeSingle()
       if (!d) return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 })
       clientEmail = (d.clients as any)?.email ?? null
       clientNom   = (d.clients as any)?.nom ?? '—'
@@ -105,7 +97,7 @@ export async function POST(request: NextRequest) {
       const { data: f } = await supabase
         .from('factures')
         .select('numero, montant_ttc, clients(nom, email)')
-        .eq('id', id).eq('company_id', profile.company_id).single()
+        .eq('id', id).eq('company_id', companyId).maybeSingle()
       if (!f) return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 })
       clientEmail = (f.clients as any)?.email ?? null
       clientNom   = (f.clients as any)?.nom ?? '—'
@@ -145,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[RAPPEL SIMULÉ] → ${clientEmail} | ${reference}`)
     return NextResponse.json({ success: true, message: `[DEV] Rappel simulé. Ajoutez RESEND_API_KEY pour envoyer.`, email_sent: false, simulated: true })
-  } catch {
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+  } catch (err) {
+    return apiError(err, '[POST /api/reminders]')
   }
 }

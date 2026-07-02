@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireCompany, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    const { supabase } = await requireCompany()
 
     const { data, error } = await supabase
       .from('dossiers')
@@ -22,35 +20,27 @@ export async function GET() {
     if (error) throw error
     return NextResponse.json(data || [])
   } catch (err) {
-    console.error('[GET /api/dossiers]', err)
-    return NextResponse.json([], { status: 500 })
+    return apiError(err, '[GET /api/dossiers]')
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    const { supabase, companyId } = await requireCompany()
 
     const { client_nom, type_transaction, montant_pret, phase, notes } = await req.json()
-
-    // Récupérer company_id
-    const { data: profile } = await supabase
-      .from('profiles').select('company_id').eq('id', user.id).single()
-    if (!profile?.company_id) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
 
     // Créer ou trouver le client
     let client_id: string | null = null
     if (client_nom?.trim()) {
       const { data: existing } = await supabase
-        .from('clients').select('id').eq('company_id', profile.company_id).ilike('nom', client_nom.trim()).limit(1).single()
+        .from('clients').select('id').eq('company_id', companyId).ilike('nom', client_nom.trim()).limit(1).maybeSingle()
 
       if (existing) {
         client_id = existing.id
       } else {
         const { data: newClient } = await supabase
-          .from('clients').insert({ company_id: profile.company_id, nom: client_nom.trim() }).select('id').single()
+          .from('clients').insert({ company_id: companyId, nom: client_nom.trim() }).select('id').single()
         client_id = newClient?.id || null
       }
     }
@@ -66,7 +56,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('dossiers')
       .insert({
-        company_id:       profile.company_id,
+        company_id:       companyId,
         client_id,
         numero,
         phase:            phase || 'prise_en_charge',
@@ -81,16 +71,13 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
-    console.error('[POST /api/dossiers]', err)
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Erreur interne' }, { status: 500 })
+    return apiError(err, '[POST /api/dossiers]')
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    const { supabase, companyId } = await requireCompany()
 
     const { id, ...updates } = await req.json()
     if (!id) return NextResponse.json({ error: 'ID requis' }, { status: 400 })
@@ -99,13 +86,13 @@ export async function PATCH(req: NextRequest) {
       .from('dossiers')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('company_id', companyId)
       .select()
       .single()
 
     if (error) throw error
     return NextResponse.json(data)
   } catch (err) {
-    console.error('[PATCH /api/dossiers]', err)
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Erreur interne' }, { status: 500 })
+    return apiError(err, '[PATCH /api/dossiers]')
   }
 }

@@ -1,48 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireCompany, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+  try {
+    const { supabase, companyId } = await requireCompany()
 
-  const { data: profile } = await supabase
-    .from('profiles').select('company_id').eq('id', user.id).single()
-  if (!profile?.company_id) return NextResponse.json([], { status: 200 })
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*, clients(nom)')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
 
-  const { data } = await supabase
-    .from('jobs')
-    .select('*, clients(nom)')
-    .eq('company_id', profile.company_id)
-    .order('created_at', { ascending: false })
-
-  return NextResponse.json(data ?? [])
+    if (error) throw error
+    return NextResponse.json(data ?? [])
+  } catch (err) {
+    return apiError(err, '[GET /api/jobs]')
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-
-    const { data: profile } = await supabase
-      .from('profiles').select('company_id').eq('id', user.id).single()
-    if (!profile?.company_id) return NextResponse.json({ error: 'Compagnie introuvable' }, { status: 400 })
+    const { supabase, companyId } = await requireCompany()
 
     const body = await req.json()
+    if (!body.titre?.trim()) return NextResponse.json({ error: 'Le titre est requis' }, { status: 400 })
 
     const year = new Date().getFullYear()
     const { count } = await supabase
       .from('jobs').select('id', { count: 'exact', head: true })
-      .eq('company_id', profile.company_id)
+      .eq('company_id', companyId)
     const numero = `JOB-${year}-${String((count ?? 0) + 1).padStart(3, '0')}`
 
     const { data, error } = await supabase
       .from('jobs')
       .insert({
-        company_id:            profile.company_id,
+        company_id:            companyId,
         client_id:             body.client_id,
         numero,
         titre:                 body.titre,
@@ -63,7 +57,6 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
-    console.error('[POST /api/jobs]', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return apiError(err, '[POST /api/jobs]')
   }
 }

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireCompany, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    const { supabase } = await requireCompany()
 
     const { data, error } = await supabase
       .from('commissions')
@@ -22,27 +20,25 @@ export async function GET() {
     if (error) throw error
     return NextResponse.json(data || [])
   } catch (err) {
-    return NextResponse.json([], { status: 500 })
+    return apiError(err, '[GET /api/commissions]')
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    const { supabase, companyId } = await requireCompany()
 
     const body = await req.json()
-    const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
-    if (!profile?.company_id) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
+    const montant = parseFloat(body.montant)
+    if (Number.isNaN(montant)) return NextResponse.json({ error: 'Montant invalide' }, { status: 400 })
 
     const { data, error } = await supabase
       .from('commissions')
       .insert({
-        company_id:  profile.company_id,
+        company_id:  companyId,
         dossier_id:  body.dossier_id  || null,
         preteur_id:  body.preteur_id  || null,
-        montant:     parseFloat(body.montant),
+        montant,
         statut:      body.statut      || 'a_recevoir',
         date_prevue: body.date_prevue || null,
         notes:       body.notes       || null,
@@ -53,23 +49,28 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Erreur interne' }, { status: 500 })
+    return apiError(err, '[POST /api/commissions]')
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    const { supabase, companyId } = await requireCompany()
 
     const { id, ...updates } = await req.json()
     if (!id) return NextResponse.json({ error: 'ID requis' }, { status: 400 })
 
-    const { data, error } = await supabase.from('commissions').update(updates).eq('id', id).select().single()
+    const { data, error } = await supabase
+      .from('commissions')
+      .update(updates)
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .select()
+      .single()
+
     if (error) throw error
     return NextResponse.json(data)
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Erreur interne' }, { status: 500 })
+    return apiError(err, '[PATCH /api/commissions]')
   }
 }

@@ -1,34 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireCompany, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json([], { status: 401 })
+    const { supabase } = await requireCompany()
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('clients')
       .select('id, nom, email, telephone, ville, created_at')
       .order('nom', { ascending: true })
 
+    if (error) throw error
     return NextResponse.json(data ?? [])
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return apiError(err, '[GET /api/clients]')
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-
-    const { data: profile } = await supabase
-      .from('profiles').select('company_id').eq('id', user.id).single()
-    if (!profile?.company_id) return NextResponse.json({ error: 'Compagnie introuvable' }, { status: 400 })
+    const { supabase, companyId } = await requireCompany()
 
     const body = await req.json()
     const { nom, email, telephone, adresse, ville, province, code_postal, notes } = body
@@ -38,7 +31,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('clients')
       .insert({
-        company_id: profile.company_id,
+        company_id: companyId,
         nom: nom.trim(),
         email: email?.trim() || null,
         telephone: telephone?.trim() || null,
@@ -54,6 +47,6 @@ export async function POST(req: NextRequest) {
     if (error) throw error
     return NextResponse.json(data, { status: 201 })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return apiError(err, '[POST /api/clients]')
   }
 }

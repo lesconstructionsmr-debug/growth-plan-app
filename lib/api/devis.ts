@@ -1,4 +1,5 @@
 import { createClient } from './supabase-server'
+import { requireCompany } from './auth'
 
 export interface LigneDevis {
   id?: string
@@ -57,19 +58,14 @@ export async function createDevis(payload: {
   appliquer_tvq: boolean
   statut?: string
 }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non authentifié')
-
-  const { data: profile } = await supabase
-    .from('profiles').select('company_id').eq('id', user.id).single()
+  const { supabase, companyId } = await requireCompany()
 
   // Numéro séquentiel sécurisé — filtre par company_id + année pour éviter les doublons
   const year = new Date().getFullYear()
   const { count: existingCount } = await supabase
     .from('devis')
     .select('id', { count: 'exact', head: true })
-    .eq('company_id', profile?.company_id)
+    .eq('company_id', companyId)
     .like('numero', `DEV-${year}-%`)
   const seqNum = String((existingCount ?? 0) + 1).padStart(3, '0')
   const autoNumero = payload.numero || `DEV-${year}-${seqNum}`
@@ -86,7 +82,7 @@ export async function createDevis(payload: {
   const { data, error } = await supabase
     .from('devis')
     .insert({
-      company_id: profile?.company_id,
+      company_id: companyId,
       client_id: payload.client_id,
       numero: autoNumero,
       titre: payload.titre,

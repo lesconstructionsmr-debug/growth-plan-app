@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireCompany, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,21 +9,15 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-
-    const { data: profile } = await supabase
-      .from('profiles').select('company_id').eq('id', user.id).single()
-    if (!profile?.company_id) return NextResponse.json({ error: 'Compagnie introuvable' }, { status: 400 })
+    const { supabase, companyId } = await requireCompany()
 
     // Charger le devis
     const { data: devis, error: devisErr } = await supabase
       .from('devis')
       .select('*')
       .eq('id', params.id)
-      .eq('company_id', profile.company_id)
-      .single()
+      .eq('company_id', companyId)
+      .maybeSingle()
 
     if (devisErr || !devis) return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 })
     if (devis.statut === 'converti') return NextResponse.json({ error: 'Déjà converti' }, { status: 409 })
@@ -33,7 +27,7 @@ export async function POST(
     const { count } = await supabase
       .from('factures')
       .select('id', { count: 'exact', head: true })
-      .eq('company_id', profile.company_id)
+      .eq('company_id', companyId)
     const seqNum = String((count ?? 0) + 1).padStart(3, '0')
     const numero = `FAC-${year}-${seqNum}`
 
@@ -41,7 +35,7 @@ export async function POST(
     const { data: facture, error: facErr } = await supabase
       .from('factures')
       .insert({
-        company_id:    profile.company_id,
+        company_id:    companyId,
         client_id:     devis.client_id,
         devis_id:      devis.id,
         numero,
@@ -69,6 +63,6 @@ export async function POST(
 
     return NextResponse.json({ facture_id: facture.id, numero }, { status: 201 })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return apiError(err, '[POST /api/devis/convertir]')
   }
 }
