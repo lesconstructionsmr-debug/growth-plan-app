@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Signature invalide' }, { status: 400 })
   }
 
-  console.log(`[stripe/webhook] Événement reçu: ${event.type}`)
+  console.log('[webhook] received event', event.type, {
+    hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  })
 
   // ── Traitement des événements ──────────────────────────────────
   try {
