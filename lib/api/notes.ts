@@ -1,4 +1,5 @@
 import { createClient } from './supabase-server'
+import { requireCompany, ApiError } from './auth'
 
 export type NoteType = 'note' | 'appel' | 'specification' | 'document' | 'rappel'
 
@@ -44,17 +45,12 @@ export async function createNote(payload: {
   type: NoteType
   contenu: string
 }): Promise<Note> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Non authentifié')
-
-  const { data: profile } = await supabase
-    .from('profiles').select('company_id').eq('id', user.id).single()
+  const { supabase, user, companyId } = await requireCompany()
 
   const { data, error } = await supabase
     .from('notes')
     .insert({
-      company_id: profile?.company_id,
+      company_id: companyId,
       client_id:  payload.client_id ?? null,
       job_id:     payload.job_id    ?? null,
       auteur_id:  user.id,
@@ -69,7 +65,15 @@ export async function createNote(payload: {
 }
 
 export async function deleteNote(id: string): Promise<void> {
-  const supabase = createClient()
-  const { error } = await supabase.from('notes').delete().eq('id', id)
+  const { supabase, companyId } = await requireCompany()
+  // .select('id') = vérifier les lignes réellement supprimées — sans ça, RLS peut
+  // bloquer silencieusement et on renverrait un faux succès (S2.2)
+  const { data, error } = await supabase
+    .from('notes')
+    .delete()
+    .eq('id', id)
+    .eq('company_id', companyId)
+    .select('id')
   if (error) throw error
+  if (!data?.length) throw new ApiError(404, 'Note introuvable')
 }
