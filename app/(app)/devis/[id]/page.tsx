@@ -44,37 +44,6 @@ interface DevisPlaceholder {
   lignes: LignePlaceholder[]
 }
 
-// ── Données fictives pour le rendu ───────────────────────────────
-const DEVIS_MOCK: DevisPlaceholder = {
-  id: '1',
-  numero: 'DEV-2026-001',
-  titre: 'Rénovation cuisine complète',
-  statut: 'envoye',
-  client_nom: 'Jean Tremblay',
-  client_email: 'jean.tremblay@example.com',
-  client_ville: 'Québec',
-  projet_titre: 'Maison Tremblay — Cuisine',
-  date_emission: '2026-06-10',
-  date_validite: '2026-07-10',
-  sous_total: 18500,
-  taux_tps: 5,
-  taux_tvq: 9.975,
-  montant_tps: 925,
-  montant_tvq: 1845.38,
-  total_ttc: 21270.38,
-  notes_client: 'Travaux à débuter dès approbation. Délai estimé : 3 semaines.',
-  notes_internes: 'Client très précis sur les finitions — prévoir marge de 10%.',
-  lignes: [
-    { id: '1', description: 'Démolition et préparation',    quantite: 1,  unite: 'forfait', prix_unitaire: 2500,  total_ligne: 2500  },
-    { id: '2', description: 'Armoires cuisine (supply)',    quantite: 1,  unite: 'forfait', prix_unitaire: 8000,  total_ligne: 8000  },
-    { id: '3', description: 'Installation armoires',       quantite: 16, unite: 'h',       prix_unitaire: 85,    total_ligne: 1360  },
-    { id: '4', description: 'Comptoir quartz 3cm',         quantite: 22, unite: 'pi²',     prix_unitaire: 145,   total_ligne: 3190  },
-    { id: '5', description: 'Plomberie — relocalisation',  quantite: 1,  unite: 'forfait', prix_unitaire: 1200,  total_ligne: 1200  },
-    { id: '6', description: 'Électricité — circuits dédiés', quantite: 1, unite: 'forfait', prix_unitaire: 950, total_ligne: 950   },
-    { id: '7', description: 'Peinture & finitions',        quantite: 1,  unite: 'forfait', prix_unitaire: 1300,  total_ligne: 1300  },
-  ],
-}
-
 // ── Helpers ───────────────────────────────────────────────────────
 const STATUT_CONFIG: Record<StatutDevis, { label: string; color: string; bg: string }> = {
   brouillon: { label: 'Brouillon',  color: 'var(--txt-3)',   bg: 'var(--bg-3)'       },
@@ -420,8 +389,9 @@ function ModalApprobation({ devis, onClose, onApproved }: {
 // ── Page principale ───────────────────────────────────────────────
 export default function DevisDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [devisData, setDevisData] = useState<DevisPlaceholder>(DEVIS_MOCK)
-  const [statut, setStatut] = useState<StatutDevis>(DEVIS_MOCK.statut)
+  const [devisData, setDevisData] = useState<DevisPlaceholder | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [statut, setStatut] = useState<StatutDevis>('brouillon')
   const [showModalEnvoi, setShowModalEnvoi] = useState(false)
   const [showConfirmRefus, setShowConfirmRefus] = useState(false)
   const [showModalApprobation, setShowModalApprobation] = useState(false)
@@ -444,7 +414,7 @@ export default function DevisDetailPage() {
       .eq('id', id)
       .single()
       .then(({ data }) => {
-        if (!data) return
+        if (!data) { setLoading(false); return }
         const cli = data.clients as any ?? {}
         const ht = Number(data.montant_ht ?? 0)
         const lignes = Array.isArray(data.lignes) ? data.lignes.map((l: any, i: number) => ({
@@ -475,8 +445,27 @@ export default function DevisDetailPage() {
         }
         setDevisData(loaded)
         setStatut(loaded.statut)
+        setLoading(false)
       })
   }, [id])
+
+  if (loading) {
+    return <div style={{ padding: '24px', color: 'var(--txt-3)', fontSize: '13px' }}>Chargement du devis…</div>
+  }
+
+  if (!devisData) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <a href="/devis" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--txt-3)', textDecoration: 'none', marginBottom: '24px' }}>
+          <ArrowLeft size={13} /> Devis
+        </a>
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '40px', textAlign: 'center' }}>
+          <FileText size={32} color="var(--bg-4)" strokeWidth={1.2} />
+          <p style={{ fontSize: '13px', color: 'var(--txt-3)', marginTop: '12px' }}>Devis introuvable — ID: {id}</p>
+        </div>
+      </div>
+    )
+  }
 
   const devis = { ...devisData, statut }
 

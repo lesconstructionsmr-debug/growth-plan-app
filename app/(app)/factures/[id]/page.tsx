@@ -30,29 +30,6 @@ interface FactureRow {
   lignes: LigneRow[]; paiements: PaiementRow[]
 }
 
-const MOCK: FactureRow = {
-  id: '1', numero: 'FAC-2026-001', titre: 'Rénovation cuisine complète',
-  statut: 'partielle', client_nom: 'Jean Tremblay',
-  client_email: 'jean.tremblay@example.com', devis_numero: 'DEV-2026-001',
-  date_emission: '2026-06-15', date_echeance: '2026-07-15',
-  sous_total: 18500, taux_tps: 5, taux_tvq: 9.975,
-  montant_tps: 925, montant_tvq: 1845.38, total_ttc: 21270.38,
-  montant_paye: 6381.11, solde_restant: 14889.27,
-  notes_client: 'Merci de faire le paiement par virement Interac ou chèque.',
-  lignes: [
-    { id:'1', description:'Démolition et préparation',     quantite:1,  unite:'forfait', prix_unitaire:2500, total_ligne:2500  },
-    { id:'2', description:'Armoires cuisine (supply)',      quantite:1,  unite:'forfait', prix_unitaire:8000, total_ligne:8000  },
-    { id:'3', description:'Installation armoires',         quantite:16, unite:'h',       prix_unitaire:85,   total_ligne:1360  },
-    { id:'4', description:'Comptoir quartz 3cm',           quantite:22, unite:'pi²',     prix_unitaire:145,  total_ligne:3190  },
-    { id:'5', description:'Plomberie — relocalisation',    quantite:1,  unite:'forfait', prix_unitaire:1200, total_ligne:1200  },
-    { id:'6', description:'Électricité — circuits dédiés', quantite:1,  unite:'forfait', prix_unitaire:950,  total_ligne:950   },
-    { id:'7', description:'Peinture & finitions',          quantite:1,  unite:'forfait', prix_unitaire:1300, total_ligne:1300  },
-  ],
-  paiements: [
-    { id:'p1', date_paiement:'2026-06-16', montant:6381.11, type_paiement:'interac', reference:'ACOMPTE-001', notes:'Acompte 30%' },
-  ],
-}
-
 const STATUT_CFG: Record<StatutFacture,{label:string;color:string;bg:string}> = {
   brouillon: {label:'Brouillon', color:'var(--txt-3)',  bg:'var(--bg-3)'     },
   envoyee:   {label:'Envoyée',   color:'var(--blue)',   bg:'var(--blue)18'   },
@@ -134,9 +111,9 @@ function ModalPaiement({totalRestant,onClose,onSave}:{
 
 export default function FactureDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [facture, setFacture] = useState<FactureRow>(MOCK)
+  const [facture, setFacture] = useState<FactureRow | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [loaded, setLoaded] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
@@ -150,7 +127,7 @@ export default function FactureDetailPage() {
       .eq('id', id)
       .single()
       .then(({ data }) => {
-        if (!data) return
+        if (!data) { setLoading(false); return }
         const total = Number(data.montant_ttc ?? 0)
         setFacture({
           id: data.id,
@@ -181,14 +158,33 @@ export default function FactureDetailPage() {
           })) : [],
           paiements: [],
         })
-        setLoaded(true)
+        setLoading(false)
       })
   }, [id])
+
+  if (loading) {
+    return <div style={{ padding: '24px', color: 'var(--txt-3)', fontSize: '13px' }}>Chargement de la facture…</div>
+  }
+
+  if (!facture) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <a href="/factures" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--txt-3)', textDecoration: 'none', marginBottom: '24px' }}>
+          <ArrowLeft size={13} /> Factures
+        </a>
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '40px', textAlign: 'center' }}>
+          <CreditCard size={32} color="var(--bg-4)" strokeWidth={1.2} />
+          <p style={{ fontSize: '13px', color: 'var(--txt-3)', marginTop: '12px' }}>Facture introuvable — ID: {id}</p>
+        </div>
+      </div>
+    )
+  }
 
   const cfg = STATUT_CFG[facture.statut]
   const pct = Math.min(100,(facture.montant_paye/Math.max(facture.total_ttc,1))*100)
 
   async function handleSave(p:{montant:number;type:TypePaiement;reference:string;notes:string}) {
+    if (!facture) return
     const paye = facture.montant_paye + p.montant
     const solde = Math.max(0, facture.total_ttc - paye)
     const newStatut: StatutFacture = solde <= 0 ? 'payee' : 'partielle'
@@ -203,10 +199,10 @@ export default function FactureDetailPage() {
       date_paiement: newStatut === 'payee' ? new Date().toISOString().split('T')[0] : null,
     }).eq('id', facture.id)
 
-    setFacture(f=>({
+    setFacture(f=>f?({
       ...f, montant_paye:paye, solde_restant:solde, statut:newStatut,
       paiements:[...f.paiements,{id:`p${Date.now()}`,date_paiement:new Date().toISOString().split('T')[0],montant:p.montant,type_paiement:p.type,reference:p.reference||null,notes:p.notes||null}],
-    }))
+    }):f)
     setShowModal(false)
   }
 
@@ -227,7 +223,7 @@ export default function FactureDetailPage() {
           <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'4px'}}>
             <h1 style={{fontSize:'20px',fontWeight:700,color:'var(--txt-1)',margin:0}}>{facture.numero}</h1>
             <span style={{padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:600,background:cfg.bg,color:cfg.color}}>{cfg.label}</span>
-            {facture.devis_numero&&<a href="/devis/1" style={{padding:'3px 8px',borderRadius:'20px',fontSize:'10px',background:'var(--bg-3)',color:'var(--txt-3)',textDecoration:'none'}}>← {facture.devis_numero}</a>}
+            {facture.devis_numero&&<span style={{padding:'3px 8px',borderRadius:'20px',fontSize:'10px',background:'var(--bg-3)',color:'var(--txt-3)'}}>← {facture.devis_numero}</span>}
           </div>
           <div style={{fontSize:'13px',color:'var(--txt-2)'}}>{facture.titre}</div>
         </div>

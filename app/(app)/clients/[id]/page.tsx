@@ -217,23 +217,6 @@ interface Client {
   date_creation: string
 }
 
-// ── Mock data ──────────────────────────────────────────────────
-const MOCK_CLIENTS: Record<string, Client> = {
-  '1': { id:'1', prenom:'Jean', nom:'Tremblay', email:'jean.tremblay@gmail.com', telephone:'514-555-0101', adresse:'245 av. des Pins', ville:'Montréal', province:'QC', type:'residential', statut:'actif', valeur_totale:43200, nb_projets:3, date_creation:'2025-03-12' },
-  '2': { id:'2', prenom:'Marie', nom:'Gagnon', email:'marie.gagnon@outlook.com', telephone:'418-555-0234', adresse:'88 ch. des Quatre-Bourgeois', ville:'Québec', province:'QC', type:'residential', statut:'actif', valeur_totale:28500, nb_projets:2, date_creation:'2025-07-08' },
-  '3': { id:'3', prenom:'Pierre', nom:'Bouchard', entreprise:'Immeubles PB inc.', email:'p.bouchard@immeublespb.com', telephone:'450-555-0388', adresse:'1200 boul. Industriel', ville:'Laval', province:'QC', type:'commercial', statut:'actif', valeur_totale:112000, nb_projets:5, date_creation:'2024-11-20' },
-}
-
-const MOCK_MESSAGES: ChatMessage[] = [
-  { id:'1', de:'systeme', contenu:'Fiche client créée', date: new Date('2026-06-10T09:00:00'), lu:true, type:'texte' },
-  { id:'2', de:'systeme', contenu:'Devis DEV-2026-001 envoyé — Rénovation cuisine complète · 19 847 $', date: new Date('2026-06-10T10:15:00'), lu:true, type:'devis', meta:{ numero:'DEV-2026-001', montant:19847, lien:'/devis/1' } },
-  { id:'3', de:'client', contenu:'Bonjour, merci pour le devis. Est-ce que le prix inclut l\'installation des comptoirs en quartz ?', date: new Date('2026-06-11T14:32:00'), lu:true },
-  { id:'4', de:'moi', contenu:'Bonjour Jean ! Oui, l\'installation des comptoirs en quartz est incluse dans le poste "Comptoirs et dosseret" à la ligne 3 du devis. N\'hésitez pas si vous avez d\'autres questions !', date: new Date('2026-06-11T16:05:00'), lu:true },
-  { id:'5', de:'client', contenu:'Parfait merci ! On approuve le devis.', date: new Date('2026-06-12T09:18:00'), lu:true },
-  { id:'6', de:'systeme', contenu:'Devis DEV-2026-001 approuvé ✓ — Facture FAC-2026-001 générée automatiquement', date: new Date('2026-06-12T09:20:00'), lu:true, type:'facture', meta:{ numero:'FAC-2026-001', montant:19847, lien:'/factures/1' } },
-  { id:'7', de:'systeme', contenu:'📅 Rappel envoyé — Facture FAC-2026-001 en attente de paiement (échéance dans 3 jours)', date: new Date('2026-06-27T08:00:00'), lu:false, type:'rappel' },
-]
-
 const TABS = [
   { id: 'apercu',    label: 'Aperçu'    },
   { id: 'devis',     label: 'Devis'     },
@@ -256,9 +239,9 @@ function fmtCAD(n: number) {
   return n.toLocaleString('fr-CA', { style:'currency', currency:'CAD', maximumFractionDigits:0 })
 }
 
-// ── Chat panel ────────────────────────────────────────────────
+// ── Chat panel (messagerie client — pas encore branchée au backend) ──
 function ChatPanel({ client }: { client: Client }) {
-  const [messages, setMessages] = useState<ChatMessage[]>(MOCK_MESSAGES)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
@@ -416,7 +399,7 @@ function ChatPanel({ client }: { client: Client }) {
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [activeTab, setActiveTab] = useState('apercu')
-  const [client, setClient] = useState<Client | null>(MOCK_CLIENTS[id as string] ?? null)
+  const [client, setClient] = useState<Client | null>(null)
   const [clientLoading, setClientLoading] = useState(true)
 
   useEffect(() => {
@@ -472,7 +455,7 @@ export default function ClientDetailPage() {
   }
 
   const c = client!
-  const nonLusCount = MOCK_MESSAGES.filter(m => m.de === 'client' && !m.lu).length
+  const nonLusCount = 0
 
   return (
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1000px' }}>
@@ -556,20 +539,25 @@ export default function ClientDetailPage() {
           </div>
           <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '18px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Activité récente</div>
-            {MOCK_MESSAGES.slice(-4).reverse().map(m => (
-              <div key={m.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '7px 0', borderBottom: '0.5px solid var(--line)' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: m.de === 'client' ? 'var(--gold)' : m.de === 'systeme' ? 'var(--blue)' : 'var(--green)', marginTop: '5px', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '11px', color: 'var(--txt-1)', lineHeight: 1.4 }}>{m.contenu.length > 60 ? m.contenu.slice(0, 60) + '…' : m.contenu}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '2px' }}>{fmtDate(m.date)}</div>
-                </div>
-              </div>
-            ))}
+            <div style={{ padding: '20px 0', textAlign: 'center' }}>
+              <Clock size={20} color="var(--bg-4)" strokeWidth={1.2} />
+              <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: '8px 0 0' }}>
+                L&apos;activité du client (devis envoyés, factures, paiements) apparaîtra ici.
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {activeTab === 'messages' && <ChatPanel client={c} />}
+      {activeTab === 'messages' && (
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <MessageSquare size={28} color="var(--bg-4)" strokeWidth={1.2} />
+          <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-2)', margin: 0 }}>Messagerie client — Bientôt disponible</p>
+          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0, textAlign: 'center' }}>
+            Vous pourrez échanger avec {c.prenom} directement ici.<br/>Ses réponses par courriel apparaîtront automatiquement.
+          </p>
+        </div>
+      )}
 
       {activeTab === 'devis' && (
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
