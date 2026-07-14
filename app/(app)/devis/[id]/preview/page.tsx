@@ -53,21 +53,24 @@ const DEVIS_MOCK = {
 
 export default function DevisPreviewPage() {
   const { id } = useParams<{ id: string }>()
-  const [devis, setDevis] = useState(DEVIS_MOCK)
+  const [devis, setDevis] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!id) return
+    if (!id) { setLoading(false); return }
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
-    supabase
-      .from('devis')
-      .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, valide_jusqu_au, notes, clients(nom, email, adresse, ville), companies(name, email, telephone, adresse, ville, tps_no, tvq_no)')
-      .eq('id', id)
-      .single()
-      .then(({ data }) => {
-        if (!data) return
+    async function loadData() {
+      try {
+        const { data } = await supabase
+          .from('devis')
+          .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, valide_jusqu_au, notes, clients(nom, email, adresse, ville), companies(name, email, telephone, adresse, ville, tps_no, tvq_no)')
+          .eq('id', id)
+          .single()
+
+        if (!data) { setLoading(false); return }
         const cli = data.clients as any ?? {}
         const org = data.companies as any ?? {}
         const lignes = Array.isArray(data.lignes) ? data.lignes.map((l: any, i: number) => ({
@@ -107,8 +110,30 @@ export default function DevisPreviewPage() {
             tvq_numero: org.tvq_no ?? '',
           },
         })
-      })
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
   }, [id])
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--txt-3)', fontSize: '13px' }}>Chargement de l'aperçu du devis…</p>
+      </div>
+    )
+  }
+
+  if (!devis) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--txt-3)', fontSize: '13px' }}>Devis introuvable</p>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)' }}>
@@ -266,7 +291,7 @@ export default function DevisPreviewPage() {
               </tr>
             </thead>
             <tbody>
-              {devis.lignes.map((l, i) => (
+              {devis.lignes.map((l: any, i: number) => (
                 <tr key={l.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
                   <td style={{ padding: '10px 12px', fontSize: '12px' }}>{l.description}</td>
                   <td style={{ padding: '10px 12px', fontSize: '12px', textAlign: 'right' }}>{l.quantite}</td>

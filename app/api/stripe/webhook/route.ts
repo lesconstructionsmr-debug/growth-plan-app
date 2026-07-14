@@ -86,21 +86,51 @@ export async function POST(request: NextRequest) {
 // ── Handlers ──────────────────────────────────────────────────────
 
 async function handleSubscriptionChange(sub: StripeSubscription) {
-  // Client service-role : un webhook n'a pas de session utilisateur,
-  // le client anon était bloqué par RLS → échec silencieux (S1.1)
   const supabase = createAdminClient()
-  const { error } = await supabase.from('subscriptions').upsert({
-    stripe_customer_id:     sub.customer,
-    stripe_subscription_id: sub.id,
-    status:                 sub.status,
-    plan:                   sub.items.data[0]?.price?.recurring?.interval ?? 'month',
-    current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
-    trial_end:              sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-  }, { onConflict: 'stripe_customer_id' })
+  const companyId = sub.metadata?.company_id
 
-  // Erreur = throw → le handler renvoie 500 → Stripe réessaie (plus d'échec silencieux)
-  if (error) throw new Error(`[webhook] upsert subscription ${sub.id}: ${error.message}`)
-  console.log(`[webhook] Abonnement mis à jour: ${sub.id} → ${sub.status}`)
+  if (!companyId) {
+    throw new Error(`[webhook] metadata company_id manquante pour la souscription ${sub.id}`)
+  }
+
+  // Vérifier s'il existe déjà un abonnement pour cette compagnie
+  const { data: existingSub } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('company_id', companyId)
+    .single()
+
+  let error
+  if (existingSub) {
+    const { error: err } = await supabase
+      .from('subscriptions')
+      .update({
+        stripe_customer_id:     sub.customer,
+        stripe_subscription_id: sub.id,
+        status:                 sub.status,
+        plan:                   sub.items.data[0]?.price?.recurring?.interval === 'year' ? 'annuel' : 'mensuel',
+        current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
+        trial_end:              sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+      })
+      .eq('company_id', companyId)
+    error = err
+  } else {
+    const { error: err } = await supabase
+      .from('subscriptions')
+      .upsert({
+        company_id:             companyId,
+        stripe_customer_id:     sub.customer,
+        stripe_subscription_id: sub.id,
+        status:                 sub.status,
+        plan:                   sub.items.data[0]?.price?.recurring?.interval === 'year' ? 'annuel' : 'mensuel',
+        current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
+        trial_end:              sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+      }, { onConflict: 'company_id' })
+    error = err
+  }
+
+  if (error) throw new Error(`[webhook] mise à jour subscription ${sub.id}: ${error.message}`)
+  console.log(`[webhook] Abonnement mis à jour: ${sub.id} → ${sub.status} pour company_id: ${companyId}`)
 }
 
 async function handleSubscriptionDeleted(sub: StripeSubscription) {
@@ -184,6 +214,7 @@ interface StripeSubscription {
   id: string; customer: string; status: string; trial_end: number | null
   current_period_end: number
   items: { data: Array<{ price: { recurring: { interval: string } } }> }
+  metadata?: Record<string, string>
 }
 interface StripeInvoice {
   customer: string; customer_email: string | null; amount_paid: number

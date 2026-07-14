@@ -87,7 +87,7 @@ export default function NouveauDevisPage() {
   const [form, setForm] = useState<FormData>({
     client_id: '',
     titre: '',
-    numero: `DEV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
+    numero: '', // Initialisé vide pour éviter les erreurs d'hydratation SSR/Client
     date_emission: today(),
     date_validite: addDays(today(), 30),
     reference_projet: '',
@@ -98,6 +98,14 @@ export default function NouveauDevisPage() {
     appliquer_tvq: true,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Générer le numéro uniquement sur le client après montage
+  useEffect(() => {
+    setForm(prev => ({
+      ...prev,
+      numero: prev.numero || `DEV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`
+    }))
+  }, [])
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [showModeles, setShowModeles] = useState(false)
   const [clients, setClients] = useState<ClientOption[]>([])

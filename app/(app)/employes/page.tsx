@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import {
-  HardHat, Plus, Search,
-  CheckCircle2, XCircle,
+  HardHat, Plus, Search, Loader2, X,
+  CheckCircle2, XCircle, Mail, DollarSign
 } from 'lucide-react'
 
 interface EmployeRow {
@@ -12,6 +12,7 @@ interface EmployeRow {
   nom: string
   email: string | null
   poste: string | null
+  taux_horaire: number | null
   actif: boolean
 }
 
@@ -19,27 +20,84 @@ export default function EmployesPage() {
   const [search, setSearch] = useState('')
   const [employes, setEmployes] = useState<EmployeRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Form states
+  const [nom, setNom] = useState('')
+  const [email, setEmail] = useState('')
+  const [poste, setPoste] = useState('')
+  const [tauxHoraire, setTauxHoraire] = useState('')
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const loadEmployes = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('employes')
+      .select('id, nom, email, poste, taux_horaire, statut')
+      .order('nom', { ascending: true })
+
+    if (error) {
+      console.error('[loadEmployes]', error)
+    } else {
+      setEmployes((data ?? []).map((e: any) => ({
+        id: e.id,
+        nom: e.nom,
+        email: e.email ?? null,
+        poste: e.poste ?? null,
+        taux_horaire: e.taux_horaire ? Number(e.taux_horaire) : null,
+        actif: e.statut !== 'inactif',
+      })))
+    }
+    setLoading(false)
+  }, [supabase])
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    supabase
-      .from('employes')
-      .select('id, nom, email, poste, statut')
-      .order('nom', { ascending: true })
-      .then(({ data }) => {
-        setEmployes((data ?? []).map((e: any) => ({
-          id: e.id,
-          nom: e.nom,
-          email: e.email ?? null,
-          poste: e.poste ?? null,
-          actif: e.statut !== 'inactif',
-        })))
-        setLoading(false)
-      })
-  }, [])
+    loadEmployes()
+  }, [loadEmployes])
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!nom.trim()) return
+    setSaving(true)
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Utilisateur non connecté')
+      const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
+      if (!profile?.company_id) throw new Error('Entreprise introuvable')
+
+      const { error } = await supabase
+        .from('employes')
+        .insert({
+          company_id: profile.company_id,
+          nom: nom.trim(),
+          email: email.trim() || null,
+          poste: poste.trim() || null,
+          taux_horaire: tauxHoraire ? parseFloat(tauxHoraire) : null,
+          statut: 'actif'
+        })
+
+      if (error) throw error
+
+      // Reset & close
+      setNom('')
+      setEmail('')
+      setPoste('')
+      setTauxHoraire('')
+      setShowModal(false)
+      await loadEmployes()
+    } catch (err) {
+      console.error('[handleAdd]', err)
+      alert('Erreur lors de l\'ajout de l\'employé')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const filtered = employes.filter(e =>
     e.nom.toLowerCase().includes(search.toLowerCase())
@@ -57,12 +115,15 @@ export default function EmployesPage() {
             {loading ? '…' : employes.length}
           </span>
         </div>
-        <button style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'var(--gold)', borderRadius: '8px', padding: '8px 14px',
-          fontSize: '12px', fontWeight: 600, color: '#0A0A0A', border: 'none', cursor: 'pointer',
-        }}>
-          <Plus size={13} /> Inviter
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: 'var(--gold)', borderRadius: '8px', padding: '8px 14px',
+            fontSize: '12px', fontWeight: 600, color: '#0A0A0A', border: 'none', cursor: 'pointer',
+          }}
+        >
+          <Plus size={13} /> Ajouter un employé
         </button>
       </div>
 
@@ -82,7 +143,12 @@ export default function EmployesPage() {
       </div>
 
       <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '8px', color: 'var(--txt-3)', fontSize: '12px' }}>
+            <Loader2 size={16} className="animate-spin" />
+            Chargement...
+          </div>
+        ) : filtered.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '10px' }}>
             <HardHat size={32} color="var(--bg-4)" strokeWidth={1.2} />
             <p style={{ fontSize: '13px', color: 'var(--txt-3)', margin: 0 }}>Aucun employé pour l'instant</p>
@@ -115,6 +181,11 @@ export default function EmployesPage() {
                     {e.poste}
                   </span>
                 )}
+                {e.taux_horaire && (
+                  <span style={{ fontSize: '11px', color: 'var(--txt-2)', marginRight: '14px' }}>
+                    {e.taux_horaire.toFixed(2)} $/h
+                  </span>
+                )}
                 <span style={{ fontSize: '11px', color: e.actif ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: '3px' }}>
                   {e.actif ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
                   {e.actif ? 'Actif' : 'Inactif'}
@@ -124,6 +195,73 @@ export default function EmployesPage() {
           })
         )}
       </div>
+
+      {/* MODAL AJOUT */}
+      {showModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px'
+        }}>
+          <form onSubmit={handleAdd} style={{
+            background: 'var(--bg-1)', border: '0.5px solid var(--line)',
+            borderRadius: '12px', width: '100%', maxWidth: '440px', overflow: 'hidden'
+          }}>
+            <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>Ajouter un employé</span>
+              <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Nom complet *</label>
+                <input
+                  type="text" required value={nom} onChange={e => setNom(e.target.value)}
+                  placeholder="Martin Bédard"
+                  style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Adresse courriel</label>
+                <input
+                  type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="martin@exemple.com"
+                  style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Poste</label>
+                  <input
+                    type="text" value={poste} onChange={e => setPoste(e.target.value)}
+                    placeholder="Apprenti Peintre"
+                    style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Taux horaire ($/h)</label>
+                  <input
+                    type="number" step="0.01" value={tauxHoraire} onChange={e => setTauxHoraire(e.target.value)}
+                    placeholder="25.00"
+                    style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '14px 20px', borderTop: '0.5px solid var(--line)', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', color: 'var(--txt-2)', cursor: 'pointer' }}>Annuler</button>
+              <button type="submit" disabled={saving} style={{ background: 'var(--gold)', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '12px', fontWeight: 700, color: '#0A0A0A', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {saving ? 'Enregistrement...' : 'Ajouter'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

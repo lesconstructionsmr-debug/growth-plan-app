@@ -102,7 +102,7 @@ export default function NouvelleFacturePage() {
   const [form, setForm] = useState<FormData>({
     client_id: '',
     reference_devis: '',
-    numero: `FAC-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`,
+    numero: '', // Initialisé vide pour éviter les erreurs d'hydratation SSR/Client
     date_emission: today(),
     date_echeance: addDays(today(), 30),
     mode_reglement: 'virement',
@@ -114,6 +114,14 @@ export default function NouvelleFacturePage() {
     appliquer_tps: true,
     appliquer_tvq: true,
   })
+
+  // Générer le numéro uniquement sur le client après montage
+  useEffect(() => {
+    setForm(prev => ({
+      ...prev,
+      numero: prev.numero || `FAC-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`
+    }))
+  }, [])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')

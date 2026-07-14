@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pure-ascension-dist",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", "C:/Users/WARRIORS666/pure-ascension/mon-nouveau-projet/dist", "-l", "4173"],
+      "port": 4173
+    }
+  ]
+}

@@ -34,6 +34,14 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     const customerEmail = user.email
 
+    // Récupérer le company_id de l'utilisateur connecté
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+    const companyId = profile?.company_id
+
     const priceId = periode === 'annuel'
       ? process.env.STRIPE_PRICE_ANNUAL
       : process.env.STRIPE_PRICE_MONTHLY
@@ -57,6 +65,7 @@ export async function POST(request: NextRequest) {
       'subscription_data[trial_period_days]': String(trialDays),
       'locale':                           'fr-CA',
       // Métadonnées pour traçabilité
+      'subscription_data[metadata][company_id]': companyId ?? '',
       'subscription_data[metadata][promo_code]': promoCode?.trim().toUpperCase() ?? '',
       'subscription_data[metadata][trial_days]': String(trialDays),
     })
