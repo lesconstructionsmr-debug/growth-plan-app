@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Receipt, Plus, Search, Loader2, X, Wallet } from 'lucide-react'
 
-const CATEGORIES = ['Matériaux', 'Équipement', 'Sous-traitant', 'Transport', 'Hébergement', 'Autre']
+const CATEGORIES = ['Matériaux', 'Équipement', 'Sous-traitant', 'Transport', 'Hébergement', 'Dépense Fixe', 'Budget Personnel', 'Autre']
 
 const CAT_STYLE: Record<string, { color: string; bg: string }> = {
   'Matériaux':    { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)'  },
@@ -12,6 +12,8 @@ const CAT_STYLE: Record<string, { color: string; bg: string }> = {
   'Sous-traitant':{ color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)'  },
   'Transport':    { color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
   'Hébergement':  { color: '#10B981', bg: 'rgba(16,185,129,0.1)'  },
+  'Dépense Fixe':    { color: '#EF4444', bg: 'rgba(239,68,68,0.1)'   },
+  'Budget Personnel':{ color: '#EC4899', bg: 'rgba(236,72,153,0.1)'  },
   'Autre':        { color: '#9CA3AF', bg: 'rgba(156,163,175,0.1)' },
 }
 
