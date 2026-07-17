@@ -229,8 +229,13 @@ create policy "Modifier sa compagnie" on public.companies
   for update using (id = get_my_company_id());
 
 -- Policies profiles
-create policy "Voir son profil" on public.profiles
-  for select using (id = auth.uid());
+-- SELECT : voir son propre profil ET les profils des collègues de la même compagnie
+create policy "Voir les profils de son entreprise" on public.profiles
+  for select using (
+    id = auth.uid()
+    OR company_id = get_my_company_id()
+  );
+-- UPDATE : modifier uniquement son propre profil
 create policy "Modifier son profil" on public.profiles
   for update using (id = auth.uid());
 
