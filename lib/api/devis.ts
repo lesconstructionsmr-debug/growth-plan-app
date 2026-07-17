@@ -15,8 +15,9 @@ export async function getDevis() {
     .from('devis')
     .select('*, clients(nom)')
     .order('created_at', { ascending: false })
+    .limit(100) // Pagination de sécurité : jamais plus de 100 lignes
 
-  if (error) { console.error('[getDevis]', error); return [] }
+  if (error) throw new Error(`[getDevis] ${error.message}`) // Propagé, pas avaleré
   return data ?? []
 }
 

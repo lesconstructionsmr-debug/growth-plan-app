@@ -525,7 +525,15 @@ export default function DevisDetailPage() {
             <Eye size={13} /> Aperçu
           </a>
           <button style={btnSecondaire}><Download size={13} /> PDF</button>
-          <button style={btnSecondaire}><Edit3 size={13} /> Modifier</button>
+          {!['converti', 'refuse', 'expire'].includes(statut) && (
+            <a
+              href={`/devis/nouveau?edit=${id}`}
+              style={{ ...btnSecondaire, textDecoration: 'none' }}
+              title="Modifier ce devis"
+            >
+              <Edit3 size={13} /> Modifier
+            </a>
+          )}
           <button style={btnSecondaire}><Copy size={13} /> Dupliquer</button>
 
           {statut === 'brouillon' && (

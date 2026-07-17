@@ -15,8 +15,9 @@ export async function getFactures() {
     .from('factures')
     .select('*, clients(nom)')
     .order('created_at', { ascending: false })
+    .limit(100) // Pagination de sécurité : jamais plus de 100 lignes
 
-  if (error) { console.error('[getFactures]', error); return [] }
+  if (error) throw new Error(`[getFactures] ${error.message}`) // Propagé, pas avaleré
   return data ?? []
 }
 
