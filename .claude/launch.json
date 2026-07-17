@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "iron-protocol",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "C:/Users/WARRIORS666/iron-protocol", "-l", "4174"],
+      "port": 4174
+    },
+    {
       "name": "pure-ascension-dist",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-s", "C:/Users/WARRIORS666/pure-ascension/mon-nouveau-projet/dist", "-l", "4173"],
