@@ -65,6 +65,14 @@ const FALLBACK_DATA: MarketIndicator[] = [
   { id: '26', date_ref: '2026-07-01', indicateur: 'Taux hypothécaire fixe 5 ans', valeur: 5.24, unite: '%', categorie: 'taux', region: 'Canada' }
 ]
 
+const FRIENDLY_NAMES: Record<string, string> = {
+  'Peinture latex': 'Peinture latex',
+  'Revêtement époxy': 'Époxy',
+  'Apprêt scellant': 'Apprêt scellant',
+  'Bois de charpente': 'Bois',
+  'Béton prêt-à-l\'emploi': 'Béton'
+}
+
 // ── Helper formatage date ────────────────────────────────────────────────────
 function fmtMonth(dateStr: string) {
   const d = new Date(dateStr)
@@ -316,7 +324,7 @@ export default function MarchePage() {
                   onClick={() => setActiveMaterial(m)}
                   style={{ background: activeMaterial === m ? 'var(--bg-3)' : 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '4px 8px', fontSize: '9px', color: activeMaterial === m ? 'var(--txt-1)' : 'var(--txt-3)', cursor: 'pointer', transition: 'all 0.1s' }}
                 >
-                  {m.replace('Peinture ', '').replace('prêt-à-l\'emploi', '').replace('de charpente', '')}
+                  {FRIENDLY_NAMES[m] || m}
                 </button>
               ))}
             </div>
