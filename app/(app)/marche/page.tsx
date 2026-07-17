@@ -19,36 +19,47 @@ interface MarketIndicator {
   region: string
 }
 
-// Données de secours (Fallback) pour assurer un affichage magnifique immédiat
+// Données de secours (Fallback) enrichies pour le métier de peintre (résidentiel & commercial)
 const FALLBACK_DATA: MarketIndicator[] = [
-  // Bois
+  // Peinture latex (gal)
+  { id: 'p1', date_ref: '2025-07-01', indicateur: 'Peinture latex', valeur: 68.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'p2', date_ref: '2025-09-01', indicateur: 'Peinture latex', valeur: 70.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'p3', date_ref: '2025-11-01', indicateur: 'Peinture latex', valeur: 71.50, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'p4', date_ref: '2026-01-01', indicateur: 'Peinture latex', valeur: 73.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'p5', date_ref: '2026-03-01', indicateur: 'Peinture latex', valeur: 74.50, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'p6', date_ref: '2026-05-01', indicateur: 'Peinture latex', valeur: 76.50, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'p7', date_ref: '2026-07-01', indicateur: 'Peinture latex', valeur: 78.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  
+  // Revêtement époxy commercial (kit)
+  { id: 'e1', date_ref: '2025-07-01', indicateur: 'Revêtement époxy', valeur: 210.00, unite: '$/kit', categorie: 'matériaux', region: 'Québec' },
+  { id: 'e2', date_ref: '2025-09-01', indicateur: 'Revêtement époxy', valeur: 215.00, unite: '$/kit', categorie: 'matériaux', region: 'Québec' },
+  { id: 'e3', date_ref: '2025-11-01', indicateur: 'Revêtement époxy', valeur: 222.00, unite: '$/kit', categorie: 'matériaux', region: 'Québec' },
+  { id: 'e4', date_ref: '2026-01-01', indicateur: 'Revêtement époxy', valeur: 225.00, unite: '$/kit', categorie: 'matériaux', region: 'Québec' },
+  { id: 'e5', date_ref: '2026-03-01', indicateur: 'Revêtement époxy', valeur: 230.00, unite: '$/kit', categorie: 'matériaux', region: 'Québec' },
+  { id: 'e6', date_ref: '2026-05-01', indicateur: 'Revêtement époxy', valeur: 238.00, unite: '$/kit', categorie: 'matériaux', region: 'Québec' },
+  { id: 'e7', date_ref: '2026-07-01', indicateur: 'Revêtement époxy', valeur: 245.00, unite: '$/kit', categorie: 'matériaux', region: 'Québec' },
+
+  // Apprêt scellant (gal)
+  { id: 'a1', date_ref: '2025-07-01', indicateur: 'Apprêt scellant', valeur: 42.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'a2', date_ref: '2025-09-01', indicateur: 'Apprêt scellant', valeur: 43.50, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'a3', date_ref: '2025-11-01', indicateur: 'Apprêt scellant', valeur: 44.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'a4', date_ref: '2026-01-01', indicateur: 'Apprêt scellant', valeur: 45.50, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'a5', date_ref: '2026-03-01', indicateur: 'Apprêt scellant', valeur: 47.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'a6', date_ref: '2026-05-01', indicateur: 'Apprêt scellant', valeur: 48.00, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+  { id: 'a7', date_ref: '2026-07-01', indicateur: 'Apprêt scellant', valeur: 49.50, unite: '$/gal', categorie: 'matériaux', region: 'Québec' },
+
+  // Bois de charpente
   { id: '1', date_ref: '2025-07-01', indicateur: 'Bois de charpente', valeur: 380, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '2', date_ref: '2025-09-01', indicateur: 'Bois de charpente', valeur: 395, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '3', date_ref: '2025-11-01', indicateur: 'Bois de charpente', valeur: 410, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '4', date_ref: '2026-01-01', indicateur: 'Bois de charpente', valeur: 430, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '5', date_ref: '2026-03-01', indicateur: 'Bois de charpente', valeur: 445, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '6', date_ref: '2026-05-01', indicateur: 'Bois de charpente', valeur: 465, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
   { id: '7', date_ref: '2026-07-01', indicateur: 'Bois de charpente', valeur: 480, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
   // Béton
   { id: '8', date_ref: '2025-07-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 145, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '9', date_ref: '2025-09-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 148, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '10', date_ref: '2025-11-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 152, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '11', date_ref: '2026-01-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 155, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '12', date_ref: '2026-03-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 158, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  { id: '13', date_ref: '2026-05-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 162, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
   { id: '14', date_ref: '2026-07-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 165, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
-  // Acier
-  { id: '15', date_ref: '2025-07-01', indicateur: 'Acier de structure', valeur: 1850, unite: '$/tonne', categorie: 'matériaux', region: 'Québec' },
-  { id: '16', date_ref: '2025-09-01', indicateur: 'Acier de structure', valeur: 1880, unite: '$/tonne', categorie: 'matériaux', region: 'Québec' },
-  { id: '17', date_ref: '2025-11-01', indicateur: 'Acier de structure', valeur: 1920, unite: '$/tonne', categorie: 'matériaux', region: 'Québec' },
-  { id: '18', date_ref: '2026-01-01', indicateur: 'Acier de structure', valeur: 1950, unite: '$/tonne', categorie: 'matériaux', region: 'Québec' },
-  { id: '19', date_ref: '2026-03-01', indicateur: 'Acier de structure', valeur: 1990, unite: '$/tonne', categorie: 'matériaux', region: 'Québec' },
-  { id: '20', date_ref: '2026-05-01', indicateur: 'Acier de structure', valeur: 2050, unite: '$/tonne', categorie: 'matériaux', region: 'Québec' },
-  { id: '21', date_ref: '2026-07-01', indicateur: 'Acier de structure', valeur: 2100, unite: '$/tonne', categorie: 'matériaux', region: 'Québec' },
+
   // Mises en chantier
   { id: '22', date_ref: '2026-06-30', indicateur: 'Mises en chantier', valeur: 3820, unite: 'unités', categorie: 'logement', region: 'Montréal' },
   { id: '23', date_ref: '2026-06-30', indicateur: 'Mises en chantier', valeur: 1480, unite: 'unités', categorie: 'logement', region: 'Laurentides' },
   { id: '24', date_ref: '2026-06-30', indicateur: 'Mises en chantier', valeur: 2150, unite: 'unités', categorie: 'logement', region: 'Montérégie' },
+  
   // Taux
   { id: '25', date_ref: '2026-07-01', indicateur: 'Taux directeur', valeur: 4.50, unite: '%', categorie: 'taux', region: 'Canada' },
   { id: '26', date_ref: '2026-07-01', indicateur: 'Taux hypothécaire fixe 5 ans', valeur: 5.24, unite: '%', categorie: 'taux', region: 'Canada' }
@@ -63,7 +74,7 @@ function fmtMonth(dateStr: string) {
 export default function MarchePage() {
   const [data, setData] = useState<MarketIndicator[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeMaterial, setActiveMaterial] = useState<string>('Bois de charpente')
+  const [activeMaterial, setActiveMaterial] = useState<string>('Peinture latex')
   const [dbNotice, setDbNotice] = useState(false)
 
   // Initialisation Supabase Browser Client
@@ -83,7 +94,6 @@ export default function MarchePage() {
       if (error) throw error
 
       if (!res || res.length === 0) {
-        // Si la table est vide, charger les fallbacks et lever une notification informative
         setData(FALLBACK_DATA)
         setDbNotice(true)
       } else {
@@ -103,8 +113,9 @@ export default function MarchePage() {
     loadMarketData()
   }, [])
 
-  // Extraire les indicateurs pour le graphique temporel
-  const materialTypes = ['Bois de charpente', 'Béton prêt-à-l\'emploi', 'Acier de structure']
+  // Liste des filtres de matériaux orientés PEINTRE (Latex, Époxy, Apprêt) + Gros oeuvre
+  const materialTypes = ['Peinture latex', 'Revêtement époxy', 'Apprêt scellant', 'Bois de charpente', 'Béton prêt-à-l\'emploi']
+  
   const chartPoints = data
     .filter(x => x.indicateur === activeMaterial)
     .map(x => ({ label: fmtMonth(x.date_ref), value: Number(x.valeur) }))
@@ -116,11 +127,11 @@ export default function MarchePage() {
   const mortgageRate = data.find(x => x.indicateur === 'Taux hypothécaire fixe 5 ans')?.valeur ?? 5.24
   const bankRate = data.find(x => x.indicateur === 'Taux directeur')?.valeur ?? 4.50
   
-  // Calcul variation du bois de charpente
-  const woodHistory = data.filter(x => x.indicateur === 'Bois de charpente')
-  const woodStart = woodHistory[0]?.valeur ?? 380
-  const woodEnd = woodHistory[woodHistory.length - 1]?.valeur ?? 480
-  const woodDiffPct = Math.round(((woodEnd - woodStart) / woodStart) * 100)
+  // Calcul variation de la peinture latex (indicateur principal peintre)
+  const paintHistory = data.filter(x => x.indicateur === 'Peinture latex')
+  const paintStart = paintHistory[0]?.valeur ?? 68.00
+  const paintEnd = paintHistory[paintHistory.length - 1]?.valeur ?? 78.00
+  const paintDiffPct = Math.round(((paintEnd - paintStart) / paintStart) * 100)
 
   // Composant SVG de graphique linéaire (robuste pour PDF et SSR)
   function LineChartSvg({ points }: { points: { label: string; value: number }[] }) {
@@ -207,9 +218,9 @@ export default function MarchePage() {
         <div className="no-print" style={{ background: 'var(--gold-2)10', border: '0.5px solid var(--gold-3)', borderRadius: '10px', padding: '12px 16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
           <AlertCircle size={18} color="var(--gold-2)" />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Démonstration active (Données de Secours)</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Démonstration active (Données de Secours Peintre)</div>
             <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '2px' }}>
-              La table `market_trends` de votre Supabase n'est pas alimentée. Nous affichons les indices de marché modélisés du Québec. Exécutez le script SQL `seed-market-trends.sql` pour lier de vraies entrées en base de données.
+              La table `market_trends` de votre Supabase n'est pas alimentée. Nous affichons les indices de marché de peinture et de construction modélisés. Exécutez le script SQL `seed-market-trends.sql` pour lier vos vraies données.
             </div>
           </div>
           <button onClick={loadMarketData} style={{ background: 'none', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 10px', fontSize: '10px', color: 'var(--txt-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -223,9 +234,9 @@ export default function MarchePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <TrendingUp size={20} color="var(--gold)" />
-            <h1 className="print-title" style={{ fontSize: '20px', fontWeight: 700, color: 'var(--txt-1)', margin: 0 }}>Analyse de Marché</h1>
+            <h1 className="print-title" style={{ fontSize: '20px', fontWeight: 700, color: 'var(--txt-1)', margin: 0 }}>Analyse de Marché Peintre</h1>
           </div>
-          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Indicateurs externes et prévisions économiques du secteur de la construction au Québec</p>
+          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Indicateurs de peinture (latex, époxy) et prévisions économiques résidentielles / commerciales au Québec</p>
         </div>
         <div className="no-print" style={{ display: 'flex', gap: '8px' }}>
           <button
@@ -260,15 +271,15 @@ export default function MarchePage() {
           <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>Banque du Canada stable</div>
         </div>
 
-        {/* Indice Matériaux (Bois) */}
+        {/* Indice Peinture (Latex) */}
         <div className="print-card" style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--txt-3)' }}>
-            <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Bois de Charpente (m³)</span>
+            <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Peinture Latex (gal)</span>
             <Hammer size={14} color="var(--gold)" />
           </div>
-          <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--txt-1)' }}>{woodEnd} $</div>
+          <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--txt-1)' }}>{paintEnd} $</div>
           <div style={{ fontSize: '10px', color: 'var(--green)', fontWeight: 600 }}>
-            +{woodDiffPct}% depuis 12 mois
+            +{paintDiffPct}% depuis 12 mois
           </div>
         </div>
 
@@ -281,7 +292,7 @@ export default function MarchePage() {
           <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--txt-1)' }}>
             {regionStarts.reduce((s, x) => s + x.valeur, 0).toLocaleString('fr-CA')}
           </div>
-          <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>Cumul des 3 régions clés du QC</div>
+          <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>Projets de peinture résidentielle potentiels</div>
         </div>
 
       </div>
@@ -289,15 +300,15 @@ export default function MarchePage() {
       {/* Deux colonnes : Graphique des matériaux + Histogramme des régions */}
       <div className="print-full" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '14px' }}>
         
-        {/* Colonne Gauche : Indice Prix Matériaux */}
+        {/* Colonne Gauche : Indice Prix Matériaux Peinture */}
         <div className="print-card" style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <LineIcon size={14} color="var(--gold)" />
-              <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--txt-1)' }}>Indices des Prix des Matériaux</span>
+              <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--txt-1)' }}>Indices des Prix Matériaux de Peinture</span>
             </div>
             
-            {/* Filtre d'indicateur matériel (Masqué à l'impression pour n'imprimer que la valeur sélectionnée) */}
+            {/* Filtre de matériel (Masqué à l'impression) */}
             <div className="no-print" style={{ display: 'flex', gap: '4px' }}>
               {materialTypes.map(m => (
                 <button
@@ -305,14 +316,14 @@ export default function MarchePage() {
                   onClick={() => setActiveMaterial(m)}
                   style={{ background: activeMaterial === m ? 'var(--bg-3)' : 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '4px 8px', fontSize: '9px', color: activeMaterial === m ? 'var(--txt-1)' : 'var(--txt-3)', cursor: 'pointer', transition: 'all 0.1s' }}
                 >
-                  {m.split(' ')[0]} {/* Raccourcit le libellé bouton (ex: Bois, Béton, Acier) */}
+                  {m.replace('Peinture ', '').replace('prêt-à-l\'emploi', '').replace('de charpente', '')}
                 </button>
               ))}
             </div>
           </div>
 
           <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>
-            Relevé d'évolution des prix unitaires pour le matériel : <strong style={{ color: 'var(--gold-2)' }}>{activeMaterial}</strong>
+            Relevé d'évolution des prix unitaires pour l'indicateur : <strong style={{ color: 'var(--gold-2)' }}>{activeMaterial}</strong>
           </div>
 
           {/* Graphique SVG */}
@@ -321,14 +332,14 @@ export default function MarchePage() {
           </div>
         </div>
 
-        {/* Colonne Droite : Mises en chantiers régionales (Bar chart en pur CSS) */}
+        {/* Colonne Droite : Mises en chantiers régionales */}
         <div className="print-card" style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <BarChart3 size={14} color="var(--gold)" />
-            <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--txt-1)' }}>Mises en Chantier Régionales</span>
+            <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--txt-1)' }}>Activité Régionale Réelle</span>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>
-            Volume de nouvelles constructions résidentielles par région
+            Opportunités de chantiers de peinture (mises en chantier)
           </div>
 
           {/* Bar Chart CSS */}
@@ -358,7 +369,7 @@ export default function MarchePage() {
 
       </div>
 
-      {/* Module AI Recommendations (Recommandations ROI Prédictives) */}
+      {/* Module AI Recommendations Peintre */}
       <div className="print-card" style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         
         {/* Titre */}
@@ -367,47 +378,47 @@ export default function MarchePage() {
             <Sparkles size={16} color="var(--gold-2)" />
           </div>
           <div>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)' }}>Recommandations IA & Analyse ROI Prédictif</span>
-            <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>Calculé automatiquement selon les variations macroéconomiques du marché</div>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)' }}>Conseils Stratégiques & ROI — Spécifique Peintre en Bâtiment</span>
+            <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>Analyses générées pour les contrats de peinture résidentielle et commerciale</div>
           </div>
         </div>
 
         {/* Recommandations */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }} className="print-full">
           
-          {/* Rec 1 */}
+          {/* Rec 1 - Peinture Latex */}
           <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--red)18', color: 'var(--red)', fontWeight: 600 }}>TENDANCE MATÉRIAUX</span>
-              <span style={{ fontSize: '10px', color: 'var(--gold-2)', fontWeight: 700 }}>ROI Estimé: +6.5%</span>
+              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--red)18', color: 'var(--red)', fontWeight: 600 }}>PRIX LATEX LATEX</span>
+              <span style={{ fontSize: '10px', color: 'var(--gold-2)', fontWeight: 700 }}>ROI: +5% à +7%</span>
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Ajustement Marges Charpente</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Indexation des Devis Résidentiels</div>
             <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: 0, lineHeight: 1.4 }}>
-              Le prix du bois de charpente a bondi de <strong>{woodDiffPct}%</strong>. Nous conseillons d'augmenter vos prix unitaires de <strong>5% à 8%</strong> sur les soumissions émises ce mois-ci pour protéger votre marge nette.
+              La peinture latex est en hausse de <strong>{paintDiffPct}%</strong>. Vos coûts de fournitures augmentent. Majorez vos prochains devis de peinture intérieure/extérieure résidentielle de <strong>4% à 5.5%</strong> pour préserver vos bénéfices.
             </p>
           </div>
 
-          {/* Rec 2 */}
+          {/* Rec 2 - Epoxy Commercial */}
           <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--blue)18', color: 'var(--blue)', fontWeight: 600 }}>TENDANCE RÉGIONALE</span>
-              <span style={{ fontSize: '10px', color: 'var(--gold-2)', fontWeight: 700 }}>ROI Estimé: +12%</span>
+              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--blue)18', color: 'var(--blue)', fontWeight: 600 }}>ÉPOXY COMMERCIAL</span>
+              <span style={{ fontSize: '10px', color: 'var(--gold-2)', fontWeight: 700 }}>ROI: +15%</span>
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Ciblage Laurentides</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Cibler Planchers Industriels</div>
             <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: 0, lineHeight: 1.4 }}>
-              Les mises en chantier dans les <strong>Laurentides</strong> progressent fortement. Concentrez 60% de vos budgets publicitaires (Google Ads / FB) sur cette zone pour capter les entrepreneurs et propriétaires.
+              Forte accélération de la demande en revêtements époxy pour entrepôts et condos à Montréal. Mettez de l'avant vos services de peinture époxy commerciale et formulez des offres agressives pour capter ces marchés à forte marge.
             </p>
           </div>
 
-          {/* Rec 3 */}
+          {/* Rec 3 - Financement et Rénos */}
           <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--purple)18', color: 'var(--purple)', fontWeight: 600 }}>TENDANCE FINANCIÈRE</span>
-              <span style={{ fontSize: '10px', color: 'var(--gold-2)', fontWeight: 700 }}>ROI Estimé: +8%</span>
+              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--purple)18', color: 'var(--purple)', fontWeight: 600 }}>FINANCIER / CCQ</span>
+              <span style={{ fontSize: '10px', color: 'var(--gold-2)', fontWeight: 700 }}>ROI: +8.5%</span>
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Prioriser Rénovations Moyennes</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Focus Rafraîchissements Rapides</div>
             <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: 0, lineHeight: 1.4 }}>
-              Avec des taux hypothécaires à <strong>{mortgageRate}%</strong>, privilégiez les chantiers de rénovation payés comptant par rapport aux constructions neuves soumises à des prêts bancaires stricts.
+              Avec des taux hypothécaires à <strong>{mortgageRate}%</strong>, les propriétaires reportent les agrandissements mais investissent dans les travaux esthétiques. Priorisez les services de rafraîchissement peinture rapides payés sans financement complexe.
             </p>
           </div>
 
