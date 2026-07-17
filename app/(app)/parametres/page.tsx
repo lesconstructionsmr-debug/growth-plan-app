@@ -518,19 +518,55 @@ export default function ParametresPage() {
                     <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Exporter mes données</div>
                     <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Télécharger toutes vos données en format JSON (droit à la portabilité)</div>
                   </div>
-                  <button style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--blue)18', border: '0.5px solid var(--blue)', borderRadius: '7px', padding: '7px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--blue)', cursor: 'pointer' }}>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/admin/export-data')
+                        if (!res.ok) { const e = await res.json(); alert(e.error ?? 'Erreur export'); return }
+                        const blob = await res.blob()
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `growth-plan-export-${new Date().toISOString().split('T')[0]}.json`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                      } catch { alert('Erreur réseau lors de l\'export') }
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--blue)18', border: '0.5px solid var(--blue)', borderRadius: '7px', padding: '7px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--blue)', cursor: 'pointer' }}
+                  >
                     <Download size={12} /> Exporter
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-1)', borderRadius: '8px', border: '0.5px solid var(--line)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--red)08', borderRadius: '8px', border: '0.5px solid var(--red)' }}>
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Demande de suppression</div>
-                    <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Envoyer une demande d'effacement au RPRP (traitement sous 30 jours)</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--red)' }}>Supprimer définitivement mon compte</div>
+                    <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Efface toutes vos données de façon irréversible (droit à l\'oubli — Loi 25)</div>
                   </div>
-                  <a href="mailto:info@novastructureai.com?subject=Demande%20de%20suppression%20de%20données%20(Loi%2025)&body=Bonjour%2C%0A%0AJe%20souhaite%20exercer%20mon%20droit%20à%20l'effacement%20de%20mes%20données%20personnelles%20conformément%20à%20la%20Loi%2025.%0A%0AEmail%20du%20compte%20%3A%20%5Bvotre-email%5D%0A%0ACordialement" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '7px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--red)', cursor: 'pointer', textDecoration: 'none' }}>
-                    <Trash2 size={12} /> Demander
-                  </a>
+                  <button
+                    onClick={async () => {
+                      const c1 = confirm('ATTENTION — Cette action est IRRÉVERSIBLE.\n\nToutes vos données (clients, devis, factures, chantiers...) seront effacées définitivement.\n\nConfirmez-vous vouloir procéder ?')
+                      if (!c1) return
+                      const saisie = prompt('Tapez "SUPPRIMER" pour confirmer la suppression définitive de votre compte :')
+                      if (saisie !== 'SUPPRIMER') { alert('Suppression annulée.'); return }
+                      try {
+                        const res = await fetch('/api/admin/purge-tenant', {
+                          method: 'DELETE',
+                          headers: { 'X-Confirm-Purge': 'DELETE-MY-ACCOUNT' }
+                        })
+                        const result = await res.json()
+                        if (res.ok) {
+                          alert('Votre compte et toutes vos données ont été supprimés. Au revoir.')
+                          window.location.href = '/login'
+                        } else {
+                          alert(result.error ?? 'Erreur lors de la suppression')
+                        }
+                      } catch { alert('Erreur réseau') }
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--red)18', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '7px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--red)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    <Trash2 size={12} /> Supprimer mon compte
+                  </button>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-1)', borderRadius: '8px', border: '0.5px solid var(--line)' }}>
