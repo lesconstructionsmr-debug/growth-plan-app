@@ -135,12 +135,46 @@ export default function DashboardPage() {
   const [recentJobs, setRecentJobs] = useState<RecentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activite, setActivite] = useState<{ id: string; label: string; date: string; color: string; href: string }[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+
+  async function handleSeedDemo() {
+    if (seeding) return
+    if (!confirm("Voulez-vous peupler votre compte de démonstration ?\n\nCela va générer :\n- 35 clients\n- 20 devis\n- 15 factures\n- 5 chantiers\n- 10 leads/CRM\n\n(Vos données existantes hors-démo ne seront pas touchées)")) return
+    
+    setSeeding(true)
+    try {
+      const res = await fetch('/api/admin/seed-demo', { method: 'POST' })
+      const result = await res.json()
+      if (res.ok) {
+        alert("Données de démonstration générées avec succès ! Rechargement...")
+        window.location.reload()
+      } else {
+        alert(result.error ?? "Erreur lors de la génération")
+      }
+    } catch {
+      alert("Erreur de réseau lors de la génération")
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   useEffect(() => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setIsAdmin(user.email === 'peinture.jtl@gmail.com' || user.email === 'max@growth-plan.ca')
+        supabase.from('profiles').select('role').eq('id', user.id).single().then(({ data: prof }) => {
+          if (prof?.role === 'propriétaire' || prof?.role === 'administrateur') {
+            setIsAdmin(true)
+          }
+        })
+      }
+    })
 
     const il30j = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().split('T')[0]
 
@@ -223,11 +257,41 @@ export default function DashboardPage() {
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px' }}>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>{salutation} 👋</h1>
-          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: '2px 0 0' }}>
-            {now.toLocaleDateString('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {salutation} 👋
+              {isAdmin && (
+                <button
+                  onClick={handleSeedDemo}
+                  disabled={seeding}
+                  title="Générer les données de démonstration"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--amber)',
+                    transition: 'all 0.15s',
+                    animation: seeding ? 'spin 1s linear infinite' : 'none'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.15)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                </button>
+              )}
+            </h1>
+            <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: '2px 0 0' }}>
+              {now.toLocaleDateString('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', color: 'var(--gold-2)' }}>
           <Clock size={12} />Aujourd'hui
