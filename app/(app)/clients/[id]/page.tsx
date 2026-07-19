@@ -563,7 +563,7 @@ export default function ClientDetailPage() {
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
           <FileText size={28} color="var(--bg-4)" strokeWidth={1.2} />
           <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Devis du client</p>
-          <a href="/devis/nouveau" style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
+          <a href={`/devis/nouveau?client=${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
             <Plus size={11} /> Nouveau devis
           </a>
         </div>
@@ -573,7 +573,7 @@ export default function ClientDetailPage() {
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
           <Receipt size={28} color="var(--bg-4)" strokeWidth={1.2} />
           <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Factures du client</p>
-          <a href="/factures/nouvelle" style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
+          <a href={`/factures/nouvelle?client=${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
             <Plus size={11} /> Nouvelle facture
           </a>
         </div>

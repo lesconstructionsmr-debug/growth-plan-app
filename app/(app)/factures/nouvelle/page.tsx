@@ -116,9 +116,12 @@ export default function NouvelleFacturePage() {
   })
 
   // Générer le numéro uniquement sur le client après montage
+  // + présélectionner le client si on arrive depuis sa fiche (?client=<id>)
   useEffect(() => {
+    const clientParam = new URLSearchParams(window.location.search).get('client')
     setForm(prev => ({
       ...prev,
+      client_id: prev.client_id || clientParam || '',
       numero: prev.numero || `FAC-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`
     }))
   }, [])

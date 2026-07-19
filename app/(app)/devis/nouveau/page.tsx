@@ -100,9 +100,12 @@ export default function NouveauDevisPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Générer le numéro uniquement sur le client après montage
+  // + présélectionner le client si on arrive depuis sa fiche (?client=<id>)
   useEffect(() => {
+    const clientParam = new URLSearchParams(window.location.search).get('client')
     setForm(prev => ({
       ...prev,
+      client_id: prev.client_id || clientParam || '',
       numero: prev.numero || `DEV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`
     }))
   }, [])
