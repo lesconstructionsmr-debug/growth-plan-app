@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import {
   CheckCircle2, XCircle, FileText, Building2,
   MapPin, Phone, Mail, Calendar, Clock,
-  ChevronDown, AlertCircle, Loader2
+  ChevronDown, AlertCircle, Loader2, PenTool, RotateCcw
 } from 'lucide-react'
 
 interface DevisPortal {
@@ -41,6 +41,51 @@ export default function PortailDevisPage() {
   const [confirming, setConfirming] = useState(false)
   const [done, setDone] = useState<'approuve' | 'refuse' | null>(null)
   const [showLignes, setShowLignes] = useState(true)
+  const [signataireNom, setSignataireNom] = useState('')
+  const [hasSignature, setHasSignature] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const isDrawing = useRef(false)
+
+  function startDrawing(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    isDrawing.current = true
+    const rect = canvas.getBoundingClientRect()
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+  }
+
+  function draw(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
+    if (!isDrawing.current) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = '#111827'
+    ctx.lineTo(x, y)
+    ctx.stroke()
+    setHasSignature(true)
+  }
+
+  function stopDrawing() { isDrawing.current = false }
+
+  function clearSignature() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    setHasSignature(false)
+  }
 
   useEffect(() => {
     if (!token) return
@@ -57,10 +102,16 @@ export default function PortailDevisPage() {
     if (!devis) return
     setConfirming(true)
     try {
+      const signatureData = hasSignature && canvasRef.current ? canvasRef.current.toDataURL() : null
       const res = await fetch(`/api/portal/devis/${devis.portal_token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, motif: motifRefus }),
+        body: JSON.stringify({
+          action,
+          motif: motifRefus,
+          signatureData,
+          signataireNom: signataireNom || devis.clients?.nom
+        }),
       })
       if (!res.ok) throw new Error(await res.text())
       setDone(action)
@@ -360,15 +411,64 @@ export default function PortailDevisPage() {
               </div>
             )}
 
-            {/* ── Confirmation approbation ──────── */}
+            {/* ── Confirmation approbation avec Signature ──────── */}
             {decision === 'approuver' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.25)', borderRadius: '8px' }}>
                   <CheckCircle2 size={16} color="var(--green)" />
                   <div style={{ fontSize: '12px', color: 'var(--green)', fontWeight: 500 }}>
-                    Vous êtes sur le point d'approuver le devis {mockDevis.numero} pour un total de {formatCAD(total)}.
+                    Vous êtes sur le point d'approuver le devis {devis?.numero} pour un total de {formatCAD(total)}.
                   </div>
                 </div>
+
+                {/* Nom du signataire */}
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'block', marginBottom: '4px' }}>
+                    Nom du signataire
+                  </label>
+                  <input
+                    type="text"
+                    value={signataireNom}
+                    onChange={e => setSignataireNom(e.target.value)}
+                    placeholder={devis?.clients?.nom || 'Votre nom complet'}
+                    style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+                  />
+                </div>
+
+                {/* Zone de signature numérique */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <PenTool size={12} color="var(--gold)" /> Signature manuscrite (optionnelle)
+                    </label>
+                    {hasSignature && (
+                      <button onClick={clearSignature} type="button" style={{ background: 'none', border: 'none', color: 'var(--txt-3)', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <RotateCcw size={10} /> Effacer
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
+                    <canvas
+                      ref={canvasRef}
+                      width={500}
+                      height={120}
+                      onMouseDown={startDrawing}
+                      onMouseMove={draw}
+                      onMouseUp={stopDrawing}
+                      onMouseLeave={stopDrawing}
+                      onTouchStart={startDrawing}
+                      onTouchMove={draw}
+                      onTouchEnd={stopDrawing}
+                      style={{ width: '100%', height: '120px', display: 'block', cursor: 'crosshair', touchAction: 'none' }}
+                    />
+                    {!hasSignature && (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: '#9CA3AF', fontSize: '12px' }}>
+                        Dessinez votre signature ici avec la souris ou votre doigt
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <button onClick={() => setDecision('idle')}
                     style={{ padding: '10px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--txt-2)' }}>
@@ -377,7 +477,7 @@ export default function PortailDevisPage() {
                   <button onClick={() => confirm('approuve')} disabled={confirming}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', background: 'var(--green)', border: 'none', borderRadius: '8px', cursor: confirming ? 'default' : 'pointer', fontSize: '12px', fontWeight: 600, color: '#fff', opacity: confirming ? 0.8 : 1 }}>
                     {confirming ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : <CheckCircle2 size={14} />}
-                    {confirming ? 'Enregistrement…' : 'Confirmer l\'approbation'}
+                    {confirming ? 'Enregistrement…' : 'Signer & Confirmer'}
                   </button>
                 </div>
               </div>

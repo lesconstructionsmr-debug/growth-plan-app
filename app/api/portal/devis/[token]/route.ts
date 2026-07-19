@@ -36,7 +36,7 @@ export async function POST(
   { params }: { params: { token: string } }
 ) {
   try {
-    const { action, motif } = await req.json()
+    const { action, motif, signatureData, signataireNom } = await req.json()
     if (action !== 'approuve' && action !== 'refuse') {
       return NextResponse.json({ error: 'action invalide' }, { status: 400 })
     }
@@ -59,7 +59,12 @@ export async function POST(
       statut: action,
       updated_at: new Date().toISOString(),
     }
-    if (action === 'approuve') updateData.approuve_le = new Date().toISOString()
+    if (action === 'approuve') {
+      updateData.approuve_le = new Date().toISOString()
+      if (signatureData) updateData.signature_data = signatureData
+      if (signataireNom) updateData.signataire_nom = signataireNom
+      updateData.signe_le = new Date().toISOString()
+    }
 
     const { error } = await supabase
       .from('devis')

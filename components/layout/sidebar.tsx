@@ -25,8 +25,9 @@ const NAV_CONSTRUCTION = [
       { href: '/leads',       label: 'Leads / CRM', icon: TrendingUp },
       { href: '/jobs',        label: 'Chantiers',   icon: Building2  },
       { href: '/calendrier',  label: 'Calendrier',  icon: Calendar   },
-      { href: '/clients',     label: 'Clients',     icon: Users      },
-      { href: '/employes',    label: 'Employés',    icon: HardHat    },
+      { href: '/clients',         label: 'Clients',         icon: Users      },
+      { href: '/employes',        label: 'Employés',        icon: HardHat    },
+      { href: '/sous-traitants',   label: 'Sous-traitants', icon: HardHat    },
     ],
   },
   {

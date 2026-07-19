@@ -236,6 +236,20 @@ export default function FactureDetailPage() {
           <a href={`/factures/${facture.id}/preview`} style={{...btn2,textDecoration:'none',display:'flex',alignItems:'center',gap:'6px'}}><Eye size={13}/> Aperçu PDF</a>
           <button onClick={()=>{ window.open(`/factures/${facture.id}/preview`,'_blank') }} style={btn2}><Download size={13}/> PDF</button>
           <button style={btn2}><Send size={13}/> Renvoyer</button>
+          {facture.statut !== 'payee' && facture.statut !== 'annulee' && (
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/factures/${facture.id}/relancer`, { method: 'POST' })
+                  const data = await res.json()
+                  alert(res.ok ? data.message : (data.error || 'Erreur relance'))
+                } catch { alert('Erreur réseau') }
+              }}
+              style={{ ...btn2, border: '0.5px solid var(--amber)', color: 'var(--amber)' }}
+            >
+              <Bell size={13} /> Relancer le paiement
+            </button>
+          )}
           {facture.statut!=='payee'&&facture.statut!=='annulee'&&(
             <button onClick={()=>setShowModal(true)} style={{display:'flex',alignItems:'center',gap:'6px',background:'var(--green)',border:'none',borderRadius:'8px',padding:'7px 14px',fontSize:'11px',fontWeight:700,color:'#fff',cursor:'pointer'}}>
               <Plus size={13}/> Enregistrer paiement

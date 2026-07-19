@@ -569,6 +569,18 @@ export default function DevisDetailPage() {
           )}
           {(statut === 'envoye' || statut === 'vu') && (
             <>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/devis/${id}/relancer`, { method: 'POST' })
+                    const data = await res.json()
+                    alert(res.ok ? data.message : (data.error || 'Erreur relance'))
+                  } catch { alert('Erreur réseau') }
+                }}
+                style={{ ...btnSecondaire, border: '0.5px solid var(--amber)', color: 'var(--amber)' }}
+              >
+                <Bell size={13} /> Relancer le client
+              </button>
               <button onClick={() => setShowModalEnvoi(true)} style={{
                 ...btnSecondaire, border: '0.5px solid var(--blue)', color: 'var(--blue)',
               }}>
