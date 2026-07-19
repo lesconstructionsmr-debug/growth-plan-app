@@ -100,7 +100,9 @@ export async function createDevis(payload: {
     .select()
     .single()
 
-  if (error) throw error
+  // PostgrestError n'est pas une instance d'Error : on convertit pour que le
+  // message réel (colonne manquante, contrainte, RLS) remonte jusqu'au client.
+  if (error) throw new Error(`[createDevis] ${error.message}${error.details ? ` — ${error.details}` : ''}`)
   return data
 }
 
@@ -118,5 +120,5 @@ export async function updateDevisStatut(id: string, statut: string) {
     .update(updates)
     .eq('id', id)
 
-  if (error) throw error
+  if (error) throw new Error(error.message)
 }

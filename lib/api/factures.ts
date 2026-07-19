@@ -89,7 +89,7 @@ export async function createFacture(payload: {
     .select()
     .single()
 
-  if (error) throw error
+  if (error) throw new Error(error.message)
   return data
 }
 
@@ -104,5 +104,5 @@ export async function updateFactureStatut(id: string, statut: string, datePaieme
     })
     .eq('id', id)
 
-  if (error) throw error
+  if (error) throw new Error(error.message)
 }

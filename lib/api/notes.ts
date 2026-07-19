@@ -60,7 +60,7 @@ export async function createNote(payload: {
     .select('*, profiles(full_name, avatar_url)')
     .single()
 
-  if (error) throw error
+  if (error) throw new Error(error.message)
   return data as Note
 }
 
@@ -74,6 +74,6 @@ export async function deleteNote(id: string): Promise<void> {
     .eq('id', id)
     .eq('company_id', companyId)
     .select('id')
-  if (error) throw error
+  if (error) throw new Error(error.message)
   if (!data?.length) throw new ApiError(404, 'Note introuvable')
 }
