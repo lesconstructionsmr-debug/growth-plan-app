@@ -112,8 +112,8 @@ export async function updateDevisStatut(id: string, statut: string) {
     statut,
     updated_at: new Date().toISOString(),
   }
-  if (statut === 'envoyé') updates.envoye_le = new Date().toISOString()
-  if (statut === 'approuvé') updates.approuve_le = new Date().toISOString()
+  if (statut === 'envoye') updates.envoye_le = new Date().toISOString()
+  if (statut === 'approuve') updates.approuve_le = new Date().toISOString()
 
   const { error } = await supabase
     .from('devis')

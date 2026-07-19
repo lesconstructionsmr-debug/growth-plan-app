@@ -159,7 +159,7 @@ export default function NouveauDevisPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          statut: action === 'envoyer' ? 'envoyé' : 'brouillon',
+          statut: action === 'envoyer' ? 'envoye' : 'brouillon',
         }),
       })
       if (!res.ok) throw new Error(await res.text())

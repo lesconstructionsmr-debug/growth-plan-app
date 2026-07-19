@@ -133,7 +133,12 @@ export default function FactureDetailPage() {
           id: data.id,
           numero: data.numero,
           titre: data.titre ?? '',
-          statut: data.statut as StatutFacture,
+          statut: (() => {
+            // Normalise les statuts accentués ('envoyée' → 'envoyee') — évite
+            // STATUT_CFG[statut] undefined qui crash la page côté client.
+            const s = String(data.statut ?? 'brouillon').normalize('NFD').replace(/[̀-ͯ]/g, '')
+            return (s in STATUT_CFG ? s : 'brouillon') as StatutFacture
+          })(),
           client_nom: (data.clients as any)?.nom ?? '—',
           client_email: (data.clients as any)?.email ?? '',
           devis_numero: (data.devis as any)?.numero ?? null,

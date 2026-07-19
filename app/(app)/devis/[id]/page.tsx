@@ -423,11 +423,15 @@ export default function DevisDetailPage() {
           prix_unitaire: Number(l.prix_unitaire ?? 0),
           total_ligne: Number(l.quantite ?? 1) * Number(l.prix_unitaire ?? 0),
         })) : []
+        // Normalise les anciens statuts accentués ('envoyé' → 'envoye') pour
+        // que STATUT_CONFIG[statut] ne retourne jamais undefined (crash client).
+        const statutNormalise = String(data.statut ?? 'brouillon')
+          .normalize('NFD').replace(/[̀-ͯ]/g, '') as StatutDevis
         const loaded: DevisPlaceholder = {
           id: data.id,
           numero: data.numero ?? '',
           titre: data.titre ?? '',
-          statut: data.statut as StatutDevis,
+          statut: statutNormalise in STATUT_CONFIG ? statutNormalise : 'brouillon',
           client_nom: cli.nom ?? '—',
           client_email: cli.email ?? '',
           client_ville: cli.ville ?? '',
