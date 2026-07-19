@@ -1,5 +1,6 @@
 import { createClient } from './supabase-server'
 import { requireCompany } from './auth'
+import { calculerTotaux } from './fiscal'
 
 export interface LigneFacture {
   id?: string
@@ -59,15 +60,9 @@ export async function createFacture(payload: {
   const seqNum = String((existingCount ?? 0) + 1).padStart(3, '0')
   const autoNumero = payload.numero || `FAC-${year}-${seqNum}`
 
-  // Arrondi strict au centime près (évite les divergences 0,01$ entre JS et Postgres numeric(12,2))
-  const round2 = (n: number) => Math.round(n * 100) / 100
-
-  const TPS = 0.05
-  const TVQ = 0.09975
-  const montant_ht = round2(payload.lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire, 0))
-  const tps         = payload.appliquer_tps ? round2(montant_ht * TPS) : 0
-  const tvq         = payload.appliquer_tvq ? round2(montant_ht * TVQ) : 0
-  const montant_ttc = round2(montant_ht + tps + tvq)
+  const { montant_ht, tps, tvq, montant_ttc } = calculerTotaux(
+    payload.lignes, payload.appliquer_tps, payload.appliquer_tvq
+  )
 
   const lignesSansId = payload.lignes.map(({ id: _id, ...l }) => l)
 

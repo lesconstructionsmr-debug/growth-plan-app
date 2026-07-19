@@ -26,8 +26,11 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // Fail-closed : sans config Supabase, on BLOQUE l'accès aux pages protégées
+  // au lieu de laisser tout passer sans authentification.
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return response
+    console.error('[middleware] Env Supabase manquante — accès refusé (fail-closed)')
+    return new NextResponse('Configuration serveur incomplète', { status: 503 })
   }
 
   const supabase = createServerClient(
