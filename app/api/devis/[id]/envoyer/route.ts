@@ -24,8 +24,16 @@ export async function POST(
     const org = devis.companies as any ?? {}
     const portalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/portal/devis/${devis.portal_token}`
 
-    if (process.env.RESEND_API_KEY && cli.email) {
-      await fetch('https://api.resend.com/emails', {
+    // Jamais d'envoi silencieusement sauté : on rapporte l'état réel au client.
+    let emailSent = false
+    let emailError: string | null = null
+
+    if (!process.env.RESEND_API_KEY) {
+      emailError = 'RESEND_API_KEY non configurée sur le serveur'
+    } else if (!cli.email) {
+      emailError = 'Le client n\'a pas d\'adresse courriel'
+    } else {
+      const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -48,18 +56,36 @@ export async function POST(
             </div>
           `,
         }),
-      }).catch(err => console.error('[devis/envoyer] Resend error:', err))
+      }).catch((err: unknown) => {
+        console.error('[devis/envoyer] Resend fetch error:', err)
+        return null
+      })
+
+      if (resendRes?.ok) {
+        emailSent = true
+      } else {
+        const body = resendRes ? await resendRes.text().catch(() => '') : 'réseau injoignable'
+        emailError = `Resend a refusé l'envoi : ${body}`
+        console.error('[devis/envoyer]', emailError)
+      }
     }
 
-    // Mettre à jour le statut à 'envoye' si encore brouillon
-    if (devis.statut === 'brouillon') {
+    // Mettre à jour le statut à 'envoye' seulement si le courriel est parti
+    if (emailSent && devis.statut === 'brouillon') {
       await supabase
         .from('devis')
         .update({ statut: 'envoye', updated_at: new Date().toISOString() })
         .eq('id', params.id)
     }
 
-    return NextResponse.json({ ok: true })
+    if (!emailSent) {
+      return NextResponse.json(
+        { ok: false, emailSent: false, error: emailError ?? 'Envoi impossible' },
+        { status: 502 }
+      )
+    }
+
+    return NextResponse.json({ ok: true, emailSent: true })
   } catch (err) {
     return apiError(err, '[POST /api/devis/envoyer]')
   }

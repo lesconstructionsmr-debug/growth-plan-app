@@ -68,20 +68,30 @@ function ModalEnvoi({ devis, onClose, onSent }: {
   onSent: () => void
 }) {
   const [step, setStep] = useState<'compose' | 'sending' | 'sent'>('compose')
+  const [sendError, setSendError] = useState<string | null>(null)
   const [emailMessage, setEmailMessage] = useState(
     `Bonjour ${devis.client_nom.split(' ')[0]},\n\nVeuillez trouver ci-joint votre devis ${devis.numero} — ${devis.titre}.\n\nTotal : ${fmt(devis.total_ttc)}\nValide jusqu'au : ${fmtDate(devis.date_validite)}\n\nCliquez sur le lien dans ce courriel pour consulter et approuver votre devis en ligne.\n\nCordialement,`
   )
 
   async function handleSend() {
     setStep('sending')
+    setSendError(null)
     try {
-      await fetch(`/api/devis/${devis.id}/envoyer`, {
+      const res = await fetch(`/api/devis/${devis.id}/envoyer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: emailMessage }),
       })
-    } catch (_) { /* silently continue — email is best-effort */ }
-    setStep('sent')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: `Erreur ${res.status}` }))
+        throw new Error(body.error ?? `Erreur ${res.status}`)
+      }
+      setStep('sent')
+    } catch (err) {
+      // On ne prétend JAMAIS que le courriel est parti s'il n'est pas parti.
+      setSendError(err instanceof Error ? err.message : 'Envoi impossible')
+      setStep('compose')
+    }
   }
 
   const overlayStyle: React.CSSProperties = {
@@ -115,6 +125,14 @@ function ModalEnvoi({ devis, onClose, onSent }: {
         {step === 'compose' && (
           <>
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {sendError && (
+                <div style={{
+                  background: 'rgba(224,96,96,0.1)', border: '0.5px solid rgba(224,96,96,0.35)',
+                  borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--red)',
+                }}>
+                  Courriel NON envoyé : {sendError}
+                </div>
+              )}
               {/* Destinataire */}
               <div>
                 <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginBottom: '4px', fontWeight: 600, letterSpacing: '0.05em' }}>À</div>
