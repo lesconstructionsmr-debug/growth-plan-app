@@ -67,3 +67,43 @@ html, body {
 ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gold-3); }
 ::selection { background: rgba(212,175,55,0.3); color: #FFF2B2; }
+
+/* ── Ergonomie Mobile Smartphone (BTP & Peinture Terrain) ───────── */
+@media (max-width: 768px) {
+  .mobile-header-hide { display: none !important; }
+  .mobile-full-width { width: 100% !important; }
+  .mobile-flex-col { flex-direction: column !important; align-items: stretch !important; }
+  
+  /* Grille des devis adaptative */
+  .devis-grid-header { display: none !important; }
+  .devis-grid-row {
+    grid-template-columns: 1fr !important;
+    background: var(--bg-2) !important;
+    padding: 12px !important;
+    border-radius: 9px !important;
+    border: 0.5px solid var(--line) !important;
+    margin-bottom: 8px !important;
+    gap: 10px !important;
+  }
+  .devis-row-inputs {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr auto !important;
+    gap: 6px !important;
+    align-items: center !important;
+  }
+
+  /* Barre d'action collante en bas de l'écran mobile */
+  .mobile-sticky-bottom {
+    position: sticky !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: var(--bg-1) !important;
+    padding: 12px 16px !important;
+    border-top: 1px solid var(--gold-3) !important;
+    z-index: 90 !important;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.5) !important;
+    margin: 16px -24px -24px -24px !important;
+    width: calc(100% + 48px) !important;
+  }
+}
