@@ -3,8 +3,8 @@ import './globals.css'
 import { ThemeProvider } from '@/components/layout/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'ERP Construction',
-  description: 'Gestion terrain pour contracteurs',
+  title: "Plangrowth — Architecte de l'Évolution Numérique | growth-plan.ca",
+  description: "Structure • Acquisition • Scalabilité pour entrepreneurs et compagnies de services.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

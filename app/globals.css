@@ -20,8 +20,8 @@
   --green: #5CB87A;
   --red: #E06060;
   --amber: #D4960C;
-  --blue: #4A8FD4;
-  --purple: #8B6BD9;
+  --blue: #D4AF37;
+  --purple: #C9A84C;
 }
 
 [data-theme="light"] {
@@ -42,11 +42,19 @@
   --green: #2E9E52;
   --red: #CC4444;
   --amber: #C4860A;
-  --blue: #2E72BC;
-  --purple: #6E50C8;
+  --blue: #B8922E;
+  --purple: #B8922E;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
 
 html, body {
   background-color: var(--bg-0);
@@ -58,4 +66,4 @@ html, body {
 ::-webkit-scrollbar-track { background: var(--bg-2); }
 ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gold-3); }
-::selection { background: rgba(201,168,76,0.2); color: var(--gold-2); }
+::selection { background: rgba(212,175,55,0.3); color: #FFF2B2; }
