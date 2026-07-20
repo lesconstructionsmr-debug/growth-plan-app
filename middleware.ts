@@ -27,7 +27,6 @@ export async function middleware(request: NextRequest) {
   }
 
   // Fail-closed : sans config Supabase, on BLOQUE l'accès aux pages protégées
-  // au lieu de laisser tout passer sans authentification.
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     console.error('[middleware] Env Supabase manquante — accès refusé (fail-closed)')
     return new NextResponse('Configuration serveur incomplète', { status: 503 })
@@ -55,11 +54,24 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data?.user ?? null
+  } catch (err) {
+    console.warn('[middleware] Jetons d\'authentification obsolètes/invalides — nettoyage session')
+  }
 
-  // Pas connecté → /login
+  // Pas connecté ou jeton obsolète → /login avec nettoyage des jetons corrompus
   if (!user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const loginUrl = new URL('/login', request.url)
+    const redirectResponse = NextResponse.redirect(loginUrl)
+    request.cookies.getAll().forEach(c => {
+      if (c.name.includes('sb-') || c.name.includes('auth-token')) {
+        redirectResponse.cookies.delete(c.name)
+      }
+    })
+    return redirectResponse
   }
 
   // Récupérer le profil (company_id)
