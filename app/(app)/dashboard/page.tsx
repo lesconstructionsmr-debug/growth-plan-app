@@ -378,7 +378,7 @@ export default function DashboardPage() {
                 onClick={() => handleSeedAction('POST')}
                 disabled={seeding}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyFocus: 'center', gap: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                   background: 'linear-gradient(135deg, #F5D061, #D4AF37)', color: '#0A0B0E',
                   border: 'none', borderRadius: '10px', padding: '14px', fontSize: '13px', fontWeight: 700,
                   cursor: 'pointer', transition: 'all 0.15s'
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                 onClick={() => handleSeedAction('DELETE')}
                 disabled={seeding}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyFocus: 'center', gap: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                   background: 'rgba(224, 96, 96, 0.12)', color: '#E06060',
                   border: '1px solid rgba(224, 96, 96, 0.4)', borderRadius: '10px', padding: '14px', fontSize: '13px', fontWeight: 700,
                   cursor: 'pointer', transition: 'all 0.15s'
