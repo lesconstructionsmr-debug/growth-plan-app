@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation'
+import LandingPage from '@/app/(public)/landing/page'
 
 export default function RootPage() {
-  redirect('/dashboard')
+  return <LandingPage />
 }
+

@@ -18,7 +18,9 @@ export async function middleware(request: NextRequest) {
 
   // Laisser passer immédiatement les routes publiques et API
   if (
-    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||
+    pathname === '/' ||
+    pathname === '/landing' ||
+    PUBLIC_PATHS.some(p => p !== '/' && pathname.startsWith(p)) ||
     pathname.startsWith('/api/') ||
     pathname.startsWith('/portal/') ||
     pathname.startsWith('/auth/')
