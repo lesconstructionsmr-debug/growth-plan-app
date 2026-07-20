@@ -140,20 +140,30 @@ export default function DashboardPage() {
 
   async function handleSeedDemo() {
     if (seeding) return
-    if (!confirm("Voulez-vous peupler votre compte de démonstration ?\n\nCela va générer :\n- 35 clients\n- 20 devis\n- 15 factures\n- 5 chantiers\n- 10 leads/CRM\n\n(Vos données existantes hors-démo ne seront pas touchées)")) return
     
+    const choice = prompt(
+      "⚡ GESTION DES DONNÉES DE DÉMONSTRATION (Éclair)\n\n" +
+      "1 = Générer la démo (35 clients, devis, factures, chantiers)\n" +
+      "2 = INVERSER / PURGER la démo (Ré-enlever tous les faux clients démo)\n\n" +
+      "Entrez 1 ou 2 :",
+      "1"
+    )
+
+    if (!choice || (choice !== '1' && choice !== '2')) return
+
     setSeeding(true)
     try {
-      const res = await fetch('/api/admin/seed-demo', { method: 'POST' })
+      const method = choice === '2' ? 'DELETE' : 'POST'
+      const res = await fetch('/api/admin/seed-demo', { method })
       const result = await res.json()
       if (res.ok) {
-        alert("Données de démonstration générées avec succès ! Rechargement...")
+        alert(result.message ?? "Opération effectuée avec succès ! Rechargement...")
         window.location.reload()
       } else {
-        alert(result.error ?? "Erreur lors de la génération")
+        alert(result.error ?? "Erreur lors de l'opération")
       }
     } catch {
-      alert("Erreur de réseau lors de la génération")
+      alert("Erreur de réseau lors de l'opération")
     } finally {
       setSeeding(false)
     }

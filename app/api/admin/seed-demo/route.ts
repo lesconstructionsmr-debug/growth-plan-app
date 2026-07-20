@@ -49,12 +49,11 @@ const LIGNES_DEVIS_PEINTRE = [
   { description: "Peinture boiseries, plinthes et cadrages", quantite: 1, unite: "forfait", prix_unitaire: 600 }
 ]
 
+// ── POST : PEUPLER OU RÉ-INITIALISER LA DÉMO ───────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const { supabase, user, companyId } = await requireCompany()
 
-    // Vérifier l'autorisation : réservé aux propriétaires/administrateurs
-    // Ou aux emails spécifiques du projet
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -71,15 +70,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
-    // ── 1. NETTOYAGE PRÉALABLE ───────────────────────────────────────────────
-    // Supprime uniquement les enregistrements identifiés par les suffixes/formats démo
+    // 1. NETTOYAGE PRÉALABLE DES DONNÉES DÉMO
     await supabase.from('factures').delete().eq('company_id', companyId).like('numero', 'FAC-DEMO-%')
     await supabase.from('devis').delete().eq('company_id', companyId).like('numero', 'DEV-DEMO-%')
     await supabase.from('jobs').delete().eq('company_id', companyId).like('titre', '[DÉMO]%')
     await supabase.from('leads').delete().eq('company_id', companyId).like('email', '%.demo@%')
     await supabase.from('clients').delete().eq('company_id', companyId).like('email', '%.demo@%')
 
-    // ── 2. PEUPLEMENT DES 35 CLIENTS ─────────────────────────────────────────
+    // 2. PEUPLEMENT DES 35 CLIENTS
     const clientsPayload = CLIENTS_BANQUE.map(c => ({
       company_id: companyId,
       nom: c.nom,
@@ -98,8 +96,7 @@ export async function POST(req: NextRequest) {
 
     if (clientsErr || !clients) throw clientsErr ?? new Error('Peuplement des clients échoué')
 
-    // ── 3. CRÉATION DES CHANTIERS (JOBS) ─────────────────────────────────────
-    // Créer 5 chantiers démo
+    // 3. CRÉATION DES CHANTIERS (JOBS)
     const jobStatuses = ['planifie', 'en_cours', 'termine', 'en_cours', 'planifie']
     const jobsPayload = Array.from({ length: 5 }).map((_, i) => {
       const client = clients[i % clients.length]
@@ -123,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     if (jobsErr || !jobs) throw jobsErr
 
-    // ── 4. PEUPLEMENT DE 20 DEVIS ────────────────────────────────────────────
+    // 4. PEUPLEMENT DE 20 DEVIS
     const devisStatuses = [
       'brouillon', 'envoye', 'vu', 'approuve', 'refuse', 'converti', 
       'envoye', 'vu', 'approuve', 'converti', 'brouillon', 'envoye',
@@ -134,7 +131,6 @@ export async function POST(req: NextRequest) {
       const job = jobs[i % jobs.length]
       const dateOffset = 25 - i
 
-      // Calcul taxes CAD standard
       const ht = 3500 + i * 450
       const tps = Math.round(ht * 0.05 * 100) / 100
       const tvq = Math.round(ht * 0.09975 * 100) / 100
@@ -165,8 +161,7 @@ export async function POST(req: NextRequest) {
 
     if (devisErr || !devis) throw devisErr
 
-    // ── 5. PEUPLEMENT DE 15 FACTURES ─────────────────────────────────────────
-    // Créer 15 factures associées aux devis approuvés ou convertis
+    // 5. PEUPLEMENT DE 15 FACTURES
     const facturesPayload = Array.from({ length: 15 }).map((_, i) => {
       const assocDevis = devis[i % devis.length]
       const dateOffset = 20 - i
@@ -198,7 +193,7 @@ export async function POST(req: NextRequest) {
 
     if (facErr) throw facErr
 
-    // ── 6. PEUPLEMENT DE 10 LEADS (PIPELINE / CRM) ───────────────────────────
+    // 6. PEUPLEMENT DE 10 LEADS (PIPELINE / CRM)
     const leadSources = ['référence', 'site_web', 'google', 'référence', 'publicité']
     const leadStatuses = ['nouveau', 'contacté', 'qualifié', 'proposition', 'nouveau']
     const leadsPayload = Array.from({ length: 10 }).map((_, i) => {
@@ -221,11 +216,49 @@ export async function POST(req: NextRequest) {
 
     if (leadsErr) throw leadsErr
 
-    return NextResponse.json({ success: true, message: 'Seeding démo complété avec succès !' })
+    return NextResponse.json({ success: true, message: 'Données démo générées avec succès !' })
   } catch (err) {
     console.error('[POST /api/admin/seed-demo]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur interne de seeding' },
+      { status: 500 }
+    )
+  }
+}
+
+// ── DELETE : REVERSE / PURGER TOUTES LES DONNÉES DÉMO ──────────────────
+export async function DELETE(req: NextRequest) {
+  try {
+    const { supabase, user, companyId } = await requireCompany()
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isAuthorized = 
+      profile?.role === 'propriétaire' || 
+      profile?.role === 'administrateur' ||
+      user.email === 'peinture.jtl@gmail.com' ||
+      user.email === 'max@growth-plan.ca'
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
+    }
+
+    // Supprimer uniquement les enregistrements identifiés comme démo
+    await supabase.from('factures').delete().eq('company_id', companyId).like('numero', 'FAC-DEMO-%')
+    await supabase.from('devis').delete().eq('company_id', companyId).like('numero', 'DEV-DEMO-%')
+    await supabase.from('jobs').delete().eq('company_id', companyId).like('titre', '[DÉMO]%')
+    await supabase.from('leads').delete().eq('company_id', companyId).like('email', '%.demo@%')
+    await supabase.from('clients').delete().eq('company_id', companyId).like('email', '%.demo@%')
+
+    return NextResponse.json({ success: true, message: 'Toutes les données et faux clients démo ont été supprimés avec succès !' })
+  } catch (err) {
+    console.error('[DELETE /api/admin/seed-demo]', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Erreur lors de la suppression des données démo' },
       { status: 500 }
     )
   }
