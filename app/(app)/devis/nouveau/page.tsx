@@ -42,6 +42,39 @@ const UNITES = ['h', 'u', 'pi²', 'pi lin.', 'forfait', 'm²', 'lot', 'verge', '
 
 const MODELES_LIGNES: { label: string; lignes: Omit<LigneDevis, 'id'>[] }[] = [
   {
+    label: 'Peinture intérieur 4 1/2',
+    lignes: [
+      { description: 'Préparation des surfaces (sablage, plâtrage des trous & fissures)', quantite: 1, unite: 'forfait', prix_unitaire: 450 },
+      { description: 'Apprêt scellant (murs & plafonds à repriser)', quantite: 1, unite: 'forfait', prix_unitaire: 350 },
+      { description: 'Peinture latex 2 couches (Salon, Cuisine, 2 Chambres, Salle de bain)', quantite: 1, unite: 'forfait', prix_unitaire: 1850 },
+      { description: 'Peinture plafonds (blanc plat spécialisé)', quantite: 1, unite: 'forfait', prix_unitaire: 650 },
+      { description: 'Peinture boiseries, plinthes et cadrages de portes (2 couches)', quantite: 1, unite: 'forfait', prix_unitaire: 450 },
+      { description: 'Nettoyage et protection des surfaces (bâches & ruban masquage)', quantite: 1, unite: 'forfait', prix_unitaire: 200 },
+    ],
+  },
+  {
+    label: 'Peinture intérieur 5 1/2',
+    lignes: [
+      { description: 'Préparation complète des surfaces (sablage, plâtrage, ponçage)', quantite: 1, unite: 'forfait', prix_unitaire: 650 },
+      { description: 'Apprêt scellant haute adhérence', quantite: 1, unite: 'forfait', prix_unitaire: 480 },
+      { description: 'Peinture latex premium 2 couches (Salon, Salle à manger, Cuisine, 3 Chambres, SDB)', quantite: 1, unite: 'forfait', prix_unitaire: 2650 },
+      { description: 'Peinture plafonds complète (blanc plat anti-reflets)', quantite: 1, unite: 'forfait', prix_unitaire: 850 },
+      { description: 'Peinture portes, cadrages, plinthes et moulures', quantite: 1, unite: 'forfait', prix_unitaire: 650 },
+      { description: 'Nettoyage de fin de chantier & évacuation des déchets', quantite: 1, unite: 'forfait', prix_unitaire: 250 },
+    ],
+  },
+  {
+    label: 'Peinture extérieur (Bungalow & Unifamiliale)',
+    lignes: [
+      { description: 'Lavage sous pression de la façade, des corniches et des parements', quantite: 1, unite: 'forfait', prix_unitaire: 450 },
+      { description: 'Grattage de la peinture écailleuse, sablage et traitement antirouille', quantite: 1, unite: 'forfait', prix_unitaire: 850 },
+      { description: 'Apprêt extérieur haute performance (résistant au gel/dégel)', quantite: 1, unite: 'forfait', prix_unitaire: 750 },
+      { description: 'Peinture extérieure acrylique 2 couches (Rebord de toit, corniches, fascia)', quantite: 1, unite: 'forfait', prix_unitaire: 1950 },
+      { description: 'Peinture portes extérieures, cadres de fenêtres et garage', quantite: 1, unite: 'forfait', prix_unitaire: 850 },
+      { description: 'Revêtement de balcon / Galerie extérieure (antidérapant)', quantite: 1, unite: 'forfait', prix_unitaire: 650 },
+    ],
+  },
+  {
     label: 'Rénovation cuisine',
     lignes: [
       { description: 'Démolition et dépose des armoires existantes', quantite: 1,   unite: 'forfait', prix_unitaire: 850  },
