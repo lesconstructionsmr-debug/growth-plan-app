@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import {
   HardHat, Plus, Search, Loader2, X,
-  CheckCircle2, XCircle, Mail, DollarSign
+  CheckCircle2, XCircle, Mail, DollarSign,
+  Edit3, Trash2, CheckSquare, Square
 } from 'lucide-react'
 
 interface EmployeRow {
@@ -21,7 +22,11 @@ export default function EmployesPage() {
   const [employes, setEmployes] = useState<EmployeRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<EmployeRow | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // Form states
   const [nom, setNom] = useState('')
@@ -60,208 +65,406 @@ export default function EmployesPage() {
     loadEmployes()
   }, [loadEmployes])
 
-  async function handleAdd(e: React.FormEvent) {
+  // ── MODIFICATION EN LIGNE DIRECTE DANS LE TABLEAU ─────────────────────
+  async function updateInlineField(id: string, field: 'nom' | 'email' | 'poste' | 'taux_horaire' | 'statut', value: any) {
+    setEmployes(prev => prev.map(e => {
+      if (e.id !== id) return e
+      if (field === 'statut') return { ...e, actif: value === 'actif' }
+      if (field === 'taux_horaire') return { ...e, taux_horaire: parseFloat(value) || null }
+      return { ...e, [field]: value || null }
+    }))
+
+    const dbValue = field === 'statut'
+      ? value
+      : field === 'taux_horaire'
+      ? (parseFloat(value) || null)
+      : (value || null)
+
+    await supabase.from('employes').update({ [field]: dbValue }).eq('id', id)
+  }
+
+  function openCreate() {
+    setEditingItem(null)
+    setNom('')
+    setEmail('')
+    setPoste('')
+    setTauxHoraire('')
+    setShowModal(true)
+  }
+
+  function openEdit(emp: EmployeRow) {
+    setEditingItem(emp)
+    setNom(emp.nom)
+    setEmail(emp.email || '')
+    setPoste(emp.poste || '')
+    setTauxHoraire(emp.taux_horaire ? String(emp.taux_horaire) : '')
+    setShowModal(true)
+  }
+
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!nom.trim()) return
     setSaving(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Utilisateur non connecté')
-      const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
-      if (!profile?.company_id) throw new Error('Entreprise introuvable')
+      if (editingItem) {
+        // Édition
+        const { error } = await supabase
+          .from('employes')
+          .update({
+            nom: nom.trim(),
+            email: email.trim() || null,
+            poste: poste.trim() || null,
+            taux_horaire: tauxHoraire ? parseFloat(tauxHoraire) : null,
+          })
+          .eq('id', editingItem.id)
 
-      const { error } = await supabase
-        .from('employes')
-        .insert({
-          company_id: profile.company_id,
-          nom: nom.trim(),
-          email: email.trim() || null,
-          poste: poste.trim() || null,
-          taux_horaire: tauxHoraire ? parseFloat(tauxHoraire) : null,
-          statut: 'actif'
-        })
+        if (error) throw error
+      } else {
+        // Création
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Utilisateur non connecté')
+        const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
+        if (!profile?.company_id) throw new Error('Entreprise introuvable')
 
-      if (error) throw error
+        const { error } = await supabase
+          .from('employes')
+          .insert({
+            company_id: profile.company_id,
+            nom: nom.trim(),
+            email: email.trim() || null,
+            poste: poste.trim() || null,
+            taux_horaire: tauxHoraire ? parseFloat(tauxHoraire) : null,
+            statut: 'actif'
+          })
 
-      // Reset & close
-      setNom('')
-      setEmail('')
-      setPoste('')
-      setTauxHoraire('')
+        if (error) throw error
+      }
+
       setShowModal(false)
       await loadEmployes()
     } catch (err) {
-      console.error('[handleAdd]', err)
-      alert('Erreur lors de l\'ajout de l\'employé')
+      console.error('[handleSave]', err)
+      alert('Erreur lors de la sauvegarde de l\'employé')
     } finally {
       setSaving(false)
     }
   }
 
+  async function handleDelete(id: string) {
+    if (!confirm('Voulez-vous vraiment supprimer cet employé ?')) return
+    await supabase.from('employes').delete().eq('id', id)
+    setShowModal(false)
+    await loadEmployes()
+  }
+
+  async function handleBatchDelete() {
+    if (selectedIds.length === 0) return
+    if (!confirm(`Voulez-vous vraiment supprimer les ${selectedIds.length} employés sélectionnés ?`)) return
+    await supabase.from('employes').delete().in('id', selectedIds)
+    setSelectedIds([])
+    await loadEmployes()
+  }
+
   const filtered = employes.filter(e =>
     e.nom.toLowerCase().includes(search.toLowerCase())
     || (e.email ?? '').toLowerCase().includes(search.toLowerCase())
+    || (e.poste ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
-  return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '900px' }}>
+  const allSelected = filtered.length > 0 && selectedIds.length === filtered.length
 
+  return (
+    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1050px', margin: '0 auto' }}>
+
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <HardHat size={18} color="var(--gold)" />
-          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>Employés</h1>
-          <span style={{ fontSize: '11px', color: 'var(--txt-3)', background: 'var(--bg-3)', borderRadius: '5px', padding: '2px 7px' }}>
-            {loading ? '…' : employes.length}
-          </span>
+        <div>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--txt-1)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <HardHat size={20} color="var(--gold)" /> Employés & Équipe
+          </h1>
+          <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '2px' }}>
+            Gestion de l'équipe, postes, taux horaires et édition directe dans la liste
+          </div>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreate}
           style={{
             display: 'flex', alignItems: 'center', gap: '6px',
-            background: 'var(--gold)', borderRadius: '8px', padding: '8px 14px',
-            fontSize: '12px', fontWeight: 600, color: '#0A0A0A', border: 'none', cursor: 'pointer',
+            background: 'var(--gold)', borderRadius: '8px', padding: '9px 16px',
+            fontSize: '13px', fontWeight: 700, color: '#0A0A0A', border: 'none', cursor: 'pointer',
           }}
         >
-          <Plus size={13} /> Ajouter un employé
+          <Plus size={15} /> Ajouter un employé
         </button>
       </div>
 
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px',
-        background: 'var(--bg-1)', border: '0.5px solid var(--line)',
-        borderRadius: '8px', padding: '7px 12px', maxWidth: '300px',
-      }}>
-        <Search size={13} color="var(--txt-3)" />
+      {/* Sélection en masse */}
+      {selectedIds.length > 0 && (
+        <div style={{
+          background: 'var(--ga)', border: '1px solid var(--gold)',
+          borderRadius: '10px', padding: '12px 18px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckSquare size={16} />
+            {selectedIds.length} employé(s) sélectionné(s)
+          </div>
+          <button
+            onClick={handleBatchDelete}
+            style={{ background: 'var(--red)20', border: '0.5px solid var(--red)', color: 'var(--red)', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Trash2 size={13} /> Supprimer la sélection
+          </button>
+        </div>
+      )}
+
+      {/* Recherche */}
+      <div style={{ position: 'relative', maxWidth: '360px' }}>
+        <Search size={14} color="var(--txt-3)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
         <input
           type="text"
-          placeholder="Rechercher..."
+          placeholder="Rechercher un employé par nom, poste..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', color: 'var(--txt-1)', width: '100%' }}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: 'var(--bg-2)', border: '0.5px solid var(--line)',
+            borderRadius: '8px', padding: '8px 12px 8px 34px',
+            fontSize: '12px', color: 'var(--txt-1)', outline: 'none',
+          }}
         />
       </div>
 
-      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
+      {/* Tableau avec ÉDITION EN LIGNE DIRECTE */}
+      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 180px 140px 110px 80px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => setSelectedIds(allSelected ? [] : filtered.map(e => e.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: allSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+              {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+            </button>
+          </div>
+          {['NOM (ÉDITABLE)', 'COURRIEL', 'POSTE (ÉDITABLE)', 'TAUX $/H (ÉDITABLE)', 'ACTIONS'].map((h, i) => (
+            <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em', textAlign: h.includes('TAUX') ? 'right' : 'left' }}>{h}</div>
+          ))}
+        </div>
+
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '8px', color: 'var(--txt-3)', fontSize: '12px' }}>
-            <Loader2 size={16} className="animate-spin" />
+            <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
             Chargement...
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '10px' }}>
-            <HardHat size={32} color="var(--bg-4)" strokeWidth={1.2} />
+            <HardHat size={32} color="var(--txt-3)" strokeWidth={1.2} />
             <p style={{ fontSize: '13px', color: 'var(--txt-3)', margin: 0 }}>Aucun employé pour l'instant</p>
           </div>
         ) : (
-          filtered.map(e => {
-            const initials = e.nom.split(' ').map((w: string) => w[0]).slice(0, 2).join('')
+          filtered.map((e, idx) => {
+            const isSelected = selectedIds.includes(e.id)
             return (
-              <div key={e.id} style={{
-                display: 'flex', alignItems: 'center', gap: '14px',
-                padding: '12px 16px', borderBottom: '0.5px solid var(--line)',
-              }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--ga)', border: '0.5px solid var(--gold-3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '11px', fontWeight: 600, color: 'var(--gold-2)',
-                }}>
-                  {initials}
+              <div
+                key={e.id}
+                style={{
+                  display: 'grid', gridTemplateColumns: '40px 1fr 180px 140px 110px 80px',
+                  padding: '10px 18px', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
+                  alignItems: 'center', background: isSelected ? 'var(--ga)' : 'transparent',
+                }}
+              >
+                {/* Checkbox */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <button onClick={() => setSelectedIds(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id])} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: isSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+                    {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                  </button>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--txt-1)' }}>{e.nom}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>{e.email ?? '—'}</div>
+
+                {/* 1. NOM EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={e.nom}
+                    onBlur={evt => evt.target.value !== e.nom && updateInlineField(e.id, 'nom', evt.target.value)}
+                    onKeyDown={evt => evt.key === 'Enter' && (evt.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', outline: 'none',
+                    }}
+                    onFocus={evt => (evt.target.style.background = 'var(--bg-2)', evt.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={evt => (evt.target.style.background = 'transparent', evt.target.style.borderColor = 'transparent')}
+                  />
                 </div>
-                {e.poste && (
-                  <span style={{
-                    fontSize: '10px', padding: '3px 8px', borderRadius: '5px',
-                    background: 'rgba(74,143,212,0.12)', color: 'var(--blue)',
-                  }}>
-                    {e.poste}
-                  </span>
-                )}
-                {e.taux_horaire && (
-                  <span style={{ fontSize: '11px', color: 'var(--txt-2)', marginRight: '14px' }}>
-                    {e.taux_horaire.toFixed(2)} $/h
-                  </span>
-                )}
-                <span style={{ fontSize: '11px', color: e.actif ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  {e.actif ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
-                  {e.actif ? 'Actif' : 'Inactif'}
-                </span>
+
+                {/* 2. COURRIEL EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="email"
+                    defaultValue={e.email || ''}
+                    placeholder="Ajouter email..."
+                    onBlur={evt => evt.target.value !== (e.email || '') && updateInlineField(e.id, 'email', evt.target.value)}
+                    onKeyDown={evt => evt.key === 'Enter' && (evt.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '11px', color: 'var(--txt-3)', outline: 'none',
+                    }}
+                    onFocus={evt => (evt.target.style.background = 'var(--bg-2)', evt.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={evt => (evt.target.style.background = 'transparent', evt.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 3. POSTE EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={e.poste || ''}
+                    placeholder="Ajouter poste..."
+                    onBlur={evt => evt.target.value !== (e.poste || '') && updateInlineField(e.id, 'poste', evt.target.value)}
+                    onKeyDown={evt => evt.key === 'Enter' && (evt.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '11px', fontWeight: 600, color: 'var(--blue)', outline: 'none',
+                    }}
+                    onFocus={evt => (evt.target.style.background = 'var(--bg-2)', evt.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={evt => (evt.target.style.background = 'transparent', evt.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 4. TAUX HORAIRE EN SAISIE DIRECTE */}
+                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2px' }}>
+                  <input
+                    type="number"
+                    step="0.50"
+                    defaultValue={e.taux_horaire ?? ''}
+                    placeholder="0.00"
+                    onBlur={evt => parseFloat(evt.target.value) !== (e.taux_horaire || 0) && updateInlineField(e.id, 'taux_horaire', evt.target.value)}
+                    onKeyDown={evt => evt.key === 'Enter' && (evt.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '75px', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '12px', fontWeight: 700, color: 'var(--txt-1)', textAlign: 'right', outline: 'none',
+                    }}
+                    onFocus={evt => (evt.target.style.background = 'var(--bg-2)', evt.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={evt => (evt.target.style.background = 'transparent', evt.target.style.borderColor = 'transparent')}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>$/h</span>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
+                  <button
+                    onClick={() => openEdit(e)}
+                    title="Modifier dans la fiche"
+                    style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 6px', cursor: 'pointer', color: 'var(--txt-2)' }}
+                  >
+                    <Edit3 size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(e.id)}
+                    title="Supprimer"
+                    style={{ background: 'var(--red)15', border: '0.5px solid var(--red)30', borderRadius: '6px', padding: '5px 6px', cursor: 'pointer', color: 'var(--red)' }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             )
           })
         )}
       </div>
 
-      {/* MODAL AJOUT */}
+      {/* MODAL AJOUT / ÉDITION COMPLÈTE */}
       {showModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px'
-        }}>
-          <form onSubmit={handleAdd} style={{
-            background: 'var(--bg-1)', border: '0.5px solid var(--line)',
-            borderRadius: '12px', width: '100%', maxWidth: '440px', overflow: 'hidden'
-          }}>
-            <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>Ajouter un employé</span>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowModal(false)}>
+          <form
+            onSubmit={handleSave}
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '14px', padding: '24px', width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '14px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--txt-1)' }}>
+                {editingItem ? 'Modifier l\'employé' : 'Ajouter un employé'}
+              </div>
               <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}>
                 <X size={16} />
               </button>
             </div>
 
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'block', marginBottom: '4px' }}>Nom complet *</label>
+              <input
+                required
+                type="text"
+                value={nom}
+                onChange={e => setNom(e.target.value)}
+                placeholder="Ex: Jean Tremblay"
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'block', marginBottom: '4px' }}>Courriel (optionnel)</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="jean@exemple.com"
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Nom complet *</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'block', marginBottom: '4px' }}>Poste / Rôle</label>
                 <input
-                  type="text" required value={nom} onChange={e => setNom(e.target.value)}
-                  placeholder="Martin Bédard"
-                  style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+                  type="text"
+                  value={poste}
+                  onChange={e => setPoste(e.target.value)}
+                  placeholder="Ex: Peintre, Menuisier..."
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
                 />
               </div>
-
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Adresse courriel</label>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'block', marginBottom: '4px' }}>Taux horaire ($/h)</label>
                 <input
-                  type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="martin@exemple.com"
-                  style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
+                  type="number"
+                  step="0.50"
+                  value={tauxHoraire}
+                  onChange={e => setTauxHoraire(e.target.value)}
+                  placeholder="25.00"
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
                 />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Poste</label>
-                  <input
-                    type="text" value={poste} onChange={e => setPoste(e.target.value)}
-                    placeholder="Apprenti Peintre"
-                    style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>Taux horaire ($/h)</label>
-                  <input
-                    type="number" step="0.01" value={tauxHoraire} onChange={e => setTauxHoraire(e.target.value)}
-                    placeholder="25.00"
-                    style={{ width: '100%', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
-                  />
-                </div>
               </div>
             </div>
 
-            <div style={{ padding: '14px 20px', borderTop: '0.5px solid var(--line)', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', color: 'var(--txt-2)', cursor: 'pointer' }}>Annuler</button>
-              <button type="submit" disabled={saving} style={{ background: 'var(--gold)', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '12px', fontWeight: 700, color: '#0A0A0A', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {saving ? 'Enregistrement...' : 'Ajouter'}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+              {editingItem && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(editingItem.id)}
+                  style={{ background: 'var(--red)15', border: '0.5px solid var(--red)30', color: 'var(--red)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  background: 'var(--gold)', borderRadius: '8px', padding: '10px',
+                  fontSize: '12px', fontWeight: 700, color: '#0A0A0A', border: 'none', cursor: 'pointer',
+                }}
+              >
+                {saving && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}
+                {editingItem ? 'Enregistrer les modifications' : 'Ajouter l\'employé'}
               </button>
             </div>
           </form>
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

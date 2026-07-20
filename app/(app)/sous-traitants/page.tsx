@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   Users, Plus, Search, Phone, Mail, ShieldCheck,
   Building2, Trash2, Edit3, X, Loader2, CheckCircle2,
-  HardHat, FileText, Filter
+  HardHat, FileText, Filter, CheckSquare, Square
 } from 'lucide-react'
 
 interface SousTraitant {
@@ -33,11 +33,22 @@ const SPECIALITES = [
   'ventilation',
 ]
 
+const SPECIALITES_OPTIONS = [
+  'général',
+  'électricité',
+  'plomberie',
+  'peinture',
+  'menuiserie',
+  'maçonnerie',
+  'ventilation',
+]
+
 export default function SousTraitantsPage() {
   const [items, setItems] = useState<SousTraitant[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [specFilter, setSpecFilter] = useState('tous')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState<SousTraitant | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -72,6 +83,35 @@ export default function SousTraitantsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // ── MODIFICATION EN LIGNE DIRECTE DANS LE TABLEAU ─────────────────────
+  async function updateInlineField(id: string, field: string, value: any) {
+    setItems(prev => prev.map(st => st.id === id ? { ...st, [field]: value || null } : st))
+
+    try {
+      const target = items.find(st => st.id === id)
+      if (!target) return
+      const updatedObj = { ...target, [field]: value || null }
+
+      await fetch(`/api/sous-traitants/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedObj),
+      })
+    } catch (e) {
+      console.error('[updateInlineField]', e)
+    }
+  }
+
+  async function handleBatchDelete() {
+    if (selectedIds.length === 0) return
+    if (!confirm(`Voulez-vous vraiment supprimer les ${selectedIds.length} sous-traitants sélectionnés ?`)) return
+    for (const id of selectedIds) {
+      await fetch(`/api/sous-traitants/${id}`, { method: 'DELETE' })
+    }
+    setSelectedIds([])
+    fetchItems()
   }
 
   function openCreate() {
@@ -153,6 +193,7 @@ export default function SousTraitantsPage() {
 
   const countActifs = items.filter(i => i.statut === 'actif').length
   const countRBQ = items.filter(i => !!i.rbq_no).length
+  const allSelected = filtered.length > 0 && selectedIds.length === filtered.length
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -165,7 +206,7 @@ export default function SousTraitantsPage() {
             Gestion des Sous-Traitants
           </div>
           <div style={{ fontSize: '13px', color: 'var(--txt-3)', marginTop: '2px' }}>
-            Suivi des partenaires, spécialités, licences RBQ et numéros de taxes
+            Suivi des partenaires, spécialités, licences RBQ et modification directe dans le tableau
           </div>
         </div>
         <button
@@ -182,7 +223,7 @@ export default function SousTraitantsPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '16px 20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Partenaires</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--txt-1)', marginTop: '4px' }}>{items.length}</div>
@@ -196,6 +237,26 @@ export default function SousTraitantsPage() {
           <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--gold-2)', marginTop: '4px' }}>{countRBQ}</div>
         </div>
       </div>
+
+      {/* Action en masse si sélection */}
+      {selectedIds.length > 0 && (
+        <div style={{
+          background: 'var(--ga)', border: '1px solid var(--gold)',
+          borderRadius: '10px', padding: '12px 18px', marginBottom: '20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckSquare size={16} />
+            {selectedIds.length} sous-traitant(s) sélectionné(s)
+          </div>
+          <button
+            onClick={handleBatchDelete}
+            style={{ background: 'var(--red)20', border: '0.5px solid var(--red)', color: 'var(--red)', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Trash2 size={13} /> Supprimer la sélection
+          </button>
+        </div>
+      )}
 
       {/* Barre de recherche et Filtres par spécialité */}
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -235,93 +296,169 @@ export default function SousTraitantsPage() {
         </div>
       </div>
 
-      {/* Liste */}
-      {loading ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--txt-3)', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> Chargement des sous-traitants…
-        </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-          <HardHat size={36} color="var(--txt-3)" style={{ marginBottom: '12px' }} />
-          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--txt-1)' }}>Aucun sous-traitant trouvé</div>
-          <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '4px' }}>Ajoutez vos sous-traitants pour suivre leurs travaux et facturations.</div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
-          {filtered.map(st => (
-            <div
-              key={st.id}
-              style={{
-                background: 'var(--bg-1)', border: '0.5px solid var(--line)',
-                borderRadius: '12px', padding: '18px 20px',
-                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                  <div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--txt-1)' }}>{st.nom}</div>
-                    {st.entreprise && (
-                      <div style={{ fontSize: '12px', color: 'var(--txt-3)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                        <Building2 size={12} /> {st.entreprise}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      background: 'var(--gold)18', border: '0.5px solid var(--gold)40',
-                      color: 'var(--gold-2)', borderRadius: '12px', padding: '2px 10px',
-                      fontSize: '11px', fontWeight: 600, textTransform: 'capitalize',
-                    }}
-                  >
-                    {st.specialite}
-                  </span>
-                </div>
-
-                {/* Coordonnées & RBQ */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', fontSize: '12px', color: 'var(--txt-2)' }}>
-                  {st.rbq_no && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--green)' }}>
-                      <ShieldCheck size={14} /> RBQ : <strong>{st.rbq_no}</strong>
-                    </div>
-                  )}
-                  {st.telephone && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Phone size={13} color="var(--txt-3)" /> <a href={`tel:${st.telephone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{st.telephone}</a>
-                    </div>
-                  )}
-                  {st.email && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Mail size={13} color="var(--txt-3)" /> <a href={`mailto:${st.email}`} style={{ color: 'inherit', textDecoration: 'none' }}>{st.email}</a>
-                    </div>
-                  )}
-                  {(st.tps_no || st.tvq_no) && (
-                    <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '2px' }}>
-                      Taxes : {st.tps_no || 'N/D'} | {st.tvq_no || 'N/D'}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions Footer */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid var(--line)' }}>
-                <button
-                  onClick={() => openEdit(st)}
-                  style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', color: 'var(--txt-2)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <Edit3 size={12} /> Modifier
-                </button>
-                <button
-                  onClick={() => handleDelete(st.id)}
-                  style={{ background: 'var(--red)12', border: '0.5px solid var(--red)30', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', color: 'var(--red)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            </div>
+      {/* TABLEAU AVEC ÉDITION EN LIGNE DIRECTE */}
+      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 180px 140px 140px 130px 80px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => setSelectedIds(allSelected ? [] : filtered.map(st => st.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: allSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+              {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+            </button>
+          </div>
+          {['NOM / CONTACT (ÉDITABLE)', 'ENTREPRISE (ÉDITABLE)', 'SPÉCIALITÉ (ÉDITABLE)', 'TÉLÉPHONE', 'LICENCE RBQ', 'ACTIONS'].map((h, i) => (
+            <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em' }}>{h}</div>
           ))}
         </div>
-      )}
+
+        {loading ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--txt-3)', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> Chargement des sous-traitants…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ background: 'var(--bg-1)', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
+            <HardHat size={36} color="var(--txt-3)" style={{ marginBottom: '12px' }} />
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--txt-1)' }}>Aucun sous-traitant trouvé</div>
+            <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '4px' }}>Ajoutez vos sous-traitants pour suivre leurs travaux.</div>
+          </div>
+        ) : (
+          filtered.map((st, idx) => {
+            const isSelected = selectedIds.includes(st.id)
+            return (
+              <div
+                key={st.id}
+                style={{
+                  display: 'grid', gridTemplateColumns: '40px 1fr 180px 140px 140px 130px 80px',
+                  padding: '10px 18px', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
+                  alignItems: 'center', background: isSelected ? 'var(--ga)' : 'transparent',
+                }}
+              >
+                {/* Checkbox */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <button onClick={() => setSelectedIds(prev => prev.includes(st.id) ? prev.filter(x => x !== st.id) : [...prev, st.id])} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: isSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+                    {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                  </button>
+                </div>
+
+                {/* 1. NOM EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={st.nom}
+                    onBlur={e => e.target.value !== st.nom && updateInlineField(st.id, 'nom', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 2. ENTREPRISE EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={st.entreprise || ''}
+                    placeholder="Nom d'entreprise..."
+                    onBlur={e => e.target.value !== (st.entreprise || '') && updateInlineField(st.id, 'entreprise', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '12px', color: 'var(--txt-2)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 3. SPÉCIALITÉ EN DROPDOWN DIRECT */}
+                <div>
+                  <select
+                    value={st.specialite || 'général'}
+                    onChange={e => updateInlineField(st.id, 'specialite', e.target.value)}
+                    style={{
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      background: 'var(--gold)18',
+                      color: 'var(--gold-2)',
+                      border: '1px solid var(--gold)40',
+                      borderRadius: '20px',
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      outline: 'none',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {SPECIALITES_OPTIONS.map(spec => (
+                      <option key={spec} value={spec} style={{ background: '#1F2937', color: '#F3F4F6' }}>
+                        {spec}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 4. TÉLÉPHONE EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={st.telephone || ''}
+                    placeholder="Téléphone..."
+                    onBlur={e => e.target.value !== (st.telephone || '') && updateInlineField(st.id, 'telephone', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '12px', color: 'var(--txt-3)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 5. LICENCE RBQ EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={st.rbq_no || ''}
+                    placeholder="RBQ..."
+                    onBlur={e => e.target.value !== (st.rbq_no || '') && updateInlineField(st.id, 'rbq_no', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '11px', fontWeight: 600, color: 'var(--green)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
+                  <button
+                    onClick={() => openEdit(st)}
+                    title="Fiche détaillée"
+                    style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 6px', cursor: 'pointer', color: 'var(--txt-2)' }}
+                  >
+                    <Edit3 size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(st.id)}
+                    title="Supprimer"
+                    style={{ background: 'var(--red)15', border: '0.5px solid var(--red)30', borderRadius: '6px', padding: '5px 6px', cursor: 'pointer', color: 'var(--red)' }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
 
       {/* Modal Création/Édition */}
       {showModal && (
@@ -369,7 +506,7 @@ export default function SousTraitantsPage() {
                     onChange={e => setForm({ ...form, specialite: e.target.value })}
                     style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
                   >
-                    {SPECIALITES.filter(s => s !== 'tous').map(s => (
+                    {SPECIALITES_OPTIONS.map(s => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
@@ -404,29 +541,6 @@ export default function SousTraitantsPage() {
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                     placeholder="contact@entreprise.com"
-                    style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'block', marginBottom: '4px' }}>No TPS</label>
-                  <input
-                    type="text"
-                    value={form.tps_no}
-                    onChange={e => setForm({ ...form, tps_no: e.target.value })}
-                    placeholder="123456789 RT 0001"
-                    style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)', display: 'block', marginBottom: '4px' }}>No TVQ</label>
-                  <input
-                    type="text"
-                    value={form.tvq_no}
-                    onChange={e => setForm({ ...form, tvq_no: e.target.value })}
-                    placeholder="1234567890 TQ 0001"
                     style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '8px 10px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none' }}
                   />
                 </div>
