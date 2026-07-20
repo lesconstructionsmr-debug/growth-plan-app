@@ -7,20 +7,35 @@ export const dynamic = 'force-dynamic'
 
 export default async function RootPage() {
   const headersList = headers()
-  const host = headersList.get('host') || ''
+  const host = (
+    headersList.get('x-forwarded-host') ||
+    headersList.get('host') ||
+    ''
+  ).toLowerCase()
 
+  // 1. SUR LE SOUS-DOMAINE APP (app.growth-plan.ca) -> TOUJOURS L'ERP (/dashboard ou /login)
+  if (host.startsWith('app.') || host.includes('app.growth-plan')) {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        redirect('/dashboard')
+      }
+    } catch (err) {
+      if ((err as { digest?: string })?.digest?.startsWith('NEXT_REDIRECT')) {
+        throw err
+      }
+    }
+    // Si non connecté ou sans session -> Écran de connexion ERP (/login)
+    redirect('/login')
+  }
+
+  // 2. SUR LE DOMAINE PRINCIPAL (growth-plan.ca)
   try {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-
-    // 1. Si l'utilisateur est déjà connecté -> aller directement au Dashboard ERP
     if (user) {
       redirect('/dashboard')
-    }
-
-    // 2. Si le domaine est app.growth-plan.ca (sous-domaine ERP) -> aller à l'écran de connexion ERP
-    if (host.startsWith('app.')) {
-      redirect('/login')
     }
   } catch (err) {
     if ((err as { digest?: string })?.digest?.startsWith('NEXT_REDIRECT')) {
@@ -28,6 +43,6 @@ export default async function RootPage() {
     }
   }
 
-  // 3. Sur le domaine principal (growth-plan.ca) -> afficher la Landing Page d'acquisition Plangrowth
+  // Si visiteur non connecté sur growth-plan.ca -> Landing Page Marketing
   return <LandingPage />
 }
