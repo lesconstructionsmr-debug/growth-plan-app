@@ -17,7 +17,7 @@ interface Integration {
 }
 
 export default function AcquisitionPage() {
-  const [onglet, setOnglet] = useState<'integrations' | 'funnel' | 'scoring'>('integrations')
+  const [onglet, setOnglet] = useState<'funnel_studio' | 'integrations' | 'funnel' | 'scoring'>('funnel_studio')
   const [loading, setLoading] = useState(true)
 
   // Real DB counts
@@ -165,8 +165,9 @@ export default function AcquisitionPage() {
       </div>
 
       {/* Onglets */}
-      <div style={{ display: 'flex', gap: '6px', borderBottom: '0.5px solid var(--line)', paddingBottom: '1px' }}>
+      <div style={{ display: 'flex', gap: '6px', borderBottom: '0.5px solid var(--line)', paddingBottom: '1px', flexWrap: 'wrap' }}>
         {[
+          { id: 'funnel_studio', label: '🔥 Master Funnel Studio (Trio Stratégique)' },
           { id: 'integrations', label: 'Intégrations & Budgets' },
           { id: 'funnel', label: 'Entonnoir (Données Réelles)' },
           { id: 'scoring', label: 'Simulateur de Scoring' }
@@ -178,7 +179,7 @@ export default function AcquisitionPage() {
               background: 'none', border: 'none',
               borderBottom: onglet === o.id ? '2px solid var(--gold)' : '2px solid transparent',
               color: onglet === o.id ? 'var(--gold-2)' : 'var(--txt-3)',
-              padding: '8px 16px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+              padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
               transition: 'all 0.12s'
             }}
           >
