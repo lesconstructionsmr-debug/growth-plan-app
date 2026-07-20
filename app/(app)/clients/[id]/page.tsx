@@ -234,10 +234,10 @@ function ChatPanel({ client }: { client: Client }) {
 
     // Envoi par courriel direct via API
     try {
-      await fetch('/api/notes', {
+      await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: client.id, type: 'note', contenu: `[Message direct client] ${msgText}` }),
+        body: JSON.stringify({ client_id: client.id, contenu: msgText }),
       })
     } catch {
       /* ignore */
