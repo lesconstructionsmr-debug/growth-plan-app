@@ -327,7 +327,7 @@ export default function NouveauDevisPage() {
         {/* ── Lignes ───────────────────────────── */}
         <div style={{ background: 'var(--bg-1)', border: `0.5px solid ${errors.lignes ? 'var(--red)' : 'var(--line)'}`, borderRadius: '10px', overflow: 'hidden' }}>
           {/* Header tableau */}
-          <div className="devis-grid-header" style={{ display: 'grid', gap: '8px', padding: '10px 14px', gridTemplateColumns: '1fr 70px 90px 110px 100px 36px', background: 'var(--bg-2)', borderBottom: '0.5px solid var(--line)', fontSize: '10px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <div style={{ display: 'grid', gap: '8px', padding: '10px 14px', gridTemplateColumns: '1fr 70px 90px 110px 100px 36px', background: 'var(--bg-2)', borderBottom: '0.5px solid var(--line)', fontSize: '10px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             <div>Description du poste</div>
             <div style={{ textAlign: 'center' }}>Qté</div>
             <div style={{ textAlign: 'center' }}>Unité</div>
@@ -339,53 +339,45 @@ export default function NouveauDevisPage() {
           {/* Lignes */}
           <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {form.lignes.map((ligne, idx) => (
-              <div key={ligne.id} className="devis-grid-row" style={{ display: 'grid', gap: '8px', gridTemplateColumns: '1fr 70px 90px 110px 100px 36px', alignItems: 'center' }}>
+              <div key={ligne.id} style={{ display: 'grid', gap: '8px', gridTemplateColumns: '1fr 70px 90px 110px 100px 36px', alignItems: 'center' }}>
                 <input value={ligne.description} onChange={e => updateLigne(ligne.id, 'description', e.target.value)}
-                  placeholder={`Poste ${idx + 1} — ex: Peinture salon 2 couches`}
-                  style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '9px 11px', fontSize: '13px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                  placeholder={`Poste ${idx + 1} — ex: Pose plancher flottant`}
+                  style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
                   onFocus={focusGold} onBlur={blurLine} />
-                
-                <div className="devis-row-inputs">
-                  <input type="number" min={0} step="0.01" value={ligne.quantite === 0 ? '' : ligne.quantite}
-                    onChange={e => updateLigne(ligne.id, 'quantite', parseFloat(e.target.value) || 0)}
-                    placeholder="Qté"
-                    style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '8px 6px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
-                    onFocus={focusGold} onBlur={blurLine} />
-                  
-                  <select value={ligne.unite} onChange={e => updateLigne(ligne.id, 'unite', e.target.value)}
-                    style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '8px 4px', fontSize: '11px', color: 'var(--txt-1)', outline: 'none', width: '100%' }}>
-                    {UNITES.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-
-                  <input type="number" min={0} step="0.01" value={ligne.prix_unitaire === 0 ? '' : ligne.prix_unitaire}
-                    onChange={e => updateLigne(ligne.id, 'prix_unitaire', parseFloat(e.target.value) || 0)}
-                    placeholder="Prix ($)"
-                    style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '8px 6px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box', textAlign: 'right' }}
-                    onFocus={focusGold} onBlur={blurLine} />
-
-                  <button type="button" onClick={() => removeLigne(ligne.id)} disabled={form.lignes.length === 1}
-                    style={{ background: 'rgba(239,68,68,0.1)', border: 'none', borderRadius: '6px', cursor: form.lignes.length === 1 ? 'default' : 'pointer', color: form.lignes.length === 1 ? 'var(--bg-4)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px' }}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-
-                <div className="mobile-header-hide" style={{ textAlign: 'right', fontSize: '12px', color: 'var(--txt-1)', fontWeight: 600, paddingRight: '4px' }}>
+                <input type="number" min={0} step="0.01" value={ligne.quantite === 0 ? '' : ligne.quantite}
+                  onChange={e => updateLigne(ligne.id, 'quantite', parseFloat(e.target.value) || 0)}
+                  style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
+                  onFocus={focusGold} onBlur={blurLine} />
+                <select value={ligne.unite} onChange={e => updateLigne(ligne.id, 'unite', e.target.value)}
+                  style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%' }}>
+                  {UNITES.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <input type="number" min={0} step="0.01" value={ligne.prix_unitaire === 0 ? '' : ligne.prix_unitaire}
+                  onChange={e => updateLigne(ligne.id, 'prix_unitaire', parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                  style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '7px 9px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box', textAlign: 'right' }}
+                  onFocus={focusGold} onBlur={blurLine} />
+                <div style={{ textAlign: 'right', fontSize: '12px', color: 'var(--txt-1)', fontWeight: 500, paddingRight: '4px' }}>
                   {formatCAD(ligne.quantite * ligne.prix_unitaire)}
                 </div>
+                <button type="button" onClick={() => removeLigne(ligne.id)} disabled={form.lignes.length === 1}
+                  style={{ background: 'none', border: 'none', cursor: form.lignes.length === 1 ? 'default' : 'pointer', color: form.lignes.length === 1 ? 'var(--bg-4)' : 'var(--txt-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+                  <Trash2 size={13} />
+                </button>
               </div>
             ))}
           </div>
 
           <div style={{ padding: '8px 14px 14px' }}>
             <button type="button" onClick={addLigne}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--ga)', border: '0.5px dashed var(--gold-3)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', fontWeight: 600, color: 'var(--gold-2)', cursor: 'pointer', width: '100%', justifyContent: 'center' }}>
-              <Plus size={14} /> Ajouter un poste
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '0.5px dashed var(--line)', borderRadius: '6px', padding: '7px 14px', fontSize: '11px', color: 'var(--txt-3)', cursor: 'pointer', width: '100%', justifyContent: 'center' }}>
+              <Plus size={12} /> Ajouter un poste
             </button>
           </div>
 
           {/* Totaux */}
           <div style={{ borderTop: '0.5px solid var(--line)', padding: '14px 16px', display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', maxWidth: '300px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '260px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--txt-2)' }}>
                 <span>Sous-total</span>
                 <span style={{ fontWeight: 500 }}>{formatCAD(subtotal)}</span>
@@ -411,7 +403,7 @@ export default function NouveauDevisPage() {
         </div>
 
         {/* ── Notes ────────────────────────────── */}
-        <div className="mobile-flex-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {[
             { field: 'notes_client' as const, label: 'Conditions & notes client', placeholder: 'Conditions de paiement, exclusions, garanties…' },
             { field: 'notes_internes' as const, label: 'Notes internes', placeholder: "Visible uniquement dans l'ERP…" },
@@ -426,26 +418,25 @@ export default function NouveauDevisPage() {
         </div>
 
         {/* ── Actions ──────────────────────────── */}
-        <div className="mobile-sticky-bottom" style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '24px' }}>
           <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>
-            Total estimé : <strong style={{ color: 'var(--gold)', fontSize: '14px' }}>{formatCAD(total)}</strong>
+            Total estimé : <strong style={{ color: 'var(--gold)', fontSize: '13px' }}>{formatCAD(total)}</strong>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
             <button type="button" onClick={() => router.back()}
-              style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--txt-2)', cursor: 'pointer' }}>
+              style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '9px 16px', fontSize: '12px', color: 'var(--txt-2)', cursor: 'pointer' }}>
               Annuler
             </button>
             <button type="button" onClick={() => handleSubmit('brouillon')} disabled={status !== 'idle'}
-              className="mobile-header-hide"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--txt-1)', cursor: 'pointer' }}>
-              <Eye size={13} /> Brouillon
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '9px 16px', fontSize: '12px', fontWeight: 500, color: 'var(--txt-1)', cursor: 'pointer' }}>
+              <Eye size={13} /> Enregistrer brouillon
             </button>
             <button type="button" onClick={() => handleSubmit('envoyer')} disabled={status !== 'idle'}
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 background: status === 'saved' ? 'var(--green)' : 'var(--gold)',
-                border: 'none', borderRadius: '8px', padding: '10px 18px',
-                fontSize: '13px', fontWeight: 700, color: status === 'saved' ? '#fff' : '#0A0A0A',
+                border: 'none', borderRadius: '8px', padding: '9px 18px',
+                fontSize: '12px', fontWeight: 600, color: status === 'saved' ? '#fff' : '#0A0A0A',
                 cursor: status !== 'idle' ? 'default' : 'pointer', opacity: status !== 'idle' ? 0.85 : 1, transition: 'background 0.2s',
               }}>
               {status === 'saving' && <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />}

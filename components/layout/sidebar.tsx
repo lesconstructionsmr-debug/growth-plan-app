@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Users, Building2, Calendar,
   FileText, Receipt, BarChart3, Settings,
   HardHat, LogOut, TrendingUp, Wallet, Target, Sparkles, Crown,
-  FolderKanban, Landmark, PieChart, Home, Sun, Moon, ArrowLeftRight, Menu, X
+  FolderKanban, Landmark, PieChart, Home, Sun, Moon, ArrowLeftRight,
+  Menu, X
 } from 'lucide-react'
 import { useTheme } from './theme-provider'
 import { useLanguage } from './language-provider'
@@ -105,10 +106,6 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
-    setMobileOpen(false)
-  }, [pathname])
-
-  useEffect(() => {
     fetch('/api/me')
       .then(r => r.json())
       .then(d => {
@@ -124,6 +121,11 @@ export default function Sidebar() {
       })
       .catch(() => {})
   }, [])
+
+  // Fermer le menu mobile lors du changement de page
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
 
   const { theme, toggle } = useTheme()
   const { lang, toggleLang, t } = useLanguage()
@@ -162,78 +164,71 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ── BARRE MOBILE TOP (Smartphone < 768px) ────────────────────── */}
-      <div className="mobile-top-bar" style={{
+      {/* ── BARRE MOBILE SOURIS & SMARTPHONE (Seulement affichée sur mobile via CSS) ── */}
+      <div className="mobile-header-bar" style={{
         display: 'none',
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        height: '52px', background: 'var(--bg-1)',
+        height: '50px',
+        background: 'var(--bg-1)',
         borderBottom: '0.5px solid var(--line)',
-        padding: '0 16px', alignItems: 'center', justifyContent: 'space-between'
+        padding: '0 16px',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 99
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={() => setMobileOpen(v => !v)}
-            style={{
-              background: 'var(--bg-2)', border: '0.5px solid var(--line)',
-              borderRadius: '7px', padding: '6px', color: 'var(--txt-1)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}
-          >
-            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-2)' }}>
-            Plangrowth ERP
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '26px', height: '26px', borderRadius: '6px',
+            background: 'var(--ga)', border: '0.5px solid var(--gold-3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            {logoIcon}
           </div>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>
+            {logoLabel}
+          </span>
         </div>
 
         <button
-          onClick={toggleVertical}
-          disabled={switching}
+          onClick={() => setMobileOpen(v => !v)}
           style={{
-            background: 'var(--ga)', border: '0.5px solid var(--gold-3)',
-            borderRadius: '6px', padding: '4px 8px', fontSize: '10px', fontWeight: 600,
-            color: 'var(--gold-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+            background: 'var(--ga)',
+            border: '0.5px solid var(--gold-3)',
+            borderRadius: '6px',
+            padding: '6px',
+            color: 'var(--gold-2)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center'
           }}
         >
-          <ArrowLeftRight size={12} /> {isCourtier ? 'Courtier' : 'Chantiers'}
+          {mobileOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
 
-      {/* Backdrop sombre sur mobile */}
+      {/* OVERLAY SOMBRE MOBILE */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 105,
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)'
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(3px)', zIndex: 998
           }}
         />
       )}
 
-      {/* ── ASIDE NAV (Desktop fixe & Mobile Drawer) ───────────────── */}
-      <aside className={`sidebar-aside ${mobileOpen ? 'mobile-open' : ''}`} style={{
+      {/* ── ASIDE NAVIGATION ── */}
+      <aside className={`sidebar-container ${mobileOpen ? 'mobile-open' : ''}`} style={{
         width: '220px', minWidth: '220px', height: '100vh',
         background: 'var(--bg-1)',
         borderRight: '0.5px solid var(--line)',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
-        zIndex: 110,
-        transition: 'transform 0.25s ease-out'
+        zIndex: 999
       }}>
-        <style>{`
-          @media (max-width: 768px) {
-            .mobile-top-bar { display: flex !important; }
-            .sidebar-aside {
-              position: fixed !important;
-              top: 0 !important; bottom: 0 !important; left: 0 !important;
-              transform: translateX(-100%);
-            }
-            .sidebar-aside.mobile-open {
-              transform: translateX(0) !important;
-              box-shadow: 8px 0 32px rgba(0,0,0,0.6) !important;
-            }
-          }
-        `}</style>
 
       {/* ── Logo + Selector Switch ─────────────────────────────────── */}
       <div style={{
@@ -420,6 +415,30 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+
+    <style jsx global>{`
+      @media (max-width: 768px) {
+        .mobile-header-bar {
+          display: flex !important;
+        }
+        .sidebar-container {
+          position: fixed !important;
+          top: 50px !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          transform: translateX(-100%) !important;
+          transition: transform 0.25s ease-in-out !important;
+          height: calc(100vh - 50px) !important;
+          box-shadow: 4px 0 20px rgba(0,0,0,0.5) !important;
+        }
+        .sidebar-container.mobile-open {
+          transform: translateX(0) !important;
+        }
+        main {
+          margin-top: 50px !important;
+        }
+      }
+    `}</style>
     </>
   )
 }
