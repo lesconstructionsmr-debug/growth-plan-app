@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Receipt, Plus, Search, Loader2, X, Wallet, Edit3, Trash2, Tag, Check } from 'lucide-react'
+import { Receipt, Plus, Search, Loader2, X, Wallet, Check, Trash2, CheckSquare, Square, Edit2 } from 'lucide-react'
 
 const DEFAULT_CATEGORIES = [
   'Matériaux',
@@ -51,19 +51,25 @@ export default function DepensesPage() {
   const [depenses, setDepenses] = useState<Depense[]>([])
   const [jobs, setJobs]         = useState<Job[]>([])
   const [categoriesList, setCategoriesList] = useState<string[]>(DEFAULT_CATEGORIES)
-  const [newCatInput, setNewCatInput] = useState('')
-  const [showCatManager, setShowCatManager] = useState(false)
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [catFilter, setCatFilter] = useState<string | null>(null)
+  
+  // Sélection multiple
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  // Modal création / édition
   const [showModal, setShowModal] = useState(false)
   const [editingDepense, setEditingDepense] = useState<Depense | null>(null)
   const [saving, setSaving]     = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [form, setForm] = useState({
     description: '', montant: '', categorie: 'Matériaux',
     date_depense: new Date().toISOString().split('T')[0], job_id: '',
   })
+
+  // Nouvelles catégories sur mesure
+  const [showCatManager, setShowCatManager] = useState(false)
+  const [newCatInput, setNewCatInput] = useState('')
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -83,32 +89,54 @@ export default function DepensesPage() {
     setDepenses(loadedDepenses)
     setJobs(jobsData || [])
 
-    // Extraire les catégories personnalisées existantes
     const customCats = Array.from(new Set(loadedDepenses.map(d => d.categorie).filter(Boolean) as string[]))
-    const merged = Array.from(new Set([...DEFAULT_CATEGORIES, ...customCats]))
-    setCategoriesList(merged)
-
+    setCategoriesList(Array.from(new Set([...DEFAULT_CATEGORIES, ...customCats])))
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  async function handleQuickCategoryChange(id: string, newCat: string) {
-    setDepenses(prev => prev.map(d => d.id === id ? { ...d, categorie: newCat } : d))
-    await supabase.from('depenses').update({ categorie: newCat }).eq('id', id)
+  // ── MODIFICATION EN LIGNE DIRECTE DANS LE TABLEAU ─────────────────────
+  async function updateInlineField(id: string, field: 'description' | 'montant' | 'categorie', value: any) {
+    setDepenses(prev => prev.map(d => {
+      if (d.id !== id) return d
+      if (field === 'montant') return { ...d, montant: parseFloat(value) || 0 }
+      return { ...d, [field]: value }
+    }))
+
+    const valToSave = field === 'montant' ? parseFloat(value) || 0 : value
+    await supabase.from('depenses').update({ [field]: valToSave }).eq('id', id)
   }
 
-  function handleAddCustomCategory() {
-    if (!newCatInput.trim()) return
-    const trimmed = newCatInput.trim()
-    if (!categoriesList.includes(trimmed)) {
-      setCategoriesList(prev => [...prev, trimmed])
+  // ── ACTION EN MASSE SUR SÉLECTION MULTIPLE ──────────────────────────
+  async function handleBatchCategoryChange(newCat: string) {
+    if (selectedIds.length === 0) return
+    setDepenses(prev => prev.map(d => selectedIds.includes(d.id) ? { ...d, categorie: newCat } : d))
+    await supabase.from('depenses').update({ categorie: newCat }).in('id', selectedIds)
+    setSelectedIds([])
+  }
+
+  async function handleBatchDelete() {
+    if (selectedIds.length === 0) return
+    if (!confirm(`Voulez-vous vraiment supprimer les ${selectedIds.length} dépenses sélectionnées ?`)) return
+    setDepenses(prev => prev.filter(d => !selectedIds.includes(d.id)))
+    await supabase.from('depenses').delete().in('id', selectedIds)
+    setSelectedIds([])
+  }
+
+  function toggleSelectAll(filteredList: Depense[]) {
+    if (selectedIds.length === filteredList.length && filteredList.length > 0) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredList.map(d => d.id))
     }
-    setForm(prev => ({ ...prev, categorie: trimmed }))
-    setNewCatInput('')
-    setShowCatManager(false)
   }
 
+  function toggleSelectOne(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  // Modal Handlers
   function openCreate() {
     setEditingDepense(null)
     setForm({
@@ -166,13 +194,22 @@ export default function DepensesPage() {
     await load()
   }
 
-  async function handleDelete(id: string) {
+  async function handleDeleteSingle(id: string) {
     if (!confirm('Voulez-vous vraiment supprimer cette dépense ?')) return
-    setDeleting(true)
     await supabase.from('depenses').delete().eq('id', id)
     setShowModal(false)
-    setDeleting(false)
     await load()
+  }
+
+  function handleAddCustomCategory() {
+    if (!newCatInput.trim()) return
+    const trimmed = newCatInput.trim()
+    if (!categoriesList.includes(trimmed)) {
+      setCategoriesList(prev => [...prev, trimmed])
+    }
+    setForm(prev => ({ ...prev, categorie: trimmed }))
+    setNewCatInput('')
+    setShowCatManager(false)
   }
 
   // Filtrage
@@ -191,8 +228,10 @@ export default function DepensesPage() {
     total: depenses.filter(d => d.categorie === c).reduce((sum, d) => sum + Number(d.montant), 0),
   })).filter(x => x.total > 0)
 
+  const allSelected = filtered.length > 0 && selectedIds.length === filtered.length
+
   return (
-    <div style={{ padding: '24px', maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ padding: '24px', maxWidth: '1150px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -201,7 +240,7 @@ export default function DepensesPage() {
             <Wallet size={20} color="var(--gold)" /> Dépenses
           </h1>
           <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '2px' }}>
-            Gestion des coûts, classification dynamique et édition directe
+            Modifiez directement le nom, le montant ou la catégorie de n'importe quel item de la liste
           </div>
         </div>
         <button
@@ -217,7 +256,7 @@ export default function DepensesPage() {
         </button>
       </div>
 
-      {/* Cartes KPI & Filtres */}
+      {/* KPIs & Filtres */}
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '16px' }}>
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total des Dépenses</div>
@@ -263,6 +302,39 @@ export default function DepensesPage() {
         </div>
       </div>
 
+      {/* Barre d'action groupée si éléments sélectionnés */}
+      {selectedIds.length > 0 && (
+        <div style={{
+          background: 'var(--ga)', border: '1px solid var(--gold)',
+          borderRadius: '10px', padding: '12px 18px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckSquare size={16} />
+            {selectedIds.length} dépense(s) sélectionnée(s)
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--txt-2)' }}>Changer catégorie vers :</span>
+              <select
+                onChange={e => e.target.value && handleBatchCategoryChange(e.target.value)}
+                defaultValue=""
+                style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', color: 'var(--txt-1)', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', outline: 'none' }}
+              >
+                <option value="" disabled>— Choisir une catégorie —</option>
+                {categoriesList.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={handleBatchDelete}
+              style={{ background: 'var(--red)20', border: '0.5px solid var(--red)', color: 'var(--red)', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Trash2 size={13} /> Supprimer la sélection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Barre de recherche */}
       <div style={{ position: 'relative' }}>
         <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--txt-3)' }} />
@@ -279,11 +351,16 @@ export default function DepensesPage() {
         />
       </div>
 
-      {/* Table des dépenses avec Dropdown de catégorie interactif direct */}
+      {/* TABLE DES DÉPENSES AVEC ÉDITION DIRECTE SUR CHAQUE CELLULE */}
       <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 130px 110px 80px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
-          {['DESCRIPTION / PROJET', 'CATÉGORIE (MODIFIABLE)', 'DATE', 'MONTANT', 'ACTIONS'].map(h => (
-            <div key={h} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em', textAlign: h === 'MONTANT' ? 'right' : h === 'ACTIONS' ? 'center' : 'left' }}>{h}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 180px 130px 130px 60px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => toggleSelectAll(filtered)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: allSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+              {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+            </button>
+          </div>
+          {['DESCRIPTION / NOM (ÉDITABLE)', 'CATÉGORIE (ÉDITABLE)', 'DATE', 'MONTANT ($ ÉDITABLE)', ''].map((h, i) => (
+            <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em', textAlign: h.includes('MONTANT') ? 'right' : 'left' }}>{h}</div>
           ))}
         </div>
 
@@ -307,35 +384,58 @@ export default function DepensesPage() {
           filtered.map((d, i) => {
             const currentCat = d.categorie || 'Autre'
             const st = CAT_STYLE[currentCat] || { color: '#9CA3AF', bg: 'rgba(156,163,175,0.15)' }
+            const isSelected = selectedIds.includes(d.id)
+
             return (
               <div
                 key={d.id}
                 style={{
-                  display: 'grid', gridTemplateColumns: '1fr 180px 130px 110px 80px',
-                  padding: '12px 18px', borderBottom: i < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
-                  alignItems: 'center', transition: 'background 0.1s',
+                  display: 'grid', gridTemplateColumns: '40px 1fr 180px 130px 130px 60px',
+                  padding: '10px 18px', borderBottom: i < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
+                  alignItems: 'center', background: isSelected ? 'var(--ga)' : 'transparent',
+                  transition: 'background 0.1s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <div style={{ cursor: 'pointer' }} onClick={() => openEdit(d)}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>{d.description}</div>
-                  {d.jobs?.titre && <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '2px' }}>🔨 {d.jobs.titre}</div>}
+                {/* Case à cocher */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <button onClick={() => toggleSelectOne(d.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: isSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+                    {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                  </button>
                 </div>
 
-                {/* Dropdown de catégorie interactif direct sur la ligne */}
-                <div onClick={e => e.stopPropagation()}>
+                {/* 1. NOM / DESCRIPTION EN Saisie DIRECTE */}
+                <div style={{ paddingRight: '12px' }}>
+                  <input
+                    type="text"
+                    defaultValue={d.description}
+                    onBlur={e => e.target.value !== d.description && updateInlineField(d.id, 'description', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      background: 'transparent', border: '1px solid transparent',
+                      borderRadius: '6px', padding: '4px 6px',
+                      fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)',
+                      outline: 'none', fontFamily: 'inherit',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                  {d.jobs?.titre && <div style={{ fontSize: '11px', color: 'var(--txt-3)', paddingLeft: '6px' }}>🔨 {d.jobs.titre}</div>}
+                </div>
+
+                {/* 2. CATÉGORIE EN DROPDOWN DIRECT */}
+                <div>
                   <select
                     value={currentCat}
-                    onChange={e => handleQuickCategoryChange(d.id, e.target.value)}
+                    onChange={e => updateInlineField(d.id, 'categorie', e.target.value)}
                     style={{
                       appearance: 'none',
                       WebkitAppearance: 'none',
                       background: st.bg,
                       color: st.color,
-                      border: `1px solid ${st.color}40`,
+                      border: `1px solid ${st.color}50`,
                       borderRadius: '20px',
-                      padding: '4px 10px',
+                      padding: '5px 12px',
                       fontSize: '11px',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -351,28 +451,46 @@ export default function DepensesPage() {
                   </select>
                 </div>
 
-                <div style={{ fontSize: '12px', color: 'var(--txt-3)', cursor: 'pointer' }} onClick={() => openEdit(d)}>
+                {/* 3. DATE */}
+                <div style={{ fontSize: '12px', color: 'var(--txt-3)' }}>
                   {fmtDate(d.date_depense)}
                 </div>
 
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--red)', textAlign: 'right', cursor: 'pointer' }} onClick={() => openEdit(d)}>
-                  {fmt(d.montant)}
+                {/* 4. MONTANT EN Saisie DIRECTE */}
+                <div style={{ textAlign: 'right' }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    defaultValue={d.montant}
+                    onBlur={e => parseFloat(e.target.value) !== d.montant && updateInlineField(d.id, 'montant', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '90px', boxSizing: 'border-box',
+                      background: 'transparent', border: '1px solid transparent',
+                      borderRadius: '6px', padding: '4px 6px',
+                      fontSize: '13px', fontWeight: 700, color: 'var(--red)',
+                      textAlign: 'right', outline: 'none', fontFamily: 'inherit',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }} onClick={e => e.stopPropagation()}>
+                {/* Actions */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
                   <button
                     onClick={() => openEdit(d)}
-                    title="Modifier tout l'item"
-                    style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 7px', cursor: 'pointer', color: 'var(--txt-2)' }}
+                    title="Ouvrir la fiche complète"
+                    style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 6px', cursor: 'pointer', color: 'var(--txt-2)' }}
                   >
-                    <Edit3 size={13} />
+                    <Edit2 size={12} />
                   </button>
                   <button
-                    onClick={() => handleDelete(d.id)}
+                    onClick={() => handleDeleteSingle(d.id)}
                     title="Supprimer"
-                    style={{ background: 'var(--red)15', border: '0.5px solid var(--red)30', borderRadius: '6px', padding: '5px 7px', cursor: 'pointer', color: 'var(--red)' }}
+                    style={{ background: 'var(--red)15', border: '0.5px solid var(--red)30', borderRadius: '6px', padding: '5px 6px', cursor: 'pointer', color: 'var(--red)' }}
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={12} />
                   </button>
                 </div>
               </div>
@@ -482,8 +600,7 @@ export default function DepensesPage() {
               {editingDepense && (
                 <button
                   type="button"
-                  onClick={() => handleDelete(editingDepense.id)}
-                  disabled={deleting}
+                  onClick={() => handleDeleteSingle(editingDepense.id)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     background: 'rgba(239,68,68,0.1)', border: '0.5px solid var(--red)',
@@ -503,7 +620,7 @@ export default function DepensesPage() {
                   fontSize: '13px', fontWeight: 700, color: '#0A0A0A', cursor: saving ? 'default' : 'pointer',
                 }}
               >
-                {saving ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : editingDepense ? <Edit3 size={14} /> : <Plus size={14} />}
+                {saving ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : editingDepense ? <Edit2 size={14} /> : <Plus size={14} />}
                 {saving ? 'Enregistrement…' : editingDepense ? 'Enregistrer les modifications' : 'Ajouter la dépense'}
               </button>
             </div>
