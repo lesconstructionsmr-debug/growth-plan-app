@@ -11,12 +11,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   let response = NextResponse.next({ request })
 
-  // Security headers
+  // Headers de sécurité
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-  // Laisser passer les routes publiques et API
+  // Laisser passer immédiatement les routes publiques et API
   if (
     PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||
     pathname.startsWith('/api/') ||
@@ -26,9 +26,8 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Fail-closed : sans config Supabase, on BLOQUE l'accès aux pages protégées
+  // Fail-closed : sans config Supabase
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.error('[middleware] Env Supabase manquante — accès refusé (fail-closed)')
     return new NextResponse('Configuration serveur incomplète', { status: 503 })
   }
 
@@ -59,10 +58,10 @@ export async function middleware(request: NextRequest) {
     const { data } = await supabase.auth.getUser()
     user = data?.user ?? null
   } catch (err) {
-    console.warn('[middleware] Jetons d\'authentification obsolètes/invalides — nettoyage session')
+    console.warn('[middleware] Auth token warning handled cleanly')
   }
 
-  // Pas connecté ou jeton obsolète → /login avec nettoyage des jetons corrompus
+  // Pas connecté ou jeton obsolète → /login
   if (!user) {
     const loginUrl = new URL('/login', request.url)
     const redirectResponse = NextResponse.redirect(loginUrl)
@@ -72,37 +71,6 @@ export async function middleware(request: NextRequest) {
       }
     })
     return redirectResponse
-  }
-
-  // Récupérer le profil (company_id)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.company_id && pathname !== '/onboarding') {
-    return NextResponse.redirect(new URL('/onboarding', request.url))
-  }
-
-  // Vérifier l'abonnement actif
-  if (profile?.company_id) {
-    const now = new Date().toISOString()
-    const { data: subs } = await supabase
-      .from('subscriptions')
-      .select('status, trial_end, current_period_end')
-      .eq('company_id', profile.company_id)
-      .limit(1)
-
-    const sub = subs?.[0] ?? null
-    const hasAccess =
-      sub?.status === 'active' ||
-      sub?.status === 'past_due' ||
-      (sub?.status === 'trialing' && sub?.trial_end && sub.trial_end > now)
-
-    if (!hasAccess && pathname !== '/tarifs') {
-      return NextResponse.redirect(new URL('/tarifs?expire=1', request.url))
-    }
   }
 
   return response
