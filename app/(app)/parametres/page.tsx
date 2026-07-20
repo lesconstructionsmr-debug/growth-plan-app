@@ -11,7 +11,7 @@ import {
 interface OrgProfile {
   nom: string; nom_legal: string; email: string; telephone: string; site_web: string
   rue: string; ville: string; province: string; code_postal: string
-  numero_tps: string; numero_tvq: string; numero_rbq: string
+  numero_tps: string; numero_tvq: string; numero_rbq: string; numero_neq: string
   mode_paiement_defaut: 'virement' | 'cheque' | 'carte' | 'comptant' | 'autre'
   delai_paiement: 15 | 30 | 45 | 60
   notes_pied_devis: string; notes_pied_facture: string; couleur_accent: string
@@ -24,7 +24,7 @@ const DEFAULT: OrgProfile = {
   email: 'info@novastructureai.com', telephone: '(418) 555-0200',
   site_web: 'https://novastructureai.com',
   rue: '1200 boul. Lebourgneuf', ville: 'Québec', province: 'QC', code_postal: 'G2K 2G4',
-  numero_tps: '123456789 RT 0001', numero_tvq: '1234567890 TQ 0001', numero_rbq: '8264-1234-01',
+  numero_tps: '', numero_tvq: '', numero_rbq: '', numero_neq: '',
   mode_paiement_defaut: 'virement', delai_paiement: 30,
   notes_pied_devis: "Ce devis est valide pour 30 jours. Un acompte de 30% est requis au démarrage des travaux. Les travaux sont exécutés selon les normes du Code du bâtiment du Québec.",
   notes_pied_facture: "Paiement dû dans le délai indiqué. Des intérêts de 1,5%/mois s'appliquent sur les soldes en retard. Merci de votre confiance.",
@@ -242,6 +242,8 @@ export default function ParametresPage() {
             code_postal: co.code_postal ?? f.code_postal,
             numero_tps:  co.tps_no ?? f.numero_tps,
             numero_tvq:  co.tvq_no ?? f.numero_tvq,
+            numero_rbq:  co.rbq_no ?? f.numero_rbq,
+            numero_neq:  co.neq ?? f.numero_neq,
           }))
         })
       })
@@ -263,6 +265,8 @@ export default function ParametresPage() {
         code_postal: form.code_postal,
         tps_no:      form.numero_tps,
         tvq_no:      form.numero_tvq,
+        rbq_no:      form.numero_rbq,
+        neq:         form.numero_neq,
         updated_at:  new Date().toISOString(),
       }).eq('id', companyId)
     }
@@ -369,7 +373,8 @@ export default function ParametresPage() {
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', paddingBottom: '12px', borderBottom: '0.5px solid var(--line)' }}>Numéros fiscaux et licences</div>
             <F label="Numéro TPS (Gouvernement fédéral)" hint="Format : 123456789 RT 0001"><Inp value={form.numero_tps} onChange={v => set('numero_tps', v)} placeholder="123456789 RT 0001" /></F>
             <F label="Numéro TVQ (Revenu Québec)" hint="Format : 1234567890 TQ 0001"><Inp value={form.numero_tvq} onChange={v => set('numero_tvq', v)} placeholder="1234567890 TQ 0001" /></F>
-            <F label="Numéro RBQ (Régie du bâtiment du Québec)" hint="Requis pour les entrepreneurs généraux et sous-traitants en construction au Québec."><Inp value={form.numero_rbq} onChange={v => set('numero_rbq', v)} placeholder="8264-1234-01" /></F>
+            <F label="Numéro RBQ (Régie du bâtiment du Québec)" hint="Requis pour les entrepreneurs généraux et sous-traitants en construction au Québec. Obligatoire sur les soumissions."><Inp value={form.numero_rbq} onChange={v => set('numero_rbq', v)} placeholder="8264-1234-01" /></F>
+            <F label="NEQ (Registraire des entreprises du Québec)" hint="Numéro d'entreprise du Québec — 10 chiffres."><Inp value={form.numero_neq} onChange={v => set('numero_neq', v)} placeholder="1234567890" /></F>
             <div style={{ padding: '12px 14px', background: 'rgba(184,146,42,0.06)', border: '0.5px solid var(--gold-3)', borderRadius: '8px', fontSize: '11px', color: 'var(--txt-2)', lineHeight: 1.6 }}>
               💡 Ces numéros apparaissent automatiquement dans le bas de page de tous vos devis et factures, conformément aux exigences de Revenu Québec.
             </div>

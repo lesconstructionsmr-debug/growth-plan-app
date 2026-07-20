@@ -26,6 +26,11 @@ create table if not exists public.companies (
 alter table public.companies add column if not exists vertical text default 'construction';
 alter table public.companies add column if not exists team_size text;
 
+-- Migration: identifiants légaux québécois (licence RBQ, NEQ du Registraire)
+alter table public.companies add column if not exists rbq_no text;
+alter table public.companies add column if not exists neq    text;
+alter table public.companies add column if not exists email  text;
+
 -- Profils utilisateurs (étend auth.users)
 create table if not exists public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,

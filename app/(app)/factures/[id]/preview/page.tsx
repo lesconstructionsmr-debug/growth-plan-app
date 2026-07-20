@@ -19,7 +19,7 @@ interface FactureDoc {
   taux_tps: number; taux_tvq: number
   notes_client: string | null
   lignes: { id: string; description: string; quantite: number; unite: string; prix_unitaire: number; total_ligne: number }[]
-  organisation: { nom: string; email: string; telephone: string; adresse: string; ville: string; tps_numero: string; tvq_numero: string }
+  organisation: { nom: string; email: string; telephone: string; adresse: string; ville: string; tps_numero: string; tvq_numero: string; rbq_numero: string; neq_numero: string }
 }
 
 const FALLBACK: FactureDoc = {
@@ -30,7 +30,7 @@ const FALLBACK: FactureDoc = {
   sous_total: 0, montant_tps: 0, montant_tvq: 0, total_ttc: 0,
   taux_tps: 5, taux_tvq: 9.975,
   notes_client: null, lignes: [],
-  organisation: { nom: 'Mon Entreprise', email: '', telephone: '', adresse: '', ville: '', tps_numero: '', tvq_numero: '' },
+  organisation: { nom: 'Mon Entreprise', email: '', telephone: '', adresse: '', ville: '', tps_numero: '', tvq_numero: '', rbq_numero: '', neq_numero: '' },
 }
 
 export default function FacturePreviewPage() {
@@ -45,7 +45,7 @@ export default function FacturePreviewPage() {
     )
     supabase
       .from('factures')
-      .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, date_echeance, notes, clients(nom, email, adresse, ville), companies(name, email, telephone, adresse, ville, tps_no, tvq_no)')
+      .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, date_echeance, notes, clients(nom, email, adresse, ville), companies(name, email, telephone, adresse, ville, tps_no, tvq_no, rbq_no, neq)')
       .eq('id', id)
       .single()
       .then(({ data }) => {
@@ -83,6 +83,8 @@ export default function FacturePreviewPage() {
             ville: org.ville ?? '',
             tps_numero: org.tps_no ?? '',
             tvq_numero: org.tvq_no ?? '',
+            rbq_numero: org.rbq_no ?? '',
+            neq_numero: org.neq ?? '',
           },
         })
       })
@@ -227,6 +229,14 @@ export default function FacturePreviewPage() {
           <p style={{ fontSize: '11px', color: '#888', textAlign: 'center', margin: 0 }}>
             Merci de votre confiance — {facture.organisation.nom}
           </p>
+          {(facture.organisation.rbq_numero || facture.organisation.neq_numero) && (
+            <p style={{ fontSize: '10px', color: '#888', textAlign: 'center', margin: '6px 0 0' }}>
+              {[
+                facture.organisation.rbq_numero && `Licence RBQ : ${facture.organisation.rbq_numero}`,
+                facture.organisation.neq_numero && `NEQ : ${facture.organisation.neq_numero}`,
+              ].filter(Boolean).join('  ·  ')}
+            </p>
+          )}
         </div>
       </div>
 

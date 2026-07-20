@@ -48,6 +48,8 @@ const DEVIS_MOCK = {
     ville: 'Québec, QC  G2K 2G4',
     tps_numero: '123456789 RT0001',
     tvq_numero: '1234567890 TQ0001',
+    rbq_numero: '',
+    neq_numero: '',
   },
 }
 
@@ -66,7 +68,7 @@ export default function DevisPreviewPage() {
       try {
         const { data } = await supabase
           .from('devis')
-          .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, valide_jusqu_au, notes, clients(nom, email, adresse, ville), companies(name, email, telephone, adresse, ville, tps_no, tvq_no)')
+          .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, valide_jusqu_au, notes, clients(nom, email, adresse, ville), companies(name, email, telephone, adresse, ville, tps_no, tvq_no, rbq_no, neq)')
           .eq('id', id)
           .single()
 
@@ -108,6 +110,8 @@ export default function DevisPreviewPage() {
             ville: org.ville ?? '',
             tps_numero: org.tps_no ?? '',
             tvq_numero: org.tvq_no ?? '',
+            rbq_numero: org.rbq_no ?? '',
+            neq_numero: org.neq ?? '',
           },
         })
       } catch (err) {
@@ -352,6 +356,14 @@ export default function DevisPreviewPage() {
               </div>
             ))}
           </div>
+
+          {/* Licences et immatriculation (exigences RBQ / Registraire) */}
+          {(devis.organisation.rbq_numero || devis.organisation.neq_numero) && (
+            <div style={{ marginTop: '28px', paddingTop: '10px', borderTop: '1px solid #e0e0e0', display: 'flex', gap: '24px', fontSize: '10px', color: '#888' }}>
+              {devis.organisation.rbq_numero && <span>Licence RBQ : {devis.organisation.rbq_numero}</span>}
+              {devis.organisation.neq_numero && <span>NEQ : {devis.organisation.neq_numero}</span>}
+            </div>
+          )}
         </div>
       </div>
 
