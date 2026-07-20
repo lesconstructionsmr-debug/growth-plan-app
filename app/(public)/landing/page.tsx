@@ -224,36 +224,36 @@ export default function LandingPage() {
                 <span className="text-xs text-amber-300 font-mono font-bold">tableau-de-bord.growth-plan.ca</span>
               </div>
               <span className="text-xs px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 font-mono border border-amber-500/20 font-bold">
-                ● Taux de conversion devis : +35%
+                ● Suivi en temps réel des chantiers &amp; devis
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                  <span>Devis Relancés (24h)</span>
+                  <span>Suivi &amp; Relances Devis (24h)</span>
                   <Zap className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-white">18 / 18 Signés</p>
-                <p className="text-xs text-amber-400 mt-2 font-semibold">↑ +42,000 $ ce mois-ci</p>
+                <p className="text-2xl font-black text-white">14 Relances Envoyées</p>
+                <p className="text-xs text-amber-400 mt-2 font-semibold">3 devis relancés signés ce mois-ci</p>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                  <span>Marge Brute Moyenne</span>
+                  <span>Marge Brute Contrôlée</span>
                   <TrendingUp className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-white">38.4 %</p>
-                <p className="text-xs text-slate-400 mt-2 font-medium">+6.2% vs secteur service</p>
+                <p className="text-2xl font-black text-white">32.5 %</p>
+                <p className="text-xs text-slate-400 mt-2 font-medium">Alertes dérives matériaux &amp; temps</p>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                  <span>Suivi Terrain & Lean</span>
+                  <span>Standardisation &amp; Qualité</span>
                   <ShieldCheck className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-white">0 Reprise de travaux</p>
-                <p className="text-xs text-amber-400 mt-2 font-semibold">100% des délais respectés</p>
+                <p className="text-2xl font-black text-white">100% Fiches Qualité</p>
+                <p className="text-xs text-amber-400 mt-2 font-semibold">Validation photo avant fermeture</p>
               </div>
             </div>
           </div>
