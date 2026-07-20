@@ -55,7 +55,7 @@ const FALLBACK_DATA: MarketIndicator[] = [
   { id: '8', date_ref: '2025-07-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 145, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
   { id: '14', date_ref: '2026-07-01', indicateur: 'Béton prêt-à-l\'emploi', valeur: 165, unite: '$/m³', categorie: 'matériaux', region: 'Québec' },
 
-  // Mises en chantier
+  // Mises en chantier uniques par région
   { id: '22', date_ref: '2026-06-30', indicateur: 'Mises en chantier', valeur: 3820, unite: 'unités', categorie: 'logement', region: 'Montréal' },
   { id: '23', date_ref: '2026-06-30', indicateur: 'Mises en chantier', valeur: 1480, unite: 'unités', categorie: 'logement', region: 'Laurentides' },
   { id: '24', date_ref: '2026-06-30', indicateur: 'Mises en chantier', valeur: 2150, unite: 'unités', categorie: 'logement', region: 'Montérégie' },
@@ -85,7 +85,6 @@ export default function MarchePage() {
   const [activeMaterial, setActiveMaterial] = useState<string>('Peinture latex')
   const [dbNotice, setDbNotice] = useState(false)
 
-  // Initialisation Supabase Browser Client
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -121,19 +120,22 @@ export default function MarchePage() {
     loadMarketData()
   }, [])
 
-  // Liste des filtres de matériaux orientés PEINTRE (Latex, Époxy, Apprêt) + Gros oeuvre
   const materialTypes = ['Peinture latex', 'Revêtement époxy', 'Apprêt scellant', 'Bois de charpente', 'Béton prêt-à-l\'emploi']
   
   const chartPoints = data
     .filter(x => x.indicateur === activeMaterial)
     .map(x => ({ label: fmtMonth(x.date_ref), value: Number(x.valeur) }))
 
-  // Données régionales (Mises en chantier)
-  const regionStarts = data.filter(x => x.indicateur === 'Mises en chantier')
+  // Données régionales uniques (Sans doublons)
+  const regionMap = new Map<string, MarketIndicator>()
+  data.filter(x => x.indicateur === 'Mises en chantier').forEach(x => {
+    regionMap.set(x.region, x)
+  })
+  const regionStarts = Array.from(regionMap.values())
 
-  // Indicateurs rapides
-  const mortgageRate = data.find(x => x.indicateur === 'Taux hypothécaire fixe 5 ans')?.valeur ?? 5.24
-  const bankRate = data.find(x => x.indicateur === 'Taux directeur')?.valeur ?? 4.50
+  // Indicateurs rapides (Dernières valeurs à jour)
+  const mortgageRate = data.slice().reverse().find(x => x.indicateur === 'Taux hypothécaire fixe 5 ans')?.valeur ?? 3.95
+  const bankRate = data.slice().reverse().find(x => x.indicateur === 'Taux directeur')?.valeur ?? 2.25
   
   // Calcul variation de la peinture latex (indicateur principal peintre)
   const paintHistory = data.filter(x => x.indicateur === 'Peinture latex')
@@ -141,19 +143,19 @@ export default function MarchePage() {
   const paintEnd = paintHistory[paintHistory.length - 1]?.valeur ?? 78.00
   const paintDiffPct = Math.round(((paintEnd - paintStart) / paintStart) * 100)
 
-  // Composant SVG de graphique linéaire (robuste pour PDF et SSR)
+  // SVG Chart
   function LineChartSvg({ points }: { points: { label: string; value: number }[] }) {
     if (points.length === 0) return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--txt-3)', fontSize: '12px' }}>Aucun point de données</div>
     
     const minVal = Math.min(...points.map(p => p.value)) * 0.98
     const maxVal = Math.max(...points.map(p => p.value)) * 1.02
-    const range = maxVal - minVal
+    const range = maxVal - minVal || 1
     
     const width = 600
     const height = 220
     
     const coords = points.map((p, idx) => {
-      const x = (idx / (points.length - 1)) * (width - 60) + 30
+      const x = (idx / (points.length - 1 || 1)) * (width - 60) + 30
       const y = height - ((p.value - minVal) / range) * (height - 60) - 30
       return { x, y, label: p.label, value: p.value }
     })
@@ -163,7 +165,6 @@ export default function MarchePage() {
 
     return (
       <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-        {/* Grille horizontale */}
         {[0, 0.25, 0.5, 0.75, 1].map((r, i) => {
           const y = height - r * (height - 60) - 30
           const val = Math.round(minVal + r * range)
@@ -175,19 +176,15 @@ export default function MarchePage() {
           )
         })}
 
-        {/* Remplissage de zone dégradé CSS */}
         <path d={areaD} fill="var(--gold-2)15" />
-        {/* Ligne principale */}
         <path d={pathD} fill="none" stroke="var(--gold)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* Points interactifs */}
         {coords.map((c, idx) => (
           <g key={idx}>
             <circle cx={c.x} cy={c.y} r={4.5} fill="var(--bg-1)" stroke="var(--gold)" strokeWidth={2} />
             <text x={c.x} y={c.y - 10} fontSize={8.5} fill="var(--txt-1)" fontWeight={600} textAnchor="middle">
               {c.value.toLocaleString('fr-CA')}
             </text>
-            {/* Étiquette d'axe X */}
             <text x={c.x} y={height - 5} fontSize={8} fill="var(--txt-3)" textAnchor="middle">
               {c.label}
             </text>
@@ -210,7 +207,6 @@ export default function MarchePage() {
   return (
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1020px' }}>
       
-      {/* CSS d'impression pour PDF parfait */}
       <style>{`
         @media print {
           body { background: white !important; color: black !important; }
@@ -221,14 +217,13 @@ export default function MarchePage() {
         }
       `}</style>
 
-      {/* Bannière d'avertissement de données de secours locale (Masquée en impression) */}
       {dbNotice && (
         <div className="no-print" style={{ background: 'var(--gold-2)10', border: '0.5px solid var(--gold-3)', borderRadius: '10px', padding: '12px 16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
           <AlertCircle size={18} color="var(--gold-2)" />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Démonstration active (Données de Secours Peintre)</div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Démonstration active (Données de Secours Peintre à jour)</div>
             <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '2px' }}>
-              La table `market_trends` de votre Supabase n'est pas alimentée. Nous affichons les indices de marché de peinture et de construction modélisés. Exécutez le script SQL `seed-market-trends.sql` pour lier vos vraies données.
+              La table `market_trends` de votre Supabase n'est pas alimentée. Nous affichons les indices de marché de peinture et taux à jour. Exécutez le script SQL `seed-market-trends.sql` pour alimenter Supabase.
             </div>
           </div>
           <button onClick={loadMarketData} style={{ background: 'none', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 10px', fontSize: '10px', color: 'var(--txt-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -316,7 +311,6 @@ export default function MarchePage() {
               <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--txt-1)' }}>Indices des Prix Matériaux de Peinture</span>
             </div>
             
-            {/* Filtre de matériel (Masqué à l'impression) */}
             <div className="no-print" style={{ display: 'flex', gap: '4px' }}>
               {materialTypes.map(m => (
                 <button
@@ -334,7 +328,6 @@ export default function MarchePage() {
             Relevé d'évolution des prix unitaires pour l'indicateur : <strong style={{ color: 'var(--gold-2)' }}>{activeMaterial}</strong>
           </div>
 
-          {/* Graphique SVG */}
           <div style={{ height: '220px', marginTop: '10px' }}>
             <LineChartSvg points={chartPoints} />
           </div>
@@ -350,7 +343,6 @@ export default function MarchePage() {
             Opportunités de chantiers de peinture (mises en chantier)
           </div>
 
-          {/* Bar Chart CSS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, justifyContent: 'center', marginTop: '10px' }}>
             {regionStarts.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--txt-3)', fontSize: '11px' }}>Données régionales indisponibles</div>
@@ -380,7 +372,6 @@ export default function MarchePage() {
       {/* Module AI Recommendations Peintre */}
       <div className="print-card" style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         
-        {/* Titre */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ background: 'var(--gold-2)18', padding: '6px', borderRadius: '8px' }}>
             <Sparkles size={16} color="var(--gold-2)" />
@@ -391,13 +382,11 @@ export default function MarchePage() {
           </div>
         </div>
 
-        {/* Recommandations */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }} className="print-full">
           
-          {/* Rec 1 - Peinture Latex */}
           <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--red)18', color: 'var(--red)', fontWeight: 600 }}>PRIX LATEX LATEX</span>
+              <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--red)18', color: 'var(--red)', fontWeight: 600 }}>PRIX LATEX</span>
               <span style={{ fontSize: '10px', color: 'var(--gold-2)', fontWeight: 700 }}>ROI: +5% à +7%</span>
             </div>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Indexation des Devis Résidentiels</div>
@@ -406,7 +395,6 @@ export default function MarchePage() {
             </p>
           </div>
 
-          {/* Rec 2 - Epoxy Commercial */}
           <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--blue)18', color: 'var(--blue)', fontWeight: 600 }}>ÉPOXY COMMERCIAL</span>
@@ -418,7 +406,6 @@ export default function MarchePage() {
             </p>
           </div>
 
-          {/* Rec 3 - Financement et Rénos */}
           <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: 'var(--purple)18', color: 'var(--purple)', fontWeight: 600 }}>FINANCIER / CCQ</span>
