@@ -22,10 +22,16 @@
     Referrer-Policy        = "strict-origin-when-cross-origin"
     Permissions-Policy     = "camera=(), microphone=(), geolocation=()"
 
-# ── Redirects ────────────────────────────────────────────────────
-# Netlify gère automatiquement les routes Next.js via le plugin.
-# Ajoute ici des redirects custom si nécessaire :
-# [[redirects]]
-#   from   = "/old-path"
-#   to     = "/new-path"
-#   status = 301
+# ── Redirects Netlify CDN ─────────────────────────────────────────
+[[redirects]]
+  from   = "https://app.growth-plan.ca/"
+  to     = "/dashboard"
+  status = 302
+  force  = true
+
+[[redirects]]
+  from   = "http://app.growth-plan.ca/"
+  to     = "/dashboard"
+  status = 302
+  force  = true
+

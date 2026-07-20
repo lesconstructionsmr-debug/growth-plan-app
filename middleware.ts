@@ -16,10 +16,15 @@ export async function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-  const host = request.headers.get('host') || request.nextUrl.hostname
+  const host = (
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    request.nextUrl.hostname ||
+    ''
+  ).toLowerCase()
 
   // Sur app.growth-plan.ca, la racine '/' va TOUJOURS vers l'ERP (/dashboard -> /login si non connecté)
-  if (host.startsWith('app.') && pathname === '/') {
+  if ((host.startsWith('app.') || host.includes('app.growth-plan')) && pathname === '/') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
