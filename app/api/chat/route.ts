@@ -19,7 +19,7 @@ function generateSmartFallbackResponse(lastMessage: string): string {
   if (msg.includes('hook') || msg.includes('accroche') || msg.includes('reels') || msg.includes('tiktok')) {
     return `# 🎣 5 Hooks Ultra-Percutants pour Réseaux Sociaux
 
-Here are 5 hooks dynamic pour capter l'attention des propriétaires québécois :
+Voici 5 accroches dynamiques pour capter l'attention des propriétaires québécois :
 
 1. **"Le piège à 10 000 $ que 90% des propriétaires font en rénovant leur sous-sol..."**
    - *Format* : Reel / TikTok 30s
@@ -105,8 +105,17 @@ Voici une proposition de contenu sur-mesure pour développer votre visibilité a
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    
+    // Auth résiliente sans crash si le jeton du navigateur est invalide
+    let user = null
+    try {
+      const { data, error } = await supabase.auth.getUser()
+      if (!error && data?.user) {
+        user = data.user
+      }
+    } catch (e) {
+      console.warn('[Chat Route] Auth warning handled cleanly:', e)
+    }
 
     const { messages } = await request.json()
     const lastUserMsg = Array.isArray(messages) && messages.length > 0

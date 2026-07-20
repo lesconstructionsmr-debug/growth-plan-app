@@ -21,17 +21,21 @@ export function createClient() {
   )
 }
 
-// Retourne le company_id de l'utilisateur connecté
+// Retourne le company_id de l'utilisateur connecté de manière sécurisée
 export async function getMyCompanyId(): Promise<string | null> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data?.user) return null
 
-  const { data } = await supabase
-    .from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .single()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', data.user.id)
+      .single()
 
-  return data?.company_id ?? null
+    return profile?.company_id ?? null
+  } catch {
+    return null
+  }
 }
