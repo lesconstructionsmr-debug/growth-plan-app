@@ -90,6 +90,8 @@ export default function MarchePage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  const [syncing, setSyncing] = useState(false)
+
   const loadMarketData = async () => {
     setLoading(true)
     try {
@@ -113,6 +115,20 @@ export default function MarchePage() {
       setDbNotice(true)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncLiveMarket = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/cron/sync-market-trends')
+      if (res.ok) {
+        await loadMarketData()
+      }
+    } catch (e) {
+      console.error('Erreur lors de la synchro du marché:', e)
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -242,6 +258,14 @@ export default function MarchePage() {
           <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Indicateurs de peinture (latex, époxy) et prévisions économiques résidentielles / commerciales au Québec</p>
         </div>
         <div className="no-print" style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={handleSyncLiveMarket}
+            disabled={syncing}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '7px 14px', fontSize: '11px', color: 'var(--txt-1)', cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
+          >
+            <RefreshCw size={13} style={{ animation: syncing ? 'spin 0.8s linear infinite' : 'none' }} />
+            {syncing ? 'Synchro en cours...' : 'Synchro en direct (BdC & IA)'}
+          </button>
           <button
             onClick={() => window.print()}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '8px', padding: '7px 14px', fontSize: '11px', color: 'var(--gold-2)', cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}
