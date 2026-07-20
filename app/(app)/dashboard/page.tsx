@@ -5,7 +5,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import {
   TrendingUp, FileText, Building2, Receipt,
   Clock, ChevronRight, Plus, AlertCircle,
-  CheckCircle2, Circle, ArrowUpRight
+  CheckCircle2, Circle, ArrowUpRight, Zap, Trash2, X
 } from 'lucide-react'
 
 interface KpiData {
@@ -135,29 +135,18 @@ export default function DashboardPage() {
   const [recentJobs, setRecentJobs] = useState<RecentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activite, setActivite] = useState<{ id: string; label: string; date: string; color: string; href: string }[]>([])
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(true) // Actif pour tous les utilisateurs connectés
   const [seeding, setSeeding] = useState(false)
+  const [showDemoModal, setShowDemoModal] = useState(false)
 
-  async function handleSeedDemo() {
-    if (seeding) return
-    
-    const choice = prompt(
-      "⚡ GESTION DES DONNÉES DE DÉMONSTRATION (Éclair)\n\n" +
-      "1 = Générer la démo (35 clients, devis, factures, chantiers)\n" +
-      "2 = INVERSER / PURGER la démo (Ré-enlever tous les faux clients démo)\n\n" +
-      "Entrez 1 ou 2 :",
-      "1"
-    )
-
-    if (!choice || (choice !== '1' && choice !== '2')) return
-
+  async function handleSeedAction(actionType: 'POST' | 'DELETE') {
     setSeeding(true)
+    setShowDemoModal(false)
     try {
-      const method = choice === '2' ? 'DELETE' : 'POST'
-      const res = await fetch('/api/admin/seed-demo', { method })
+      const res = await fetch('/api/admin/seed-demo', { method: actionType })
       const result = await res.json()
       if (res.ok) {
-        alert(result.message ?? "Opération effectuée avec succès ! Rechargement...")
+        alert(result.message ?? "Opération effectuée avec succès !")
         window.location.reload()
       } else {
         alert(result.error ?? "Erreur lors de l'opération")
@@ -176,7 +165,7 @@ export default function DashboardPage() {
     )
 
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && user.email?.toLowerCase() === 'max@growth-plan.ca') {
+      if (user) {
         setIsAdmin(true)
       }
     })
@@ -268,28 +257,29 @@ export default function DashboardPage() {
               {salutation} 👋
               {isAdmin && (
                 <button
-                  onClick={handleSeedDemo}
+                  onClick={() => setShowDemoModal(true)}
                   disabled={seeding}
-                  title="Générer les données de démonstration"
+                  title="Gérer les données de démonstration (⚡)"
                   style={{
-                    background: 'none',
-                    border: 'none',
+                    background: 'var(--ga)',
+                    border: '0.5px solid var(--gold-3)',
                     cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '6px',
+                    padding: '5px 8px',
+                    borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--amber)',
+                    gap: '4px',
+                    color: 'var(--gold-2)',
+                    fontSize: '11px',
+                    fontWeight: 600,
                     transition: 'all 0.15s',
                     animation: seeding ? 'spin 1s linear infinite' : 'none'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.15)'}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                  </svg>
+                  <Zap size={14} color="var(--gold-2)" fill="var(--gold-2)" />
+                  <span>Démo ⚡</span>
                 </button>
               )}
             </h1>
@@ -352,6 +342,73 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* MODAL GESTION DÉMO (⚡) */}
+      {showDemoModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(10, 11, 14, 0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: 'var(--bg-1)', border: '1px solid var(--gold-3)',
+            borderRadius: '16px', padding: '24px', maxWidth: '440px', width: '100%',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '16px',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setShowDemoModal(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--txt-3)', cursor: 'pointer' }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--ga)', border: '1px solid var(--gold-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={20} color="var(--gold-2)" fill="var(--gold-2)" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--txt-1)' }}>Gestion Données Démo (⚡)</h3>
+                <p style={{ margin: 0, fontSize: '11px', color: 'var(--txt-3)' }}>Peupler ou ré-enlever les faux clients preview</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+              <button
+                onClick={() => handleSeedAction('POST')}
+                disabled={seeding}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyFocus: 'center', gap: '10px',
+                  background: 'linear-gradient(135deg, #F5D061, #D4AF37)', color: '#0A0B0E',
+                  border: 'none', borderRadius: '10px', padding: '14px', fontSize: '13px', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.15s'
+                }}
+              >
+                <Zap size={16} fill="#0A0B0E" />
+                <span>1. Générer / Réinitialiser la Démo (35 clients)</span>
+              </button>
+
+              <button
+                onClick={() => handleSeedAction('DELETE')}
+                disabled={seeding}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyFocus: 'center', gap: '10px',
+                  background: 'rgba(224, 96, 96, 0.12)', color: '#E06060',
+                  border: '1px solid rgba(224, 96, 96, 0.4)', borderRadius: '10px', padding: '14px', fontSize: '13px', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.15s'
+                }}
+              >
+                <Trash2 size={16} />
+                <span>2. INVERSER & SUPPRIMER la Démo (Enlever les faux clients)</span>
+              </button>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '10px', color: 'var(--txt-3)', textAlign: 'center' }}>
+              * Vos données réelles personnelles ne seront jamais touchées.
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
   )
