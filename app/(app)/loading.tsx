@@ -5,7 +5,7 @@ export default function Loading() {
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      justify: 'center',
+      justifyContent: 'center',
       minHeight: '60vh',
       color: 'var(--gold)',
       gap: '10px',
