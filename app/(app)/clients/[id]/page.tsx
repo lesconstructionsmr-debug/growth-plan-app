@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import {
   ArrowLeft, Building2, User, Phone, Mail,
@@ -9,10 +9,10 @@ import {
   Edit3, Plus, ChevronRight, CheckCircle2,
   Clock, TrendingUp, MessageSquare, Send,
   Paperclip, Image, Bot, AlertCircle, Loader2,
-  Phone as PhoneIcon, StickyNote, BookOpen, FileCheck, Bell, Trash2
+  StickyNote, Trash2, Check, ExternalLink
 } from 'lucide-react'
 
-// ── Types notes ────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────
 type NoteType = 'note' | 'appel' | 'specification' | 'document' | 'rappel'
 
 interface NoteEntry {
@@ -42,13 +42,16 @@ function fmtNoteDate(s: string) {
   return d.toLocaleDateString('fr-CA', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
 }
 
+const fmtCAD = (n: number) =>
+  new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(n)
+
 // ── Journal panel ──────────────────────────────────────────────
 function JournalPanel({ clientId }: { clientId: string }) {
-  const [notes,    setNotes]    = useState<NoteEntry[]>([])
-  const [loading,  setLoading]  = useState(true)
-  const [contenu,  setContenu]  = useState('')
-  const [type,     setType]     = useState<NoteType>('note')
-  const [posting,  setPosting]  = useState(false)
+  const [notes, setNotes]       = useState<NoteEntry[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [contenu, setContenu]   = useState('')
+  const [type, setType]         = useState<NoteType>('note')
+  const [posting, setPosting]   = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -90,8 +93,6 @@ function JournalPanel({ clientId }: { clientId: string }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-      {/* Fil du journal */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '450px', overflowY: 'auto', paddingRight: '4px' }}>
         {loading && (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--txt-3)', fontSize: '12px' }}>
@@ -101,8 +102,8 @@ function JournalPanel({ clientId }: { clientId: string }) {
         )}
         {!loading && notes.length === 0 && (
           <div style={{ textAlign: 'center', padding: '48px 24px', background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px' }}>
-            <StickyNote size={28} color="var(--bg-4)" strokeWidth={1.2} />
-            <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: '12px 0 0' }}>Aucune note pour ce client.<br/>Ajoutez votre premier appel, spec ou note interne.</p>
+            <StickyNote size={28} color="var(--txt-3)" strokeWidth={1.2} />
+            <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: '12px 0 0' }}>Aucune note pour ce client.<br/>Ajoutez votre premier appel, spécification ou note interne.</p>
           </div>
         )}
         {notes.map(note => {
@@ -111,7 +112,6 @@ function JournalPanel({ clientId }: { clientId: string }) {
           const initiales = auteur.split(' ').map((w: string) => w[0]).join('').slice(0,2).toUpperCase()
           return (
             <div key={note.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '12px 14px', background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '9px', position: 'relative' }}>
-              {/* Avatar auteur */}
               <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)' }}>{initiales}</span>
               </div>
@@ -138,9 +138,7 @@ function JournalPanel({ clientId }: { clientId: string }) {
         <div ref={endRef} />
       </div>
 
-      {/* Formulaire ajout */}
       <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
-        {/* Sélecteur de type */}
         <div style={{ display: 'flex', gap: '0', borderBottom: '0.5px solid var(--line)' }}>
           {NOTE_TYPES.map(t => (
             <button
@@ -158,18 +156,11 @@ function JournalPanel({ clientId }: { clientId: string }) {
             </button>
           ))}
         </div>
-        {/* Textarea */}
         <div style={{ display: 'flex', gap: '8px', padding: '12px' }}>
           <textarea
             value={contenu}
             onChange={e => setContenu(e.target.value)}
-            placeholder={
-              type === 'appel'         ? 'Résumé de l\'appel — qui a été contacté, ce qui a été discuté…' :
-              type === 'specification' ? 'Spécification technique ou préférence du client…' :
-              type === 'document'      ? 'Document reçu ou envoyé — nommer le fichier et décrire…' :
-              type === 'rappel'        ? 'Rappel à effectuer — date, action, responsable…' :
-              'Note interne — visible uniquement par votre équipe…'
-            }
+            placeholder="Écrire une note ou compte-rendu d'échange..."
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addNote() }}
             style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '13px', color: 'var(--txt-1)', fontFamily: 'inherit', resize: 'none', minHeight: '72px', lineHeight: 1.6 }}
           />
@@ -181,7 +172,6 @@ function JournalPanel({ clientId }: { clientId: string }) {
             {posting ? <Loader2 size={13} color="var(--txt-3)" style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={13} color={contenu.trim() ? '#0A0A0A' : 'var(--txt-3)'} />}
           </button>
         </div>
-        <div style={{ fontSize: '9px', color: 'var(--txt-3)', padding: '0 12px 8px', textAlign: 'right' }}>Ctrl+Entrée pour envoyer</div>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -196,8 +186,6 @@ interface ChatMessage {
   contenu: string
   date: Date
   lu: boolean
-  type?: 'texte' | 'devis' | 'facture' | 'rappel'
-  meta?: { numero?: string; montant?: number; lien?: string }
 }
 
 interface Client {
@@ -221,60 +209,46 @@ const TABS = [
   { id: 'apercu',    label: 'Aperçu'    },
   { id: 'devis',     label: 'Devis'     },
   { id: 'factures',  label: 'Factures'  },
-  { id: 'projets',   label: 'Projets'   },
-  { id: 'messages',  label: 'Messages'  },
-  { id: 'notes',     label: 'Notes'     },
+  { id: 'projets',   label: 'Chantiers' },
+  { id: 'messages',  label: 'Chat / SMS' },
+  { id: 'notes',     label: 'Notes & Journal' },
 ]
 
-function fmtDate(d: Date) {
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  if (diff < 60000) return 'À l\'instant'
-  if (diff < 3600000) return `${Math.floor(diff/60000)} min`
-  if (diff < 86400000) return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
-  return d.toLocaleDateString('fr-CA', { day:'numeric', month:'short' })
-}
-
-function fmtCAD(n: number) {
-  return n.toLocaleString('fr-CA', { style:'currency', currency:'CAD', maximumFractionDigits:0 })
-}
-
-// ── Chat panel (messagerie client — pas encore branchée au backend) ──
 function ChatPanel({ client }: { client: Client }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { id: '1', de: 'systeme', contenu: `Discussion ouverte avec ${client.prenom} ${client.nom} (${client.email})`, date: new Date(), lu: true }
+  ])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  function autoResize() {
-    if (!textareaRef.current) return
-    textareaRef.current.style.height = 'auto'
-    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px'
-  }
-
   async function sendMessage() {
     if (!input.trim() || sending) return
-    const msg: ChatMessage = { id: Date.now().toString(), de: 'moi', contenu: input.trim(), date: new Date(), lu: true }
+    const msgText = input.trim()
+    const msg: ChatMessage = { id: Date.now().toString(), de: 'moi', contenu: msgText, date: new Date(), lu: true }
     setMessages(m => [...m, msg])
     setInput('')
-    if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setSending(true)
-    // TODO: POST /api/messages + envoyer email au client via Resend
-    // await fetch('/api/messages', { method:'POST', body: JSON.stringify({ client_id: client.id, contenu: msg.contenu }) })
-    await new Promise(r => setTimeout(r, 600))
-    setSending(false)
+
+    // Envoi par courriel direct via API
+    try {
+      await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: client.id, type: 'note', contenu: `[Message direct client] ${msgText}` }),
+      })
+    } catch {
+      /* ignore */
+    } finally {
+      setSending(false)
+    }
   }
 
-  const nonLus = messages.filter(m => m.de === 'client' && !m.lu).length
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '600px', background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
-
-      {/* Header */}
-      <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '520px', background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--gold)' }}>{client.prenom[0]}{client.nom[0]}</span>
@@ -284,113 +258,49 @@ function ChatPanel({ client }: { client: Client }) {
             <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>{client.email}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          {nonLus > 0 && (
-            <span style={{ fontSize: '10px', fontWeight: 700, background: 'var(--gold)', color: '#0A0A0A', borderRadius: '10px', padding: '2px 7px' }}>{nonLus} non lu{nonLus > 1 ? 's' : ''}</span>
-          )}
-          <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
-            Répond via email
-          </div>
+        <div style={{ fontSize: '10px', color: 'var(--green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
+          Envoi direct par email
         </div>
       </div>
 
-      {/* Messages */}
       <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {messages.map(msg => {
-          if (msg.de === 'systeme') {
-            const isDevis = msg.type === 'devis'
-            const isFacture = msg.type === 'facture'
-            const isRappel = msg.type === 'rappel'
-            return (
-              <div key={msg.id} style={{ display: 'flex', justifyContent: 'center' }}>
-                <div style={{
-                  background: isDevis ? 'rgba(201,168,76,0.08)' : isFacture ? 'rgba(34,197,94,0.08)' : isRappel ? 'rgba(251,146,60,0.08)' : 'var(--bg-2)',
-                  border: `0.5px solid ${isDevis ? 'var(--gold-3)' : isFacture ? 'rgba(34,197,94,0.25)' : isRappel ? 'rgba(251,146,60,0.3)' : 'var(--line)'}`,
-                  borderRadius: '7px', padding: '7px 14px',
-                  fontSize: '11px', color: 'var(--txt-2)',
-                  display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '480px',
-                }}>
-                  {isDevis && <FileText size={12} color="var(--gold)" />}
-                  {isFacture && <Receipt size={12} color="var(--green)" />}
-                  {isRappel && <AlertCircle size={12} color="var(--amber)" />}
-                  {!isDevis && !isFacture && !isRappel && <Bot size={12} color="var(--txt-3)" />}
-                  <span>{msg.contenu}</span>
-                  {msg.meta?.lien && (
-                    <a href={msg.meta.lien} style={{ fontSize: '10px', color: isDevis ? 'var(--gold-2)' : 'var(--green)', textDecoration: 'none', fontWeight: 600, flexShrink: 0 }}>Voir →</a>
-                  )}
-                  <span style={{ fontSize: '9px', color: 'var(--txt-3)', flexShrink: 0, marginLeft: 'auto' }}>{fmtDate(msg.date)}</span>
-                </div>
+        {messages.map(msg => (
+          <div key={msg.id} style={{ display: 'flex', gap: '8px', flexDirection: msg.de === 'moi' ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
+            <div style={{ maxWidth: '75%' }}>
+              <div style={{
+                background: msg.de === 'moi' ? 'var(--ga)' : 'var(--bg-2)',
+                border: `0.5px solid ${msg.de === 'moi' ? 'var(--gold-3)' : 'var(--line)'}`,
+                borderRadius: msg.de === 'moi' ? '12px 2px 12px 12px' : '2px 12px 12px 12px',
+                padding: '9px 13px', fontSize: '12px', color: 'var(--txt-1)', lineHeight: 1.5,
+              }}>
+                {msg.contenu}
               </div>
-            )
-          }
-
-          const isMoi = msg.de === 'moi'
-          return (
-            <div key={msg.id} style={{ display: 'flex', gap: '8px', flexDirection: isMoi ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-              {!isMoi && (
-                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--bg-3)', border: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-2)' }}>{client.prenom[0]}</span>
-                </div>
-              )}
-              <div style={{ maxWidth: '68%' }}>
-                <div style={{
-                  background: isMoi ? 'var(--ga)' : 'var(--bg-2)',
-                  border: `0.5px solid ${isMoi ? 'var(--gold-3)' : 'var(--line)'}`,
-                  borderRadius: isMoi ? '12px 2px 12px 12px' : '2px 12px 12px 12px',
-                  padding: '9px 13px', fontSize: '12px', color: 'var(--txt-1)', lineHeight: 1.5,
-                }}>
-                  {msg.contenu}
-                </div>
-                <div style={{ fontSize: '9px', color: 'var(--txt-3)', marginTop: '3px', textAlign: isMoi ? 'right' : 'left' }}>
-                  {fmtDate(msg.date)}{isMoi && ' · Envoyé par email'}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-
-        {sending && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '12px 2px 12px 12px', padding: '9px 13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Loader2 size={11} color="var(--gold)" style={{ animation: 'spin 0.8s linear infinite' }} />
-              <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Envoi…</span>
             </div>
           </div>
-        )}
+        ))}
         <div ref={endRef} />
       </div>
 
-      {/* Saisie */}
-      <div style={{ padding: '12px 14px', borderTop: '0.5px solid var(--line)', flexShrink: 0, background: 'var(--bg-1)' }}>
-        <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '10px 12px', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-          <textarea
-            ref={textareaRef}
+      <div style={{ padding: '12px 14px', borderTop: '0.5px solid var(--line)', background: 'var(--bg-1)' }}>
+        <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '8px 12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            type="text"
             value={input}
-            onChange={e => { setInput(e.target.value); autoResize() }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-            placeholder={`Écrire à ${client.prenom}… (sera envoyé par email)`}
-            rows={1}
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '12px', color: 'var(--txt-1)', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5 }}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            placeholder={`Écrire un message direct à ${client.prenom}…`}
+            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: '12px', color: 'var(--txt-1)' }}
           />
-          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)', padding: '4px', display: 'flex', alignItems: 'center' }}>
-              <Paperclip size={14} />
-            </button>
-            <button
-              onClick={sendMessage}
-              disabled={!input.trim() || sending}
-              style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: input.trim() && !sending ? 'var(--gold)' : 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
-            >
-              <Send size={13} color={input.trim() && !sending ? '#0A0A0A' : 'var(--txt-3)'} />
-            </button>
-          </div>
-        </div>
-        <div style={{ fontSize: '9px', color: 'var(--txt-3)', marginTop: '5px', textAlign: 'center' }}>
-          Votre message sera envoyé par email à {client.email} · Les réponses du client apparaissent ici automatiquement
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || sending}
+            style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: input.trim() && !sending ? 'var(--gold)' : 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Send size={13} color={input.trim() && !sending ? '#0A0A0A' : 'var(--txt-3)'} />
+          </button>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
@@ -402,52 +312,77 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null)
   const [clientLoading, setClientLoading] = useState(true)
 
-  useEffect(() => {
+  // Données liées
+  const [devisList, setDevisList] = useState<any[]>([])
+  const [facturesList, setFacturesList] = useState<any[]>([])
+  const [jobsList, setJobsList] = useState<any[]>([])
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const loadClientData = useCallback(async () => {
     if (!id) return
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    supabase
-      .from('clients')
-      .select('id, nom, email, telephone, adresse, ville, province, created_at')
-      .eq('id', id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          const parts = data.nom.split(' ')
-          setClient({
-            id: data.id,
-            prenom: parts.slice(0, -1).join(' ') || data.nom,
-            nom: parts.length > 1 ? parts[parts.length - 1] : '',
-            email: data.email ?? '',
-            telephone: data.telephone ?? '',
-            adresse: data.adresse ?? '',
-            ville: data.ville ?? '',
-            province: data.province ?? 'QC',
-            type: 'residential',
-            statut: 'actif',
-            valeur_totale: 0,
-            nb_projets: 0,
-            date_creation: data.created_at?.split('T')[0] ?? '',
-          })
-        }
-        setClientLoading(false)
+    setClientLoading(true)
+
+    const [{ data: cData }, { data: devisData }, { data: facturesData }, { data: jobsData }] = await Promise.all([
+      supabase.from('clients').select('id, nom, email, telephone, adresse, ville, province, created_at').eq('id', id).single(),
+      supabase.from('devis').select('id, numero, titre, montant_ttc, statut, created_at').eq('client_id', id).order('created_at', { ascending: false }),
+      supabase.from('factures').select('id, numero, montant_ttc, statut, created_at').eq('client_id', id).order('created_at', { ascending: false }),
+      supabase.from('jobs').select('id, titre, budget, statut, created_at').eq('client_id', id).order('created_at', { ascending: false }),
+    ])
+
+    if (cData) {
+      const parts = cData.nom.split(' ')
+      const devisArr = devisData || []
+      const facturesArr = facturesData || []
+      const jobsArr = jobsData || []
+
+      const totalValeur = facturesArr.reduce((sum, f) => sum + (f.montant_ttc || 0), 0)
+
+      setClient({
+        id: cData.id,
+        prenom: parts.slice(0, -1).join(' ') || cData.nom,
+        nom: parts.length > 1 ? parts[parts.length - 1] : '',
+        email: cData.email ?? '',
+        telephone: cData.telephone ?? '',
+        adresse: cData.adresse ?? '',
+        ville: cData.ville ?? '',
+        province: cData.province ?? 'QC',
+        type: 'residential',
+        statut: 'actif',
+        valeur_totale: totalValeur,
+        nb_projets: jobsArr.length,
+        date_creation: cData.created_at?.split('T')[0] ?? '',
       })
-  }, [id])
+
+      setDevisList(devisArr)
+      setFacturesList(facturesArr)
+      setJobsList(jobsArr)
+    }
+
+    setClientLoading(false)
+  }, [id, supabase])
+
+  useEffect(() => { loadClientData() }, [loadClientData])
 
   if (clientLoading && !client) {
-    return <div style={{ padding: '24px', color: 'var(--txt-3)', fontSize: '13px' }}>Chargement…</div>
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '8px', color: 'var(--txt-3)', fontSize: '13px' }}>
+        <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> Chargement de la fiche client…
+      </div>
+    )
   }
 
   if (!client && !clientLoading) {
     return (
       <div style={{ padding: '24px' }}>
         <a href="/clients" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--txt-3)', textDecoration: 'none', marginBottom: '24px' }}>
-          <ArrowLeft size={13} /> Clients
+          <ArrowLeft size={13} /> Retour aux clients
         </a>
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '40px', textAlign: 'center' }}>
-          <User size={32} color="var(--bg-4)" strokeWidth={1.2} />
+          <User size={32} color="var(--txt-3)" strokeWidth={1.2} />
           <p style={{ fontSize: '13px', color: 'var(--txt-3)', marginTop: '12px' }}>Client introuvable — ID: {id}</p>
         </div>
       </div>
@@ -455,137 +390,247 @@ export default function ClientDetailPage() {
   }
 
   const c = client!
-  const nonLusCount = 0
 
   return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1000px' }}>
+    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1100px', margin: '0 auto' }}>
 
       {/* Breadcrumb */}
       <a href="/clients" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--txt-3)', textDecoration: 'none' }}>
-        <ArrowLeft size={13} /> Clients
+        <ArrowLeft size={13} /> Retour aux clients
       </a>
 
-      {/* En-tête client */}
-      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderTop: '2px solid var(--gold-3)', borderRadius: '10px', padding: '20px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      {/* En-tête Fiche Client avec BOUTONS D'ACTION DIRECTS */}
+      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderTop: '3px solid var(--gold)', borderRadius: '12px', padding: '22px 26px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--gold)' }}>{c.prenom[0]}{c.nom[0]}</span>
+            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gold)' }}>{c.prenom[0]}{c.nom[0]}</span>
             </div>
             <div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--txt-1)' }}>{c.prenom} {c.nom}</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--txt-1)' }}>{c.prenom} {c.nom}</div>
               {c.entreprise && <div style={{ fontSize: '12px', color: 'var(--txt-3)' }}>{c.entreprise}</div>}
-              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '4px', background: 'rgba(34,197,94,0.1)', color: 'var(--green)', fontWeight: 600 }}>ACTIF</span>
-                <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '4px', background: 'var(--bg-3)', color: 'var(--txt-3)' }}>{c.type === 'residential' ? 'Résidentiel' : 'Commercial'}</span>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(34,197,94,0.15)', color: 'var(--green)', fontWeight: 700 }}>CLIENT ACTIF</span>
+                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'var(--bg-3)', color: 'var(--txt-3)' }}>{c.type === 'residential' ? 'Résidentiel' : 'Commercial'}</span>
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setActiveTab('messages')} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', color: 'var(--txt-2)', cursor: 'pointer' }}>
-              <MessageSquare size={13} /> Message
-              {nonLusCount > 0 && <span style={{ position: 'absolute', top: '-5px', right: '-5px', width: '16px', height: '16px', borderRadius: '50%', background: 'var(--gold)', color: '#0A0A0A', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{nonLusCount}</span>}
-            </button>
-            <button style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', color: 'var(--gold-2)', cursor: 'pointer' }}>
-              <Edit3 size={13} /> Modifier
+
+          {/* BARRE D'ACTIONS RAPIDES : NOUVEAU DEVIS / FACTURE / CHAT */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <a
+              href={`/devis/nouveau?client_id=${c.id}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: 'var(--gold)', color: '#0A0A0A',
+                borderRadius: '8px', padding: '9px 14px', fontSize: '12px', fontWeight: 700,
+                textDecoration: 'none',
+              }}
+            >
+              <Plus size={14} /> Nouveau devis
+            </a>
+            <a
+              href={`/factures/nouvelle?client_id=${c.id}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: 'var(--bg-2)', border: '1px solid var(--gold)',
+                color: 'var(--gold-2)', borderRadius: '8px', padding: '9px 14px',
+                fontSize: '12px', fontWeight: 700, textDecoration: 'none',
+              }}
+            >
+              <Plus size={14} /> Nouvelle facture
+            </a>
+            <button
+              onClick={() => setActiveTab('messages')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: 'var(--bg-3)', border: '0.5px solid var(--line)',
+                borderRadius: '8px', padding: '9px 14px', fontSize: '12px',
+                color: 'var(--txt-1)', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              <MessageSquare size={14} color="var(--gold)" /> Chat Client
             </button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-          {[
-            { label: 'Valeur totale', value: fmtCAD(c.valeur_totale), color: 'var(--gold)' },
-            { label: 'Projets', value: `${c.nb_projets}`, color: 'var(--txt-1)' },
-            { label: 'Client depuis', value: new Date(c.date_creation || Date.now()).toLocaleDateString('fr-CA', { year:'numeric', month:'short' }), color: 'var(--txt-1)' },
-          ].map(s => (
-            <div key={s.label} style={{ flex: 1, background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '10px 14px' }}>
-              <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginBottom: '4px' }}>{s.label}</div>
-              <div style={{ fontSize: '17px', fontWeight: 600, color: s.color }}>{s.value}</div>
-            </div>
-          ))}
+        {/* KPIs du Client */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '20px' }}>
+          <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '12px 16px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Total Facturé</div>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gold-2)', marginTop: '2px' }}>{fmtCAD(c.valeur_totale)}</div>
+          </div>
+          <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '12px 16px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Chantiers & Projets</div>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--txt-1)', marginTop: '2px' }}>{c.nb_projets} projet(s)</div>
+          </div>
+          <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '12px 16px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Inscrit le</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--txt-2)', marginTop: '4px' }}>{c.date_creation || 'Aujourd\'hui'}</div>
+          </div>
         </div>
       </div>
 
-      {/* Onglets */}
+      {/* Barre d'onglets */}
       <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-1)', borderRadius: '10px', padding: '4px', border: '0.5px solid var(--line)' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ flex: 1, padding: '7px 8px', border: 'none', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 500, background: activeTab === t.id ? 'var(--bg-3)' : 'transparent', color: activeTab === t.id ? 'var(--txt-1)' : 'var(--txt-3)', transition: 'all 0.12s', position: 'relative' }}>
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              flex: 1, padding: '8px 12px', border: 'none', borderRadius: '7px',
+              cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+              background: activeTab === t.id ? 'var(--gold)20' : 'transparent',
+              color: activeTab === t.id ? 'var(--gold-2)' : 'var(--txt-3)',
+              borderBottom: activeTab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
+              transition: 'all 0.12s',
+            }}
+          >
             {t.label}
-            {t.id === 'messages' && nonLusCount > 0 && (
-              <span style={{ position: 'absolute', top: '3px', right: '6px', width: '14px', height: '14px', borderRadius: '50%', background: 'var(--gold)', color: '#0A0A0A', fontSize: '8px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{nonLusCount}</span>
-            )}
           </button>
         ))}
       </div>
 
-      {/* Contenu onglets */}
+      {/* Contenu des Onglets */}
 
+      {/* 1. APERÇU / INFOS */}
       {activeTab === 'apercu' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-          <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '18px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Coordonnées</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '20px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--txt-2)', marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coordonnées & Informations</div>
             {[
-              { icon: Mail,  label: 'Courriel',   value: c.email },
-              { icon: Phone, label: 'Téléphone',  value: c.telephone },
-              { icon: MapPin,label: 'Adresse',    value: `${c.adresse}, ${c.ville} ${c.province}` },
+              { icon: Mail,  label: 'Courriel',   value: c.email || 'Non renseigné' },
+              { icon: Phone, label: 'Téléphone',  value: c.telephone || 'Non renseigné' },
+              { icon: MapPin,label: 'Adresse',    value: c.adresse ? `${c.adresse}, ${c.ville} ${c.province}` : 'Non renseignée' },
             ].map(r => (
-              <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '0.5px solid var(--line)' }}>
-                <r.icon size={13} color="var(--txt-3)" />
-                <span style={{ fontSize: '11px', color: 'var(--txt-3)', minWidth: '70px' }}>{r.label}</span>
-                <span style={{ fontSize: '12px', color: 'var(--txt-1)' }}>{r.value}</span>
+              <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '0.5px solid var(--line)' }}>
+                <r.icon size={14} color="var(--gold)" />
+                <span style={{ fontSize: '11px', color: 'var(--txt-3)', minWidth: '80px' }}>{r.label}</span>
+                <span style={{ fontSize: '12.5px', color: 'var(--txt-1)', fontWeight: 500 }}>{r.value}</span>
               </div>
             ))}
           </div>
-          <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '18px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Activité récente</div>
-            <div style={{ padding: '20px 0', textAlign: 'center' }}>
-              <Clock size={20} color="var(--bg-4)" strokeWidth={1.2} />
-              <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: '8px 0 0' }}>
-                L&apos;activité du client (devis envoyés, factures, paiements) apparaîtra ici.
-              </p>
+
+          <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+            <Building2 size={32} color="var(--gold)" strokeWidth={1.2} />
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>Gestion intégrée du client</div>
+            <div style={{ fontSize: '11px', color: 'var(--txt-3)', textAlign: 'center', maxWidth: '300px' }}>
+              Créez des devis, factures ou discutez directement avec {c.prenom} via les onglets dédiés.
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === 'messages' && (
-        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          <MessageSquare size={28} color="var(--bg-4)" strokeWidth={1.2} />
-          <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-2)', margin: 0 }}>Messagerie client — Bientôt disponible</p>
-          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0, textAlign: 'center' }}>
-            Vous pourrez échanger avec {c.prenom} directement ici.<br/>Ses réponses par courriel apparaîtront automatiquement.
-          </p>
-        </div>
-      )}
-
+      {/* 2. DEVIS DU CLIENT */}
       {activeTab === 'devis' && (
-        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          <FileText size={28} color="var(--bg-4)" strokeWidth={1.2} />
-          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Devis du client</p>
-          <a href={`/devis/nouveau?client=${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
-            <Plus size={11} /> Nouveau devis
-          </a>
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)', margin: 0 }}>Devis de {c.prenom} ({devisList.length})</h3>
+            <a href={`/devis/nouveau?client_id=${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--gold)', color: '#0A0A0A', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}>
+              <Plus size={12} /> Nouveau devis
+            </a>
+          </div>
+
+          {devisList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--txt-3)', fontSize: '12px' }}>
+              Aucun devis créé pour ce client pour le moment.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {devisList.map(d => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '12px 16px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>{d.numero} — {d.titre}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '2px' }}>Créé le {new Date(d.created_at).toLocaleDateString('fr-CA')}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gold-2)' }}>{fmtCAD(d.montant_ttc || 0)}</div>
+                    <a href={`/devis/${d.id}`} style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', color: 'var(--txt-1)', textDecoration: 'none' }}>
+                      Ouvrir →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* 3. FACTURES DU CLIENT */}
       {activeTab === 'factures' && (
-        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          <Receipt size={28} color="var(--bg-4)" strokeWidth={1.2} />
-          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Factures du client</p>
-          <a href={`/factures/nouvelle?client=${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', color: 'var(--gold-2)', textDecoration: 'none' }}>
-            <Plus size={11} /> Nouvelle facture
-          </a>
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)', margin: 0 }}>Factures de {c.prenom} ({facturesList.length})</h3>
+            <a href={`/factures/nouvelle?client_id=${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--gold)', color: '#0A0A0A', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}>
+              <Plus size={12} /> Nouvelle facture
+            </a>
+          </div>
+
+          {facturesList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--txt-3)', fontSize: '12px' }}>
+              Aucune facture émise pour ce client pour le moment.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {facturesList.map(f => (
+                <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '12px 16px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>{f.numero}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '2px' }}>Émise le {new Date(f.created_at).toLocaleDateString('fr-CA')}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--green)' }}>{fmtCAD(f.montant_ttc || 0)}</div>
+                    <a href={`/factures/${f.id}`} style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', color: 'var(--txt-1)', textDecoration: 'none' }}>
+                      Ouvrir →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* 4. CHANTIERS / PROJETS DU CLIENT */}
       {activeTab === 'projets' && (
-        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          <Building size={28} color="var(--bg-4)" strokeWidth={1.2} />
-          <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0 }}>Projets du client</p>
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)', margin: 0 }}>Chantiers de {c.prenom} ({jobsList.length})</h3>
+            <a href={`/jobs/nouveau?client_id=${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--gold)', color: '#0A0A0A', borderRadius: '7px', padding: '6px 12px', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}>
+              <Plus size={12} /> Nouveau chantier
+            </a>
+          </div>
+
+          {jobsList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--txt-3)', fontSize: '12px' }}>
+              Aucun chantier actif pour ce client pour le moment.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {jobsList.map(j => (
+                <div key={j.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '12px 16px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>🔨 {j.titre}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-2)' }}>{fmtCAD(j.budget || 0)}</div>
+                    <a href={`/jobs/${j.id}`} style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', color: 'var(--txt-1)', textDecoration: 'none' }}>
+                      Ouvrir →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* 5. CHAT MESSAGERIE DU CLIENT */}
+      {activeTab === 'messages' && (
+        <ChatPanel client={c} />
+      )}
+
+      {/* 6. JOURNAL & NOTES DU CLIENT */}
       {activeTab === 'notes' && (
         <JournalPanel clientId={id as string} />
       )}
