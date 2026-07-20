@@ -9,7 +9,7 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION = "20"
   # Évite les erreurs de peer deps si nécessaire
   # NPM_FLAGS = "--legacy-peer-deps"
 

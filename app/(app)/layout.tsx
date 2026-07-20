@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/layout/sidebar'
 import SubscriptionBanner from '@/components/subscription-banner'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let subStatus: 'trialing' | 'active' | 'past_due' | 'canceled' | 'none' = 'none'
   let trialDaysLeft = 0
