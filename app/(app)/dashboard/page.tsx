@@ -166,13 +166,8 @@ export default function DashboardPage() {
     )
 
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setIsAdmin(user.email === 'peinture.jtl@gmail.com' || user.email === 'max@growth-plan.ca')
-        supabase.from('profiles').select('role').eq('id', user.id).single().then(({ data: prof }) => {
-          if (prof?.role === 'propriétaire' || prof?.role === 'administrateur') {
-            setIsAdmin(true)
-          }
-        })
+      if (user && user.email?.toLowerCase() === 'max@growth-plan.ca') {
+        setIsAdmin(true)
       }
     })
 
