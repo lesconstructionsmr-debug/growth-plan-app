@@ -16,7 +16,14 @@ export async function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-  // Laisser passer immédiatement les routes publiques et API
+  const host = request.headers.get('host') || request.nextUrl.hostname
+
+  // Sur app.growth-plan.ca, la racine '/' va TOUJOURS vers l'ERP (/dashboard -> /login si non connecté)
+  if (host.startsWith('app.') && pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Laisser passer immédiatement les routes publiques et API (ex: growth-plan.ca principal)
   if (
     pathname === '/' ||
     pathname === '/landing' ||
