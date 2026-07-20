@@ -61,8 +61,8 @@ const FALLBACK_DATA: MarketIndicator[] = [
   { id: '24', date_ref: '2026-06-30', indicateur: 'Mises en chantier', valeur: 2150, unite: 'unités', categorie: 'logement', region: 'Montérégie' },
   
   // Taux
-  { id: '25', date_ref: '2026-07-01', indicateur: 'Taux directeur', valeur: 4.50, unite: '%', categorie: 'taux', region: 'Canada' },
-  { id: '26', date_ref: '2026-07-01', indicateur: 'Taux hypothécaire fixe 5 ans', valeur: 5.24, unite: '%', categorie: 'taux', region: 'Canada' }
+  { id: '25', date_ref: '2026-07-15', indicateur: 'Taux directeur', valeur: 2.25, unite: '%', categorie: 'taux', region: 'Canada' },
+  { id: '26', date_ref: '2026-07-15', indicateur: 'Taux hypothécaire fixe 5 ans', valeur: 3.95, unite: '%', categorie: 'taux', region: 'Canada' }
 ]
 
 const FRIENDLY_NAMES: Record<string, string> = {

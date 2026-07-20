@@ -61,7 +61,7 @@ insert into public.market_trends (date_ref, indicateur, valeur, unite, categorie
 ('2026-03-31', 'Mises en chantier', 1950, 'unités', 'logement', 'Montérégie'),
 ('2026-06-30', 'Mises en chantier', 2150, 'unités', 'logement', 'Montérégie');
 
--- 4. Taux et Salaires (Taux CCQ Peintre Compagnon, $/h)
+-- 4. Taux et Salaires (Taux Banque du Canada)
 insert into public.market_trends (date_ref, indicateur, valeur, unite, categorie, region) values
-('2026-07-01', 'Taux directeur', 4.50, '%', 'taux', 'Canada'),
-('2026-07-01', 'Taux hypothécaire fixe 5 ans', 5.24, '%', 'taux', 'Canada');
+('2026-07-15', 'Taux directeur', 2.25, '%', 'taux', 'Canada'),
+('2026-07-15', 'Taux hypothécaire fixe 5 ans', 3.95, '%', 'taux', 'Canada');
