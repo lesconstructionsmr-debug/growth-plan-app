@@ -99,6 +99,7 @@ export default function Sidebar() {
   const [vertical, setVertical]   = useState<Vertical>('construction')
   const [compName, setCompName]   = useState('Mon Entreprise')
   const [initials, setInitials]   = useState('GP')
+  const [isAdmin, setIsAdmin]     = useState(false)
 
   useEffect(() => {
     fetch('/api/me')
@@ -106,6 +107,9 @@ export default function Sidebar() {
       .then(d => {
         if (d.vertical) setVertical(d.vertical as Vertical)
         if (d.name)     setCompName(d.name)
+        if (d.email && d.email.toLowerCase() === 'max@growth-plan.ca') {
+          setIsAdmin(true)
+        }
         if (d.full_name) {
           const parts = (d.full_name as string).trim().split(' ')
           setInitials(((parts[0]?.[0] || '') + (parts[1]?.[0] || parts[0]?.[1] || '')).toUpperCase())
@@ -116,7 +120,8 @@ export default function Sidebar() {
 
   const { theme, toggle } = useTheme()
   const router = useRouter()
-  const NAV = vertical === 'agence' ? NAV_AGENCE : NAV_CONSTRUCTION
+  const rawNav = vertical === 'agence' ? NAV_AGENCE : NAV_CONSTRUCTION
+  const NAV = rawNav.filter(group => group.section !== 'Admin SaaS' || isAdmin)
 
   async function handleLogout() {
     await fetch('/api/auth/signout', { method: 'POST' })

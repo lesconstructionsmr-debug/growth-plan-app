@@ -26,6 +26,7 @@ export async function GET() {
       .single()
 
     return NextResponse.json({
+      email:     user.email        || null,
       name:      company?.name     || 'Mon Entreprise',
       vertical:  company?.vertical || 'construction',
       role:      profile.role      || 'owner',
