@@ -68,7 +68,7 @@ export async function GET() {
       if (match) {
         await supabase
           .from('depenses')
-          .update({ categorie: 'Dépense Fixe' })
+          .update({ categorie: 'Budget Personnel' })
           .eq('id', d.id)
         updatedIds.push(d.id)
       }
