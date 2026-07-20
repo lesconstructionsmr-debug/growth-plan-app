@@ -10,6 +10,7 @@ import {
   FolderKanban, Landmark, PieChart, Home, Sun, Moon, ArrowLeftRight
 } from 'lucide-react'
 import { useTheme } from './theme-provider'
+import { useLanguage } from './language-provider'
 
 // ── Nav construction ───────────────────────────────────────────────
 const NAV_CONSTRUCTION = [
@@ -120,6 +121,7 @@ export default function Sidebar() {
   }, [])
 
   const { theme, toggle } = useTheme()
+  const { lang, toggleLang, t } = useLanguage()
   const router = useRouter()
   const isCourtier = vertical === 'agence' || vertical === 'courtier'
   const rawNav = isCourtier ? NAV_AGENCE : NAV_CONSTRUCTION
@@ -183,7 +185,7 @@ export default function Sidebar() {
               {logoLabel}
             </div>
             <div style={{ fontSize: '9px', color: 'var(--gold-3)', letterSpacing: '0.08em' }}>
-              {isCourtier ? 'MODE IMMOBILIER' : 'MODE CHANTIERS'}
+              {isCourtier ? t('MODE IMMOBILIER') : t('MODE CHANTIERS')}
             </div>
           </div>
         </div>
@@ -225,7 +227,7 @@ export default function Sidebar() {
               letterSpacing: '0.12em', textTransform: 'uppercase',
               padding: '6px 14px 2px',
             }}>
-              {group.section}
+              {t(group.section)}
             </div>
 
             {group.items.map((item) => {
@@ -262,7 +264,7 @@ export default function Sidebar() {
                   }}
                 >
                   <Icon size={14} strokeWidth={1.7} />
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               )
             })}
@@ -270,7 +272,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* ── Utilisateur ──────────────────────────── */}
+      {/* ── Utilisateur & Langue ──────────────────────────── */}
       <div style={{
         padding: '10px 14px',
         borderTop: '0.5px solid var(--line)',
@@ -293,6 +295,32 @@ export default function Sidebar() {
             {isCourtier ? 'Courtier Immobilier' : 'Entrepreneur BTP'}
           </div>
         </div>
+
+        {/* Bouton Toggle Langue (FR / EN) */}
+        <button
+          onClick={toggleLang}
+          title={lang === 'fr' ? 'Switch to English' : 'Passer en Français'}
+          style={{
+            background: 'var(--ga)',
+            border: '0.5px solid var(--gold-3)',
+            borderRadius: '6px',
+            padding: '3px 6px',
+            fontSize: '9px',
+            fontWeight: 700,
+            color: 'var(--gold-2)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px',
+            transition: 'all 0.15s',
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
+          onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          <span>🌐</span> {lang.toUpperCase()}
+        </button>
+
         <button
           onClick={toggle}
           title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
@@ -308,7 +336,7 @@ export default function Sidebar() {
         </button>
         <button
           onClick={handleLogout}
-          title="Déconnexion"
+          title={t('Déconnexion')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--txt-3)', padding: '2px', flexShrink: 0,
