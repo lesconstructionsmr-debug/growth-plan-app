@@ -5,7 +5,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import {
   Settings, Building2, Hash, CreditCard, FileText, Palette,
   Upload, Save, Loader2, CheckCircle2, Shield, Trash2, Download, Mail, Lock,
-  Users, UserPlus, Crown, User as UserIcon, XCircle, Send,
+  Users, UserPlus, Crown, User as UserIcon, XCircle, Send, Home, ArrowLeftRight, HardHat, Landmark
 } from 'lucide-react'
 
 interface OrgProfile {
@@ -33,6 +33,7 @@ const DEFAULT: OrgProfile = {
 
 const ONGLETS = [
   { id: 'organisation',    label: 'Organisation',    icon: Building2 },
+  { id: 'secteur',         label: 'Secteur & Mode',  icon: Home      },
   { id: 'fiscal',          label: 'Fiscal & RBQ',    icon: Hash      },
   { id: 'facturation',     label: 'Facturation',     icon: CreditCard},
   { id: 'documents',       label: 'Documents',       icon: FileText  },
@@ -67,7 +68,6 @@ function F({ label, hint, children }: { label: string; hint?: string; children: 
   )
 }
 
-// ── TeamPanel ──────────────────────────────────────────────────
 interface TeamMember {
   id: string
   email: string
@@ -132,7 +132,6 @@ function TeamPanel() {
         <Users size={14} color="var(--gold)" /> Gestion de l'équipe
       </div>
 
-      {/* Membres actuels */}
       <div>
         <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.05em', marginBottom: '10px' }}>MEMBRES &amp; INVITATIONS</div>
         {loading && <div style={{ fontSize: '12px', color: 'var(--txt-3)', padding: '16px 0' }}>Chargement…</div>}
@@ -164,7 +163,6 @@ function TeamPanel() {
         ))}
       </div>
 
-      {/* Formulaire invitation */}
       <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '16px' }}>
         <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UserPlus size={13} color="var(--gold)" /> Inviter un membre
@@ -200,10 +198,6 @@ function TeamPanel() {
           </div>
           {error && <div style={{ fontSize: '11px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '8px 12px' }}>{error}</div>}
         </div>
-        <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '10px', lineHeight: 1.6 }}>
-          Un email avec un lien d'activation sera envoyé. L'invitation expire après 7 jours.
-          Le nouveau membre accède automatiquement aux mêmes clients, devis et factures que votre compagnie.
-        </div>
       </div>
     </div>
   )
@@ -217,6 +211,8 @@ export default function ParametresPage() {
   const logoRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
+  const [vertical, setVertical] = useState<'construction' | 'agence'>('construction')
+  const [updatingVertical, setUpdatingVertical] = useState(false)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -224,6 +220,13 @@ export default function ParametresPage() {
   )
 
   useEffect(() => {
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(d => {
+        if (d.vertical) setVertical(d.vertical === 'courtier' ? 'agence' : d.vertical)
+      })
+      .catch(() => {})
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       supabase.from('profiles').select('company_id').eq('id', user.id).single().then(({ data: profile }) => {
@@ -231,6 +234,7 @@ export default function ParametresPage() {
         setCompanyId(profile.company_id)
         supabase.from('companies').select('*').eq('id', profile.company_id).single().then(({ data: co }) => {
           if (!co) return
+          if (co.vertical) setVertical(co.vertical === 'courtier' ? 'agence' : co.vertical)
           setForm(f => ({
             ...f,
             nom:         co.name ?? f.nom,
@@ -251,6 +255,28 @@ export default function ParametresPage() {
   }, [])
 
   function set<K extends keyof OrgProfile>(k: K, v: OrgProfile[K]) { setForm(f => ({ ...f, [k]: v })) }
+
+  async function switchMode(targetMode: 'construction' | 'agence') {
+    if (updatingVertical || vertical === targetMode) return
+    setUpdatingVertical(true)
+    try {
+      const res = await fetch('/api/me', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vertical: targetMode }),
+      })
+      if (res.ok) {
+        setVertical(targetMode)
+        window.location.reload()
+      } else {
+        alert('Erreur lors du changement de mode')
+      }
+    } catch {
+      alert('Erreur réseau')
+    } finally {
+      setUpdatingVertical(false)
+    }
+  }
 
   async function save() {
     setSaving(true)
@@ -279,7 +305,6 @@ export default function ParametresPage() {
     const reader = new FileReader()
     reader.onload = ev => setLogoPreview(ev.target?.result as string)
     reader.readAsDataURL(file)
-    // TODO: supabase.storage.from('logos').upload(...)
   }
 
   return (
@@ -365,6 +390,77 @@ export default function ParametresPage() {
                 </select>
               </F>
               <F label="Code postal"><Inp value={form.code_postal} onChange={v => set('code_postal', v)} placeholder="G2K 2G4" /></F>
+            </div>
+          </>)}
+
+          {/* ── SECTEUR & MODE ERP ── */}
+          {onglet === 'secteur' && (<>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', paddingBottom: '12px', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Home size={14} color="var(--gold)" /> Mode &amp; Secteur d'activité ERP
+            </div>
+
+            <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0, lineHeight: 1.5 }}>
+              Choisissez le mode d'utilisation adapté à votre métier. Le changement réorganise instantanément les modules, menus et vocabulaires de votre ERP.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '10px' }}>
+              {/* Option 1 : Construction */}
+              <div
+                onClick={() => switchMode('construction')}
+                style={{
+                  background: vertical === 'construction' ? 'var(--ga)' : 'var(--bg-2)',
+                  border: `1.5px solid ${vertical === 'construction' ? 'var(--gold)' : 'var(--line)'}`,
+                  borderRadius: '12px', padding: '18px', cursor: 'pointer', transition: 'all 0.15s',
+                  display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(212,175,55,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <HardHat size={20} color="var(--gold)" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>Entrepreneur BTP &amp; Construction</div>
+                    <div style={{ fontSize: '10px', color: 'var(--gold-2)' }}>Chantiers &amp; Sous-traitants</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--txt-3)', lineHeight: 1.5 }}>
+                  Inclus : Chantiers, Suivi de projet, Devis peinture/général, Facturation, Sous-traitants, Employés &amp; Licences RBQ.
+                </div>
+                {vertical === 'construction' && (
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold-2)', background: 'var(--gold-3)20', padding: '3px 8px', borderRadius: '6px', alignSelf: 'flex-start' }}>
+                    ✓ MODE ACTIF
+                  </span>
+                )}
+              </div>
+
+              {/* Option 2 : Courtier Immobilier */}
+              <div
+                onClick={() => switchMode('agence')}
+                style={{
+                  background: vertical === 'agence' ? 'var(--ga)' : 'var(--bg-2)',
+                  border: `1.5px solid ${vertical === 'agence' ? 'var(--gold)' : 'var(--line)'}`,
+                  borderRadius: '12px', padding: '18px', cursor: 'pointer', transition: 'all 0.15s',
+                  display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(96,165,250,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Landmark size={20} color="#60A5FA" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>Courtier Immobilier &amp; Prêts</div>
+                    <div style={{ fontSize: '10px', color: '#60A5FA' }}>Dossiers &amp; Prêteurs</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--txt-3)', lineHeight: 1.5 }}>
+                  Inclus : Dossiers d'emprunt, Répertoire des Prêteurs &amp; Banques, Commissions de courtage, Emprunteurs &amp; Offres.
+                </div>
+                {vertical === 'agence' && (
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#60A5FA', background: 'rgba(96,165,250,0.2)', padding: '3px 8px', borderRadius: '6px', alignSelf: 'flex-start' }}>
+                    ✓ MODE ACTIF
+                  </span>
+                )}
+              </div>
             </div>
           </>)}
 
@@ -473,7 +569,6 @@ export default function ParametresPage() {
               <Shield size={14} color="var(--gold)" /> Confidentialité & Protection des données (Loi 25)
             </div>
 
-            {/* Statut conformité */}
             <div style={{ background: 'var(--green)10', border: '0.5px solid var(--green)', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
               <CheckCircle2 size={16} color="var(--green)" style={{ marginTop: '1px', flexShrink: 0 }} />
               <div>
@@ -484,7 +579,6 @@ export default function ParametresPage() {
               </div>
             </div>
 
-            {/* RPRP */}
             <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '14px 16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.05em', marginBottom: '10px' }}>RESPONSABLE DE LA PROTECTION (RPRP)</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
@@ -497,7 +591,6 @@ export default function ParametresPage() {
               </div>
             </div>
 
-            {/* Rétention des données */}
             <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '14px 16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.05em', marginBottom: '10px' }}>POLITIQUE DE RÉTENTION</div>
               {[
@@ -514,7 +607,6 @@ export default function ParametresPage() {
               ))}
             </div>
 
-            {/* Actions */}
             <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '14px 16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.05em', marginBottom: '12px' }}>ACTIONS DISPONIBLES</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -586,7 +678,6 @@ export default function ParametresPage() {
               </div>
             </div>
 
-            {/* Déclaration d'incident */}
             <div style={{ background: 'var(--amber)10', border: '0.5px solid var(--amber)', borderRadius: '10px', padding: '14px 16px' }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Lock size={13} color="var(--amber)" /> Incident de confidentialité

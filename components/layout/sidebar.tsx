@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Building2, Calendar,
   FileText, Receipt, BarChart3, Settings,
   HardHat, LogOut, TrendingUp, Wallet, Target, Sparkles, Crown,
-  FolderKanban, Landmark, PieChart, Home, Sun, Moon,
+  FolderKanban, Landmark, PieChart, Home, Sun, Moon, ArrowLeftRight
 } from 'lucide-react'
 import { useTheme } from './theme-provider'
 
@@ -52,7 +52,7 @@ const NAV_CONSTRUCTION = [
   },
 ]
 
-// ── Nav agence (courtier hypothécaire) ────────────────────────────
+// ── Nav agence (courtier hypothécaire & immobilier) ────────────────────────────
 const NAV_AGENCE = [
   {
     section: "Vue d'ensemble",
@@ -63,7 +63,7 @@ const NAV_AGENCE = [
     items: [
       { href: '/acquisition',  label: 'Acquisition',  icon: Target        },
       { href: '/contenu',      label: 'Contenu IA',   icon: Sparkles      },
-      { href: '/dossiers',     label: 'Dossiers',     icon: FolderKanban  },
+      { href: '/dossiers',     label: 'Dossiers Prêts', icon: FolderKanban  },
       { href: '/preteurs',     label: 'Prêteurs',     icon: Landmark      },
       { href: '/calendrier',   label: 'Calendrier',   icon: Calendar      },
       { href: '/clients',      label: 'Emprunteurs',  icon: Users         },
@@ -92,7 +92,7 @@ const NAV_AGENCE = [
   },
 ]
 
-type Vertical = 'construction' | 'agence'
+type Vertical = 'construction' | 'agence' | 'courtier'
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -100,6 +100,7 @@ export default function Sidebar() {
   const [compName, setCompName]   = useState('Mon Entreprise')
   const [initials, setInitials]   = useState('GP')
   const [isAdmin, setIsAdmin]     = useState(false)
+  const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
     fetch('/api/me')
@@ -120,7 +121,8 @@ export default function Sidebar() {
 
   const { theme, toggle } = useTheme()
   const router = useRouter()
-  const rawNav = vertical === 'agence' ? NAV_AGENCE : NAV_CONSTRUCTION
+  const isCourtier = vertical === 'agence' || vertical === 'courtier'
+  const rawNav = isCourtier ? NAV_AGENCE : NAV_CONSTRUCTION
   const NAV = rawNav.filter(group => group.section !== 'Admin SaaS' || isAdmin)
 
   async function handleLogout() {
@@ -129,11 +131,27 @@ export default function Sidebar() {
     router.refresh()
   }
 
-  const logoIcon = vertical === 'agence'
+  async function toggleVertical() {
+    if (switching) return
+    const nextVertical = isCourtier ? 'construction' : 'agence'
+    setSwitching(true)
+    try {
+      await fetch('/api/me', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vertical: nextVertical }),
+      })
+      window.location.reload()
+    } catch {
+      setSwitching(false)
+    }
+  }
+
+  const logoIcon = isCourtier
     ? <Home size={15} color="var(--gold)" />
     : <Building2 size={15} color="var(--gold)" />
 
-  const logoLabel = vertical === 'agence' ? 'ERP Agence' : 'ERP Construction'
+  const logoLabel = isCourtier ? 'ERP Courtier' : 'ERP Construction'
 
   return (
     <aside style={{
@@ -144,29 +162,55 @@ export default function Sidebar() {
       overflow: 'hidden',
     }}>
 
-      {/* ── Logo ─────────────────────────────────── */}
+      {/* ── Logo + Selector Switch ─────────────────────────────────── */}
       <div style={{
         padding: '14px 16px',
         borderBottom: '0.5px solid var(--line)',
-        display: 'flex', alignItems: 'center', gap: '10px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexShrink: 0,
       }}>
-        <div style={{
-          width: '30px', height: '30px', borderRadius: '7px',
-          background: 'var(--ga)', border: '0.5px solid var(--gold-3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          {logoIcon}
-        </div>
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--txt-1)', lineHeight: 1.2 }}>
-            {logoLabel}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '30px', height: '30px', borderRadius: '7px',
+            background: 'var(--ga)', border: '0.5px solid var(--gold-3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            {logoIcon}
           </div>
-          <div style={{ fontSize: '9px', color: 'var(--gold-3)', letterSpacing: '0.08em' }}>
-            GROWTH PLAN
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', lineHeight: 1.2 }}>
+              {logoLabel}
+            </div>
+            <div style={{ fontSize: '9px', color: 'var(--gold-3)', letterSpacing: '0.08em' }}>
+              {isCourtier ? 'MODE IMMOBILIER' : 'MODE CHANTIERS'}
+            </div>
           </div>
         </div>
+
+        {/* Bouton Switch Mode (Construction <-> Courtier) */}
+        <button
+          onClick={toggleVertical}
+          disabled={switching}
+          title={isCourtier ? 'Passer en Mode Construction 🏗️' : 'Passer en Mode Courtier Immobilier 🏡'}
+          style={{
+            background: 'var(--ga)',
+            border: '0.5px solid var(--gold-3)',
+            borderRadius: '6px',
+            padding: '4px 6px',
+            cursor: 'pointer',
+            color: 'var(--gold-2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s',
+            opacity: switching ? 0.5 : 1
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <ArrowLeftRight size={13} />
+        </button>
       </div>
 
       {/* ── Navigation ───────────────────────────── */}
@@ -245,7 +289,9 @@ export default function Sidebar() {
           <div style={{ fontSize: '11px', color: 'var(--txt-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {compName}
           </div>
-          <div style={{ fontSize: '9px', color: 'var(--txt-3)' }}>Propriétaire</div>
+          <div style={{ fontSize: '9px', color: 'var(--txt-3)' }}>
+            {isCourtier ? 'Courtier Immobilier' : 'Entrepreneur BTP'}
+          </div>
         </div>
         <button
           onClick={toggle}
