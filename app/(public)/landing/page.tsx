@@ -82,13 +82,13 @@ export default function LandingPage() {
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
-  // ROI Calculations
-  const newWinRate = Math.min(85, currentWinRate + 14)
+  // ROI Calculations - Formule réaliste et conservatrice (+5% de taux de signature)
+  const newWinRate = Math.min(80, currentWinRate + 5)
   const currentMonthlyRevenue = (quotesPerMonth * (currentWinRate / 100)) * avgProjectValue
   const projectedMonthlyRevenue = (quotesPerMonth * (newWinRate / 100)) * avgProjectValue
-  const monthlyGain = projectedMonthlyRevenue - currentMonthlyRevenue
+  const monthlyGain = Math.round(projectedMonthlyRevenue - currentMonthlyRevenue)
   const yearlyGain = monthlyGain * 12
-  const hoursSavedPerWeek = Math.round(quotesPerMonth * 0.8 + 5)
+  const hoursSavedPerWeek = Math.round(quotesPerMonth * 0.4 + 2)
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -260,18 +260,18 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CALCULATEUR ROI INTERACTIF */}
+      {/* CALCULATEUR ROI INTERACTIF & RÉALISTE */}
       <section id="roi-calculator" className="py-20 bg-slate-950 border-y border-amber-500/20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              📊 Le Stratège Financier & Rentabilité — Plangrowth
+              📊 Analyse de Récupération de Chiffre d'Affaires — Plangrowth
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Combien d'argent perdez-vous chaque mois sans relance automatique ?
+              Combien de soumissions perdez-vous par simple manque de suivi au bon moment ?
             </h2>
             <p className="text-slate-400 mt-4 text-base">
-              Ajustez vos données ci-dessous et visualisez immédiatement l'impact direct sur votre chiffre d'affaires.
+              80% des contrats se signent au premier entrepreneur qui effectue un suivi professionnel sous 24h. Calculez votre potentiel de récupération.
             </p>
           </div>
 
@@ -336,40 +336,44 @@ export default function LandingPage() {
             <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 to-slate-950 p-6 sm:p-8 rounded-xl border border-amber-500/40 relative overflow-hidden shadow-2xl">
               <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/15 blur-3xl rounded-full"></div>
               
-              <h3 className="text-xs uppercase font-mono tracking-widest text-slate-400">Impact Financier Estimé</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-slate-400">Potentiel de Récupération Estimé</h3>
               
               <div className="mt-4">
-                <span className="text-sm text-slate-400">Gain annuel de chiffre d'affaires :</span>
+                <span className="text-sm text-slate-400">Chiffre d'affaires annuel récupérable :</span>
                 <p className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37] font-mono tracking-tight mt-1">
                   +{yearlyGain.toLocaleString('fr-CA')} $
                 </p>
                 <p className="text-xs text-amber-300 font-medium mt-1">
-                  soit +{monthlyGain.toLocaleString('fr-CA')} $ / mois réinjectés dans votre marge
+                  soit +{monthlyGain.toLocaleString('fr-CA')} $ / mois (~1 à 2 contrats additionnels signés)
                 </p>
               </div>
 
               <div className="mt-6 pt-6 border-t border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Heures de gestion économisées :</span>
+                  <span className="text-slate-400">Temps administratif économisé :</span>
                   <span className="text-white font-bold font-mono">{hoursSavedPerWeek}h / semaine</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Nouveau taux de signature estimé :</span>
-                  <span className="text-amber-400 font-bold font-mono">{newWinRate} %</span>
+                  <span className="text-slate-400">Amélioration estimée du taux de signature :</span>
+                  <span className="text-amber-400 font-bold font-mono">+{newWinRate - currentWinRate}% ({currentWinRate}% → {newWinRate}%)</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Retour sur investissement Plangrowth :</span>
-                  <span className="text-amber-300 font-bold font-mono">&gt; 35x abonnement</span>
+                  <span className="text-slate-400">Seuil de rentabilité ERP :</span>
+                  <span className="text-amber-300 font-bold font-mono">Rentabilisé dès le 1er devis récupéré</span>
                 </div>
               </div>
 
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="w-full mt-6 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
+                className="w-full mt-6 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
               >
-                <span>Capturer cette croissance</span>
+                <span>Tester mon potentiel de relance (Audit 15 min)</span>
                 <ArrowRight className="w-4 h-4 text-slate-950" />
               </button>
+
+              <p className="text-[10px] text-slate-500 mt-3 text-center">
+                * Estimation basée sur un gain réaliste de +5% de signature grâce aux relances automatiques 24h.
+              </p>
             </div>
           </div>
         </div>
