@@ -2,19 +2,28 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Receipt, Plus, Search, Loader2, X, Wallet, Edit3, Trash2 } from 'lucide-react'
+import { Receipt, Plus, Search, Loader2, X, Wallet, Edit3, Trash2, Tag, Check } from 'lucide-react'
 
-const CATEGORIES = ['Matériaux', 'Équipement', 'Sous-traitant', 'Transport', 'Hébergement', 'Dépense Fixe', 'Budget Personnel', 'Autre']
+const DEFAULT_CATEGORIES = [
+  'Matériaux',
+  'Équipement',
+  'Sous-traitant',
+  'Transport',
+  'Hébergement',
+  'Dépense Fixe',
+  'Budget Personnel',
+  'Autre',
+]
 
 const CAT_STYLE: Record<string, { color: string; bg: string }> = {
-  'Matériaux':    { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)'  },
-  'Équipement':   { color: '#3B82F6', bg: 'rgba(59,130,246,0.1)'  },
-  'Sous-traitant':{ color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)'  },
-  'Transport':    { color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
-  'Hébergement':  { color: '#10B981', bg: 'rgba(16,185,129,0.1)'  },
-  'Dépense Fixe':    { color: '#EF4444', bg: 'rgba(239,68,68,0.1)'   },
-  'Budget Personnel':{ color: '#EC4899', bg: 'rgba(236,72,153,0.1)'  },
-  'Autre':        { color: '#9CA3AF', bg: 'rgba(156,163,175,0.1)' },
+  'Matériaux':        { color: '#F59E0B', bg: 'rgba(245,158,11,0.15)'  },
+  'Équipement':       { color: '#3B82F6', bg: 'rgba(59,130,246,0.15)'  },
+  'Sous-traitant':    { color: '#8B5CF6', bg: 'rgba(139,92,246,0.15)'  },
+  'Transport':        { color: '#6B7280', bg: 'rgba(107,114,128,0.15)' },
+  'Hébergement':      { color: '#10B981', bg: 'rgba(16,185,129,0.15)'  },
+  'Dépense Fixe':     { color: '#EF4444', bg: 'rgba(239,68,68,0.15)'   },
+  'Budget Personnel': { color: '#EC4899', bg: 'rgba(236,72,153,0.15)'  },
+  'Autre':            { color: '#9CA3AF', bg: 'rgba(156,163,175,0.15)' },
 }
 
 interface Depense {
@@ -41,6 +50,9 @@ const inputSt: React.CSSProperties = { width: '100%', boxSizing: 'border-box', b
 export default function DepensesPage() {
   const [depenses, setDepenses] = useState<Depense[]>([])
   const [jobs, setJobs]         = useState<Job[]>([])
+  const [categoriesList, setCategoriesList] = useState<string[]>(DEFAULT_CATEGORIES)
+  const [newCatInput, setNewCatInput] = useState('')
+  const [showCatManager, setShowCatManager] = useState(false)
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [catFilter, setCatFilter] = useState<string | null>(null)
@@ -67,19 +79,42 @@ export default function DepensesPage() {
         .order('date_depense', { ascending: false }),
       supabase.from('jobs').select('id, titre').order('titre'),
     ])
-    setDepenses((dep as unknown as Depense[]) || [])
+    const loadedDepenses = (dep as unknown as Depense[]) || []
+    setDepenses(loadedDepenses)
     setJobs(jobsData || [])
+
+    // Extraire les catégories personnalisées existantes
+    const customCats = Array.from(new Set(loadedDepenses.map(d => d.categorie).filter(Boolean) as string[]))
+    const merged = Array.from(new Set([...DEFAULT_CATEGORIES, ...customCats]))
+    setCategoriesList(merged)
+
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function handleQuickCategoryChange(id: string, newCat: string) {
+    setDepenses(prev => prev.map(d => d.id === id ? { ...d, categorie: newCat } : d))
+    await supabase.from('depenses').update({ categorie: newCat }).eq('id', id)
+  }
+
+  function handleAddCustomCategory() {
+    if (!newCatInput.trim()) return
+    const trimmed = newCatInput.trim()
+    if (!categoriesList.includes(trimmed)) {
+      setCategoriesList(prev => [...prev, trimmed])
+    }
+    setForm(prev => ({ ...prev, categorie: trimmed }))
+    setNewCatInput('')
+    setShowCatManager(false)
+  }
 
   function openCreate() {
     setEditingDepense(null)
     setForm({
       description: '',
       montant: '',
-      categorie: 'Matériaux',
+      categorie: categoriesList[0] || 'Matériaux',
       date_depense: new Date().toISOString().split('T')[0],
       job_id: '',
     })
@@ -105,7 +140,6 @@ export default function DepensesPage() {
     if (!user) { setSaving(false); return }
 
     if (editingDepense) {
-      // Modification
       await supabase.from('depenses').update({
         description:  form.description,
         montant:      parseFloat(form.montant),
@@ -114,7 +148,6 @@ export default function DepensesPage() {
         job_id:       form.job_id || null,
       }).eq('id', editingDepense.id)
     } else {
-      // Création
       const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
       if (!profile?.company_id) { setSaving(false); return }
 
@@ -153,7 +186,7 @@ export default function DepensesPage() {
   const totalMois = depenses.reduce((sum, d) => sum + Number(d.montant), 0)
   const countMois = depenses.length
 
-  const catTotals = CATEGORIES.map(c => ({
+  const catTotals = categoriesList.map(c => ({
     cat: c,
     total: depenses.filter(d => d.categorie === c).reduce((sum, d) => sum + Number(d.montant), 0),
   })).filter(x => x.total > 0)
@@ -168,7 +201,7 @@ export default function DepensesPage() {
             <Wallet size={20} color="var(--gold)" /> Dépenses
           </h1>
           <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '2px' }}>
-            Suivi des coûts de chantier, équipements et dépenses opérationnelles
+            Gestion des coûts, classification dynamique et édition directe
           </div>
         </div>
         <button
@@ -184,7 +217,7 @@ export default function DepensesPage() {
         </button>
       </div>
 
-      {/* Cartes KPI */}
+      {/* Cartes KPI & Filtres */}
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '16px' }}>
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total des Dépenses</div>
@@ -193,7 +226,7 @@ export default function DepensesPage() {
         </div>
 
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '18px 20px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Répartition par Catégorie</div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Filtres par Catégorie</div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setCatFilter(null)}
@@ -207,7 +240,7 @@ export default function DepensesPage() {
               Toutes ({fmt(totalMois)})
             </button>
             {catTotals.map(ct => {
-              const st = CAT_STYLE[ct.cat] || CAT_STYLE['Autre']
+              const st = CAT_STYLE[ct.cat] || { color: '#9CA3AF', bg: 'rgba(156,163,175,0.15)' }
               const active = catFilter === ct.cat
               return (
                 <button
@@ -246,10 +279,10 @@ export default function DepensesPage() {
         />
       </div>
 
-      {/* Table des dépenses */}
+      {/* Table des dépenses avec Dropdown de catégorie interactif direct */}
       <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px 130px 110px 80px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
-          {['DESCRIPTION / PROJET', 'CATÉGORIE', 'DATE', 'MONTANT', 'ACTIONS'].map(h => (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 130px 110px 80px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+          {['DESCRIPTION / PROJET', 'CATÉGORIE (MODIFIABLE)', 'DATE', 'MONTANT', 'ACTIONS'].map(h => (
             <div key={h} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em', textAlign: h === 'MONTANT' ? 'right' : h === 'ACTIONS' ? 'center' : 'left' }}>{h}</div>
           ))}
         </div>
@@ -272,34 +305,64 @@ export default function DepensesPage() {
           </div>
         ) : (
           filtered.map((d, i) => {
-            const st = CAT_STYLE[d.categorie || 'Autre'] || CAT_STYLE['Autre']
+            const currentCat = d.categorie || 'Autre'
+            const st = CAT_STYLE[currentCat] || { color: '#9CA3AF', bg: 'rgba(156,163,175,0.15)' }
             return (
               <div
                 key={d.id}
                 style={{
-                  display: 'grid', gridTemplateColumns: '1fr 150px 130px 110px 80px',
+                  display: 'grid', gridTemplateColumns: '1fr 180px 130px 110px 80px',
                   padding: '12px 18px', borderBottom: i < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
-                  alignItems: 'center', transition: 'background 0.1s', cursor: 'pointer',
+                  alignItems: 'center', transition: 'background 0.1s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                onClick={() => openEdit(d)}
               >
-                <div>
+                <div style={{ cursor: 'pointer' }} onClick={() => openEdit(d)}>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>{d.description}</div>
                   {d.jobs?.titre && <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '2px' }}>🔨 {d.jobs.titre}</div>}
                 </div>
-                <div>
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: st.color, background: st.bg, padding: '3px 10px', borderRadius: '20px' }}>
-                    {d.categorie || 'Autre'}
-                  </span>
+
+                {/* Dropdown de catégorie interactif direct sur la ligne */}
+                <div onClick={e => e.stopPropagation()}>
+                  <select
+                    value={currentCat}
+                    onChange={e => handleQuickCategoryChange(d.id, e.target.value)}
+                    style={{
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      background: st.bg,
+                      color: st.color,
+                      border: `1px solid ${st.color}40`,
+                      borderRadius: '20px',
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {categoriesList.map(c => (
+                      <option key={c} value={c} style={{ background: '#1F2937', color: '#F3F4F6' }}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--txt-3)' }}>{fmtDate(d.date_depense)}</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--red)', textAlign: 'right' }}>{fmt(d.montant)}</div>
+
+                <div style={{ fontSize: '12px', color: 'var(--txt-3)', cursor: 'pointer' }} onClick={() => openEdit(d)}>
+                  {fmtDate(d.date_depense)}
+                </div>
+
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--red)', textAlign: 'right', cursor: 'pointer' }} onClick={() => openEdit(d)}>
+                  {fmt(d.montant)}
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }} onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => openEdit(d)}
-                    title="Modifier cette dépense"
+                    title="Modifier tout l'item"
                     style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 7px', cursor: 'pointer', color: 'var(--txt-2)' }}
                   >
                     <Edit3 size={13} />
@@ -318,7 +381,7 @@ export default function DepensesPage() {
         )}
       </div>
 
-      {/* Modal Création & Modification */}
+      {/* Modal Création & Modification complète */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowModal(false)}>
           <form
@@ -371,11 +434,21 @@ export default function DepensesPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={labelSt}>Catégorie</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={labelSt}>Catégorie</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowCatManager(v => !v)}
+                    style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    + Nouvelle catégorie
+                  </button>
+                </div>
                 <select value={form.categorie} onChange={e => setForm(p => ({ ...p, categorie: e.target.value }))} style={inputSt}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {categoriesList.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+
               <div>
                 <label style={labelSt}>Chantier (optionnel)</label>
                 <select value={form.job_id} onChange={e => setForm(p => ({ ...p, job_id: e.target.value }))} style={inputSt}>
@@ -384,6 +457,26 @@ export default function DepensesPage() {
                 </select>
               </div>
             </div>
+
+            {/* Formulaire d'ajout de nouvelle catégorie sur mesure */}
+            {showCatManager && (
+              <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '10px 12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={newCatInput}
+                  onChange={e => setNewCatInput(e.target.value)}
+                  placeholder="Nom de la nouvelle catégorie..."
+                  style={{ flex: 1, background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', color: 'var(--txt-1)', outline: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomCategory}
+                  style={{ background: 'var(--gold)', color: '#0A0A0A', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Ajouter
+                </button>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
               {editingDepense && (
