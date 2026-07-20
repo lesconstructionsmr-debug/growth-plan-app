@@ -1,16 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import {
-  Users, Plus, Search, Filter,
-  Building2, User, Phone, Mail,
-  ChevronRight, MoreHorizontal,
-  TrendingUp, CheckCircle2, Clock, Archive
+  Users, Plus, Search, Building2, User, Phone, Mail,
+  CheckCircle2, Clock, Archive, TrendingUp, Loader2,
+  Trash2, CheckSquare, Square, Edit3
 } from 'lucide-react'
 import type { StatutClient } from '@/lib/types/models'
 
-// ── Types ────────────────────────────────────────────────────
 interface ClientRow {
   id: string
   nom: string
@@ -24,250 +22,323 @@ interface ClientRow {
   cree_le: string
 }
 
-// ── Config statuts ───────────────────────────────────────────
-const STATUTS: { value: StatutClient | 'tous'; label: string; color: string }[] = [
-  { value: 'tous',     label: 'Tous',      color: 'var(--txt-3)' },
+const STATUTS: { value: StatutClient; label: string; color: string }[] = [
   { value: 'prospect', label: 'Prospect',  color: 'var(--amber)' },
   { value: 'actif',    label: 'Actif',     color: 'var(--green)' },
   { value: 'inactif',  label: 'Inactif',   color: 'var(--txt-3)' },
   { value: 'archive',  label: 'Archivé',   color: 'var(--red)'   },
 ]
 
-function statutIcon(s: StatutClient) {
-  switch (s) {
-    case 'actif':    return <CheckCircle2 size={11} color="var(--green)" />
-    case 'prospect': return <TrendingUp   size={11} color="var(--amber)" />
-    case 'inactif':  return <Clock        size={11} color="var(--txt-3)" />
-    case 'archive':  return <Archive      size={11} color="var(--red)"   />
-  }
-}
-
-
-// ── Composants ───────────────────────────────────────────────
-
-function ClientCard({ client }: { client: ClientRow }) {
-  return (
-    <a
-      href={`/clients/${client.id}`}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '14px',
-        padding: '14px 16px',
-        borderBottom: '0.5px solid var(--line)',
-        textDecoration: 'none',
-        transition: 'background 0.1s',
-      }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-2)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-    >
-      {/* Avatar */}
-      <div style={{
-        width: '36px', height: '36px', borderRadius: '9px', flexShrink: 0,
-        background: client.type === 'entreprise' ? 'rgba(74,143,212,0.12)' : 'var(--ga)',
-        border: `0.5px solid ${client.type === 'entreprise' ? 'rgba(74,143,212,0.3)' : 'var(--gold-3)'}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {client.type === 'entreprise'
-          ? <Building2 size={15} color="var(--blue)" strokeWidth={1.7} />
-          : <User size={15} color="var(--gold)" strokeWidth={1.7} />
-        }
-      </div>
-
-      {/* Infos */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--txt-1)' }}>{client.nom}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
-          {client.email && (
-            <span style={{ fontSize: '11px', color: 'var(--txt-3)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <Mail size={10} /> {client.email}
-            </span>
-          )}
-          {client.telephone && (
-            <span style={{ fontSize: '11px', color: 'var(--txt-3)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <Phone size={10} /> {client.telephone}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Ville */}
-      <div style={{ fontSize: '11px', color: 'var(--txt-3)', minWidth: '80px', textAlign: 'center' }}>
-        {client.ville ?? '—'}
-      </div>
-
-      {/* Projets */}
-      <div style={{ fontSize: '12px', color: 'var(--txt-2)', minWidth: '60px', textAlign: 'center' }}>
-        {client.nombre_projets} projet{client.nombre_projets !== 1 ? 's' : ''}
-      </div>
-
-      {/* Total */}
-      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', minWidth: '80px', textAlign: 'right' }}>
-        {client.total_facture > 0
-          ? `${client.total_facture.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}`
-          : '—'
-        }
-      </div>
-
-      {/* Statut */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '70px' }}>
-        {statutIcon(client.statut)}
-        <span style={{ fontSize: '11px', color: 'var(--txt-2)' }}>
-          {STATUTS.find(s => s.value === client.statut)?.label}
-        </span>
-      </div>
-
-      <ChevronRight size={13} color="var(--txt-3)" />
-    </a>
-  )
-}
-
-// ── Page principale ──────────────────────────────────────────
 export default function ClientsPage() {
   const [search, setSearch] = useState('')
-  const [statut, setStatut] = useState<StatutClient | 'tous'>('tous')
+  const [statutFilter, setStatutFilter] = useState<string>('tous')
   const [clients, setClients] = useState<ClientRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
-  useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    supabase
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const loadClients = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase
       .from('clients')
       .select('id, nom, email, telephone, ville, created_at')
       .order('created_at', { ascending: false })
-      .limit(100)
-      .then(({ data }) => {
-        setClients((data ?? []).map(c => ({
-          id: c.id,
-          nom: c.nom,
-          type: 'particulier' as const,
-          statut: 'actif' as const,
-          email: c.email ?? null,
-          telephone: c.telephone ?? null,
-          ville: c.ville ?? null,
-          nombre_projets: 0,
-          total_facture: 0,
-          cree_le: c.created_at,
-        })))
-        setLoading(false)
-      })
-  }, [])
+
+    setClients((data ?? []).map((c: any) => ({
+      id: c.id,
+      nom: c.nom,
+      type: 'particulier',
+      statut: 'actif',
+      email: c.email ?? null,
+      telephone: c.telephone ?? null,
+      ville: c.ville ?? null,
+      nombre_projets: 0,
+      total_facture: 0,
+      cree_le: c.created_at,
+    })))
+    setLoading(false)
+  }, [supabase])
+
+  useEffect(() => { loadClients() }, [loadClients])
+
+  // ── ÉDITION EN LIGNE DIRECTE SUR LE TABLEAU ─────────────────────
+  async function updateInlineField(id: string, field: 'nom' | 'email' | 'telephone' | 'ville' | 'statut', value: any) {
+    setClients(prev => prev.map(c => c.id === id ? { ...c, [field]: value || null } : c))
+    await supabase.from('clients').update({ [field]: value || null }).eq('id', id)
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Voulez-vous vraiment supprimer ce client ?')) return
+    await supabase.from('clients').delete().eq('id', id)
+    loadClients()
+  }
+
+  async function handleBatchDelete() {
+    if (selectedIds.length === 0) return
+    if (!confirm(`Voulez-vous vraiment supprimer les ${selectedIds.length} clients sélectionnés ?`)) return
+    await supabase.from('clients').delete().in('id', selectedIds)
+    setSelectedIds([])
+    loadClients()
+  }
 
   const filtered = clients.filter(c => {
     const matchSearch = c.nom.toLowerCase().includes(search.toLowerCase())
-    const matchStatut = statut === 'tous' || c.statut === statut
+      || (c.email ?? '').toLowerCase().includes(search.toLowerCase())
+      || (c.telephone ?? '').toLowerCase().includes(search.toLowerCase())
+      || (c.ville ?? '').toLowerCase().includes(search.toLowerCase())
+    const matchStatut = statutFilter === 'tous' || c.statut === statutFilter
     return matchSearch && matchStatut
   })
 
-  return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1100px' }}>
+  const allSelected = filtered.length > 0 && selectedIds.length === filtered.length
 
-      {/* ── En-tête ─────────────────────────────── */}
+  return (
+    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1100px', margin: '0 auto' }}>
+
+      {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Users size={18} color="var(--gold)" />
-          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>Clients</h1>
-          <span style={{
-            fontSize: '11px', color: 'var(--txt-3)',
-            background: 'var(--bg-3)', borderRadius: '5px', padding: '2px 7px',
-          }}>
-            {loading ? '…' : filtered.length}
-          </span>
+        <div>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--txt-1)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={20} color="var(--gold)" /> Clients & Prospects
+          </h1>
+          <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '2px' }}>
+            Gestion des coordonnées clients et modification directe dans la liste
+          </div>
         </div>
-        <a href="/clients/nouveau" style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'var(--gold)', borderRadius: '8px', padding: '8px 14px',
-          fontSize: '12px', fontWeight: 600, color: '#0A0A0A', textDecoration: 'none',
-        }}>
-          <Plus size={13} /> Nouveau client
+        <a
+          href="/clients/nouveau"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: 'var(--gold)', borderRadius: '8px', padding: '9px 16px',
+            fontSize: '13px', fontWeight: 700, color: '#0A0A0A', textDecoration: 'none',
+          }}
+        >
+          <Plus size={15} /> Nouveau client
         </a>
       </div>
 
-      {/* ── Filtres ──────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-        {/* Recherche */}
+      {/* Sélection en masse */}
+      {selectedIds.length > 0 && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          background: 'var(--bg-1)', border: '0.5px solid var(--line)',
-          borderRadius: '8px', padding: '7px 12px', flex: 1, minWidth: '200px', maxWidth: '320px',
+          background: 'var(--ga)', border: '1px solid var(--gold)',
+          borderRadius: '10px', padding: '12px 18px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <Search size={13} color="var(--txt-3)" />
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckSquare size={16} />
+            {selectedIds.length} client(s) sélectionné(s)
+          </div>
+          <button
+            onClick={handleBatchDelete}
+            style={{ background: 'var(--red)20', border: '0.5px solid var(--red)', color: 'var(--red)', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Trash2 size={13} /> Supprimer la sélection
+          </button>
+        </div>
+      )}
+
+      {/* Recherche & Filtres */}
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+          <Search size={14} color="var(--txt-3)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
-            placeholder="Rechercher un client..."
+            placeholder="Rechercher par nom, courriel, téléphone, ville…"
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
-              background: 'none', border: 'none', outline: 'none',
-              fontSize: '12px', color: 'var(--txt-1)', width: '100%',
+              width: '100%', boxSizing: 'border-box',
+              background: 'var(--bg-2)', border: '0.5px solid var(--line)',
+              borderRadius: '8px', padding: '8px 12px 8px 34px',
+              fontSize: '12px', color: 'var(--txt-1)', outline: 'none',
             }}
           />
         </div>
 
-        {/* Filtres statut */}
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {STATUTS.map(s => (
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {['tous', 'prospect', 'actif', 'inactif', 'archive'].map(s => (
             <button
-              key={s.value}
-              onClick={() => setStatut(s.value)}
+              key={s}
+              onClick={() => setStatutFilter(s)}
               style={{
-                background: statut === s.value ? 'var(--ga)' : 'var(--bg-1)',
-                border: `0.5px solid ${statut === s.value ? 'var(--gold-3)' : 'var(--line)'}`,
-                borderRadius: '6px', padding: '5px 10px',
-                fontSize: '11px', cursor: 'pointer',
-                color: statut === s.value ? 'var(--gold-2)' : 'var(--txt-3)',
+                background: statutFilter === s ? 'var(--gold)20' : 'var(--bg-2)',
+                border: statutFilter === s ? '0.5px solid var(--gold)' : '0.5px solid var(--line)',
+                color: statutFilter === s ? 'var(--gold-2)' : 'var(--txt-2)',
+                borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                textTransform: 'capitalize',
               }}
             >
-              {s.label}
+              {s}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Tableau ──────────────────────────────── */}
-      <div style={{
-        background: 'var(--bg-1)',
-        border: '0.5px solid var(--line)',
-        borderRadius: '10px',
-        overflow: 'hidden',
-      }}>
-        {/* Header colonnes */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '14px',
-          padding: '10px 16px',
-          borderBottom: '0.5px solid var(--line)',
-          background: 'var(--bg-2)',
-        }}>
-          <div style={{ width: '36px', flexShrink: 0 }} />
-          <div style={{ flex: 1, fontSize: '10px', color: 'var(--txt-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Client</div>
-          <div style={{ minWidth: '80px', textAlign: 'center', fontSize: '10px', color: 'var(--txt-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Ville</div>
-          <div style={{ minWidth: '60px', textAlign: 'center', fontSize: '10px', color: 'var(--txt-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Projets</div>
-          <div style={{ minWidth: '80px', textAlign: 'right', fontSize: '10px', color: 'var(--txt-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Facturé</div>
-          <div style={{ minWidth: '70px', fontSize: '10px', color: 'var(--txt-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Statut</div>
-          <div style={{ width: '13px' }} />
+      {/* Tableau avec ÉDITION EN LIGNE DIRECTE */}
+      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 200px 140px 120px 110px 60px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => setSelectedIds(allSelected ? [] : filtered.map(c => c.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: allSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+              {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+            </button>
+          </div>
+          {['NOM (ÉDITABLE)', 'COURRIEL (ÉDITABLE)', 'TÉLÉPHONE (ÉDITABLE)', 'VILLE (ÉDITABLE)', 'STATUT (ÉDITABLE)', 'ACTIONS'].map((h, i) => (
+            <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em' }}>{h}</div>
+          ))}
         </div>
 
-        {/* Lignes */}
-        {filtered.length === 0 ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '60px 20px', gap: '10px',
-          }}>
-            <Users size={32} color="var(--bg-4)" strokeWidth={1.2} />
-            <p style={{ fontSize: '13px', color: 'var(--txt-3)', margin: 0 }}>
-              {search ? 'Aucun client trouvé' : 'Aucun client pour l\'instant'}
-            </p>
-            <a href="/clients/nouveau" style={{
-              fontSize: '12px', color: 'var(--gold-2)', textDecoration: 'none', marginTop: '4px',
-            }}>
-              + Créer le premier client
-            </a>
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '8px', color: 'var(--txt-3)', fontSize: '12px' }}>
+            <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+            Chargement…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '10px' }}>
+            <Users size={32} color="var(--txt-3)" strokeWidth={1.2} />
+            <p style={{ fontSize: '13px', color: 'var(--txt-3)', margin: 0 }}>Aucun client trouvé</p>
           </div>
         ) : (
-          filtered.map(client => <ClientCard key={client.id} client={client} />)
+          filtered.map((c, idx) => {
+            const isSelected = selectedIds.includes(c.id)
+            const stCfg = STATUTS.find(s => s.value === c.statut) || STATUTS[1]
+
+            return (
+              <div
+                key={c.id}
+                style={{
+                  display: 'grid', gridTemplateColumns: '40px 1fr 200px 140px 120px 110px 60px',
+                  padding: '10px 18px', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
+                  alignItems: 'center', background: isSelected ? 'var(--ga)' : 'transparent',
+                }}
+              >
+                {/* Checkbox */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <button onClick={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: isSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
+                    {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                  </button>
+                </div>
+
+                {/* 1. NOM EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={c.nom}
+                    onBlur={e => e.target.value !== c.nom && updateInlineField(c.id, 'nom', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 2. COURRIEL EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="email"
+                    defaultValue={c.email || ''}
+                    placeholder="Ajouter email..."
+                    onBlur={e => e.target.value !== (c.email || '') && updateInlineField(c.id, 'email', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '11px', color: 'var(--txt-3)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 3. TÉLÉPHONE EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={c.telephone || ''}
+                    placeholder="Téléphone..."
+                    onBlur={e => e.target.value !== (c.telephone || '') && updateInlineField(c.id, 'telephone', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '11px', color: 'var(--txt-2)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 4. VILLE EN SAISIE DIRECTE */}
+                <div>
+                  <input
+                    type="text"
+                    defaultValue={c.ville || ''}
+                    placeholder="Ville..."
+                    onBlur={e => e.target.value !== (c.ville || '') && updateInlineField(c.id, 'ville', e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: 'transparent',
+                      border: '1px solid transparent', borderRadius: '5px', padding: '3px 6px',
+                      fontSize: '11px', color: 'var(--txt-3)', outline: 'none',
+                    }}
+                    onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
+                    onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
+                  />
+                </div>
+
+                {/* 5. STATUT EN DROPDOWN DIRECT */}
+                <div>
+                  <select
+                    value={c.statut}
+                    onChange={e => updateInlineField(c.id, 'statut', e.target.value)}
+                    style={{
+                      appearance: 'none', WebkitAppearance: 'none',
+                      background: `${stCfg.color}18`, color: stCfg.color,
+                      border: `1px solid ${stCfg.color}40`,
+                      borderRadius: '20px', padding: '4px 10px',
+                      fontSize: '10px', fontWeight: 600, cursor: 'pointer', outline: 'none',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {STATUTS.map(s => (
+                      <option key={s.value} value={s.value} style={{ background: '#1F2937', color: '#F3F4F6' }}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
+                  <a
+                    href={`/clients/${c.id}`}
+                    title="Voir fiche complète"
+                    style={{ background: 'var(--bg-3)', border: '0.5px solid var(--line)', borderRadius: '6px', padding: '5px 6px', color: 'var(--txt-2)', display: 'inline-flex' }}
+                  >
+                    <Edit3 size={13} />
+                  </a>
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    title="Supprimer"
+                    style={{ background: 'var(--red)15', border: '0.5px solid var(--red)30', borderRadius: '6px', padding: '5px 6px', cursor: 'pointer', color: 'var(--red)' }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            )
+          })
         )}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
