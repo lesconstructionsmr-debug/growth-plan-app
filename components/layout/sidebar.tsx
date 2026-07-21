@@ -43,6 +43,7 @@ const NAV_CONSTRUCTION = [
   {
     section: 'Rapports',
     items: [
+      { href: '/ventes',     label: 'Ventes',     icon: BarChart3 },
       { href: '/rapports',   label: 'Rapports',   icon: BarChart3 },
       { href: '/marche',     label: 'Marché',     icon: TrendingUp },
       { href: '/parametres', label: 'Paramètres', icon: Settings  },
@@ -83,6 +84,7 @@ const NAV_AGENCE = [
   {
     section: 'Rapports',
     items: [
+      { href: '/ventes',     label: 'Ventes',     icon: BarChart3 },
       { href: '/rapports',   label: 'Rapports',   icon: BarChart3 },
       { href: '/marche',     label: 'Marché',     icon: TrendingUp },
       { href: '/parametres', label: 'Paramètres', icon: Settings  },
