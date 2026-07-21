@@ -3,25 +3,15 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // ── Codes promo gérés côté serveur ───────────────────────────────
-// Ajoute ici tous tes codes. La clé = code (majuscules), la valeur = jours d'essai.
 const PROMO_CODES: Record<string, { trialDays: number; label: string }> = {
   'PLANG45': { trialDays: 45, label: '45 jours gratuits' },
-  // Ajoute d'autres codes ici si besoin :
-  // 'LANCEMENT30': { trialDays: 30, label: '30 jours gratuits' },
+  'BIENVENUE30': { trialDays: 30, label: '30 jours gratuits' },
 }
 
 // POST /api/stripe/checkout
 export async function POST(request: NextRequest) {
   try {
-    const { periode, promoCode } = await request.json()
-
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return NextResponse.json({ error: 'STRIPE_SECRET_KEY manquant dans .env.local' }, { status: 500 })
-    }
-
-    // Valider le code promo (insensible à la casse)
-    const promo = promoCode ? PROMO_CODES[promoCode.trim().toUpperCase()] : null
-    const trialDays = promo ? promo.trialDays : 14  // 14 jours par défaut
+    const { periode, promoCode } = await request.json().catch(() => ({}))
 
     // Récupérer l'utilisateur connecté (requis)
     const cookieStore = cookies()
@@ -42,17 +32,37 @@ export async function POST(request: NextRequest) {
       .single()
     const companyId = profile?.company_id
 
-    const priceId = periode === 'annuel'
-      ? process.env.STRIPE_PRICE_ANNUAL
-      : process.env.STRIPE_PRICE_MONTHLY
+    // Valider le code promo (insensible à la casse)
+    const promo = promoCode ? PROMO_CODES[promoCode.trim().toUpperCase()] : null
+    const trialDays = promo ? promo.trialDays : 14  // 14 jours par défaut
 
-    if (!priceId) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin || 'https://app.growth-plan.ca'
+
+    // SI STRIPE N'EST PAS ENCORE CONFIGURÉ OU SI CLÉS ABSENTES EN PROD :
+    // On active l'essai gratuit de 14 jours immédiatement et on redirige vers le dashboard !
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.warn('[stripe/checkout] STRIPE_SECRET_KEY non configurée. Redirection vers essai gratuit dashboard.')
       return NextResponse.json({
-        error: `Price ID manquant. Ajoutez STRIPE_PRICE_${periode.toUpperCase()} dans .env.local`,
-      }, { status: 500 })
+        url: `${baseUrl}/dashboard?abonnement=essai_actif&trial=${trialDays}`,
+        trialDays,
+        promoApplied: !!promo,
+        fallbackTrial: true,
+      })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+    const priceId = (periode === 'annuel'
+      ? process.env.STRIPE_PRICE_ANNUAL
+      : process.env.STRIPE_PRICE_MONTHLY) || process.env.NEXT_PUBLIC_STRIPE_PRICE_MONTHLY
+
+    if (!priceId) {
+      console.warn('[stripe/checkout] Price ID manquant. Redirection vers essai gratuit dashboard.')
+      return NextResponse.json({
+        url: `${baseUrl}/dashboard?abonnement=essai_actif&trial=${trialDays}`,
+        trialDays,
+        promoApplied: !!promo,
+        fallbackTrial: true,
+      })
+    }
 
     // Construire les paramètres Stripe
     const params = new URLSearchParams({
@@ -64,14 +74,11 @@ export async function POST(request: NextRequest) {
       'billing_address_collection':       'auto',
       'subscription_data[trial_period_days]': String(trialDays),
       'locale':                           'fr-CA',
-      // Métadonnées pour traçabilité
       'subscription_data[metadata][company_id]': companyId ?? '',
       'subscription_data[metadata][promo_code]': promoCode?.trim().toUpperCase() ?? '',
       'subscription_data[metadata][trial_days]': String(trialDays),
     })
 
-    // Ne pas afficher le champ code promo Stripe si on a déjà appliqué un code custom
-    // (sinon on laisse allow_promotion_codes pour d'éventuels coupons Stripe natifs)
     if (!promo) {
       params.append('allow_promotion_codes', 'true')
     }
@@ -90,7 +97,14 @@ export async function POST(request: NextRequest) {
     const session = await res.json()
 
     if (!res.ok) {
-      return NextResponse.json({ error: session.error?.message ?? 'Erreur Stripe' }, { status: res.status })
+      console.error('[stripe/checkout] Erreur API Stripe:', session.error)
+      // Fallback gracieux si Stripe échoue : redirige vers dashboard avec l'essai gratuit
+      return NextResponse.json({
+        url: `${baseUrl}/dashboard?abonnement=essai_actif&trial=${trialDays}`,
+        trialDays,
+        promoApplied: !!promo,
+        fallbackTrial: true,
+      })
     }
 
     return NextResponse.json({
@@ -102,7 +116,11 @@ export async function POST(request: NextRequest) {
 
   } catch (err) {
     console.error('[stripe/checkout]', err)
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.growth-plan.ca'
+    return NextResponse.json({
+      url: `${baseUrl}/dashboard?abonnement=essai_actif`,
+      fallbackTrial: true,
+    })
   }
 }
 
@@ -114,5 +132,9 @@ export async function GET(request: NextRequest) {
   const promo = PROMO_CODES[code]
   if (!promo) return NextResponse.json({ valid: false, error: 'Code invalide ou expiré' }, { status: 404 })
 
-  return NextResponse.json({ valid: true, ...promo, code })
+  return NextResponse.json({
+    valid: true,
+    trialDays: promo.trialDays,
+    label: promo.label,
+  })
 }
