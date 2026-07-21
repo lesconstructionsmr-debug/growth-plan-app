@@ -6,6 +6,7 @@ import {
   Users, User, Building2, Mail, Phone, MapPin,
   FileText, ChevronLeft, Check, AlertCircle, Loader2
 } from 'lucide-react'
+import AddressAutocomplete from '@/components/address-autocomplete'
 
 type TypeClient = 'particulier' | 'entreprise'
 type StatutClient = 'prospect' | 'actif'
@@ -304,11 +305,20 @@ export default function NouveauClientPage() {
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Adresse</div>
 
           <Field>
-            <Label>Rue</Label>
-            <Input
+            <Label>Rue (Saisie automatique Google Maps)</Label>
+            <AddressAutocomplete
               value={form.adresse}
               onChange={v => set('adresse', v)}
-              placeholder="245 avenue des Pins"
+              placeholder="Rechercher une adresse avec Google Maps..."
+              onAddressSelect={({ adresse, ville, province, code_postal }) => {
+                setForm(f => ({
+                  ...f,
+                  adresse,
+                  ville: ville || f.ville,
+                  province: province || f.province,
+                  code_postal: code_postal || f.code_postal,
+                }))
+              }}
             />
           </Field>
 

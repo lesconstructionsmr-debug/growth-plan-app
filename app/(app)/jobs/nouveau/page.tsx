@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { ArrowLeft, Building2, Save, MapPin, Calendar, Loader2 } from 'lucide-react'
+import AddressAutocomplete from '@/components/address-autocomplete'
 
 const inputStyle: React.CSSProperties = {
   background: 'var(--bg-2)', border: '0.5px solid var(--line)',
@@ -122,8 +123,20 @@ export default function NouveauJobPage() {
           <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-2)' }}>Chantier</span>
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
-          <label style={labelStyle}>Adresse</label>
-          <input value={form.adresse} onChange={e => set('adresse', e.target.value)} placeholder="123 rue des Érables" style={inputStyle} />
+          <label style={labelStyle}>Adresse (Saisie automatique Google Maps)</label>
+          <AddressAutocomplete
+            value={form.adresse}
+            onChange={v => set('adresse', v)}
+            placeholder="Rechercher une adresse de chantier..."
+            onAddressSelect={({ adresse, ville, code_postal }) => {
+              setForm(f => ({
+                ...f,
+                adresse,
+                ville: ville || f.ville,
+                code_postal: code_postal || f.code_postal,
+              }))
+            }}
+          />
         </div>
         <div>
           <label style={labelStyle}>Ville</label>
