@@ -27,7 +27,10 @@ import {
   X,
   PhoneCall,
   Crown,
-  Check
+  Check,
+  Target,
+  Calendar,
+  CreditCard
 } from 'lucide-react'
 
 // Icone de Logo 3D Or Plangrowth (Barres + Flèche Ascendante + Courbe G)
@@ -256,6 +259,96 @@ export default function LandingPage() {
                 <p className="text-xs text-amber-400 mt-2 font-semibold">Validation photo avant fermeture</p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION FLUX OPÉRATIONNEL UNIFIÉ */}
+      <section className="py-20 bg-slate-900/40 relative z-10 border-t border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="mb-14">
+            <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
+              ⚙️ Le Flux Opérationnel Unifié
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
+              Un seul système pour toutes vos opérations
+            </h2>
+            <p className="text-red-500 font-bold uppercase tracking-widest text-sm mt-2">
+              Du premier contact jusqu'au paiement
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mt-16 relative">
+            
+            {/* Ligne de connexion décorative desktop */}
+            <div className="hidden lg:block absolute top-[45px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-red-500/10 via-red-500/50 to-red-500/10 z-0"></div>
+
+            {/* Étape 1 : CRM / Leads */}
+            <div className="flex flex-col items-center text-center group z-10">
+              <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
+                <Target className="w-8 h-8" />
+              </div>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">CRM &amp; Leads</h3>
+              <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
+                Centralisez vos requêtes entrantes et intégrez automatiquement vos prospects publicitaires.
+              </p>
+            </div>
+
+            {/* Étape 2 : Devis */}
+            <div className="flex flex-col items-center text-center group z-10">
+              <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
+                <FileText className="w-8 h-8" />
+              </div>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Soumissions</h3>
+              <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
+                Créez des devis professionnels et personnalisés en quelques clics.
+              </p>
+            </div>
+
+            {/* Étape 3 : Ventes */}
+            <div className="flex flex-col items-center text-center group z-10">
+              <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
+                <TrendingUp className="w-8 h-8" />
+              </div>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Ventes</h3>
+              <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
+                Suivez vos signatures, vos taux de conversion et vos marges en temps réel.
+              </p>
+            </div>
+
+            {/* Étape 4 : Planification */}
+            <div className="flex flex-col items-center text-center group z-10">
+              <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
+                <Calendar className="w-8 h-8" />
+              </div>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Planification</h3>
+              <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
+                Gérez l'horaire de vos équipes et planifiez les interventions de chantier.
+              </p>
+            </div>
+
+            {/* Étape 5 : Opérations */}
+            <div className="flex flex-col items-center text-center group z-10">
+              <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
+                <Wrench className="w-8 h-8" />
+              </div>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Opérations</h3>
+              <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
+                Documentez les travaux exécutés sur le terrain et gérez la facturation.
+              </p>
+            </div>
+
+            {/* Étape 6 : Paiements */}
+            <div className="flex flex-col items-center text-center group z-10">
+              <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
+                <CreditCard className="w-8 h-8" />
+              </div>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Paiements</h3>
+              <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
+                Suivez les encaissements Stripe ou virement et la rentabilité nette finale.
+              </p>
+            </div>
+
           </div>
         </div>
       </section>
