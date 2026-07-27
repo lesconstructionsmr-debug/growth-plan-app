@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growth Plan ERP - Convertissez vos leads en chantiers payants</title>
+    <meta name="description" content="Growth Plan ERP : La plateforme tout-en-un pour entrepreneurs du bâtiment au Québec. Qualifiez vos leads en temps réel et filtrez les tireux de roches.">
+
+    <!-- Fonts Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --bg-card-hover: rgba(255, 255, 255, 0.08);
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --border-glass-glow: rgba(56, 189, 248, 0.4);
+            
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.3);
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            
+            --temp-cold: #38bdf8;
+            --temp-warm: #f59e0b;
+            --temp-hot: #ef4444;
+            --temp-hot-glow: rgba(239, 68, 68, 0.4);
+
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Arrière-plan dynamique Orbes Néon */
+        .ambient-glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.5;
+            animation: pulseGlow 12s infinite alternate ease-in-out;
+        }
+        .glow-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #38bdf8 0%, rgba(99, 102, 241, 0) 70%);
+            top: -100px;
+            left: -100px;
+        }
+        .glow-2 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #8b5cf6 0%, rgba(236, 72, 153, 0) 70%);
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -6s;
+        }
+        .glow-3 {
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, #06b6d4 0%, rgba(16, 185, 129, 0) 70%);
+            top: 45%;
+            left: 30%;
+            animation-delay: -3s;
+        }
+
+        @keyframes pulseGlow {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.4; }
+            100% { transform: scale(1.15) translate(30px, -20px); opacity: 0.65; }
+        }
+
+        /* Layout & Utilities */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+            color: #fff;
+            box-shadow: 0 8px 25px rgba(56, 189, 248, 0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(56, 189, 248, 0.5);
+            background: linear-gradient(135deg, #60a5fa 0%, #1d4ed8 100%);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.07);
+            color: var(--text-main);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Navigation Header */
+        header {
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--font-heading);
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #38bdf8, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0 60px;
+            text-align: center;
+        }
+
+        .pre-headline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 30px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: var(--primary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            font-family: var(--font-heading);
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 24px;
+            background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            max-width: 950px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p.sub-headline {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto 36px;
+            font-weight: 400;
+        }
+
+        .hero-cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .social-proof {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .social-proof .stars {
+            color: #fbbf24;
+        }
+
+        /* Problem vs Solution Section */
+        .section-padding {
+            padding: 90px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .section-subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .problem-card {
+            padding: 40px;
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.03);
+        }
+
+        .solution-card {
+            padding: 40px;
+            border-left: 4px solid var(--primary);
+            background: rgba(56, 189, 248, 0.03);
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .problem-card .card-icon {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .solution-card .card-icon {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+        }
+
+        .card-title {
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .solution-list {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .solution-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+            color: var(--text-muted);
+        }
+
+        .solution-list li i {
+            color: var(--primary);
+            margin-top: 4px;
+        }
+
+        .solution-list li strong {
+            color: var(--text-main);
+        }
+
+        /* Features / Benefits Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            padding: 36px 30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card .icon-box {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: var(--primary);
+            margin-bottom: 24px;
+        }
+
+        .feature-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .feature-card .benefit-tagline {
+            color: var(--primary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            font-style: italic;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.98rem;
+        }
+
+        /* Lead Scoring Interactive Section */
+        .calculator-wrapper {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .form-section {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .form-label span.req {
+            color: #ef4444;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 13px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        select.form-control option {
+            background-color: #0f172a;
+            color: #fff;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .checkbox-label:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .pts-badge {
+            margin-left: auto;
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* Live Score Gauge Sidebar */
+        .score-sidebar {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-header {
+            text-align: center;
+        }
+
+        .score-circle-container {
+            position: relative;
+            width: 190px;
+            height: 190px;
+            margin: 25px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .score-svg circle {
+            fill: none;
+            stroke-width: 12;
+            stroke-linecap: round;
+        }
+
+        .score-bg-circle {
+            stroke: rgba(255, 255, 255, 0.08);
+        }
+
+        .score-progress-circle {
+            stroke: var(--temp-cold);
+            stroke-dasharray: 502;
+            stroke-dashoffset: 502;
+            transition: stroke-dashoffset 0.5s ease-out, stroke 0.5s ease;
+        }
+
+        .score-text-content {
+            position: absolute;
+            text-align: center;
+        }
+
+        .score-number {
+            font-family: var(--font-heading);
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1;
+            color: #fff;
+        }
+
+        .score-max {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        /* Temperature Badge */
+        .temp-badge-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .temp-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .temp-badge.cold {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid var(--temp-cold);
+            color: var(--temp-cold);
+        }
+
+        .temp-badge.warm {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid var(--temp-warm);
+            color: var(--temp-warm);
+        }
+
+        .temp-badge.hot {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--temp-hot);
+            color: #f87171;
+            box-shadow: 0 0 25px var(--temp-hot-glow);
+            animation: flamePulse 1.5s infinite alternate;
+        }
+
+        @keyframes flamePulse {
+            0% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+            100% { box-shadow: 0 0 35px rgba(239, 68, 68, 0.8); }
+        }
+
+        .trigger-box {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 18px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .trigger-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+        }
+
+        .trigger-desc {
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        /* Webhook Modal / Console */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(9, 13, 22, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-width: 680px;
+            background: #0f172a;
+            border: 1px solid var(--border-glass-glow);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .modal-title {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-modal:hover { color: #fff; }
+
+        .terminal-box {
+            background: #020617;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #38bdf8;
+            max-height: 320px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+        }
+
+        .terminal-line { margin-bottom: 6px; }
+        .terminal-line.success { color: #10b981; }
+        .terminal-line.info { color: #fbbf24; }
+
+        /* Final CTA Section */
+        .cta-final {
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .cta-card {
+            padding: 70px 40px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-card h2 {
+            font-family: var(--font-heading);
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .cta-card p {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto 36px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 992px) {
+            .hero h1 { font-size: 2.6rem; }
+            .grid-2, .calculator-wrapper { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 2rem; }
+            .hero p.sub-headline { font-size: 1rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+            .form-section, .score-sidebar { padding: 24px; }
+            .cta-card h2 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Arrière-plan néon flottant -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <!-- Navigation Header -->
+    <header>
+        <div class="container nav-content">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <span>Growth Plan <span style="color: var(--primary);">ERP</span></span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#problem-solution">Pourquoi Nous</a></li>
+                <li><a href="#features">Bénéfices</a></li>
+                <li><a href="#calculator">Simulateur & Qualification</a></li>
+            </ul>
+            <a href="#calculator" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
+                <i class="fa-solid fa-bolt"></i> Tester la Qualification
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero container">
+        <div class="pre-headline">
+            <i class="fa-solid fa-helmet-safety"></i> Conçu pour les entrepreneurs, solopreneurs et PME du bâtiment au Québec
+        </div>
+        <h1>
+            Arrêtez de courir après les mauvais leads.<br>
+            Bâtissez votre business avec ceux qui <span>sont prêts à signer.</span>
+        </h1>
+        <p class="sub-headline">
+            Gérez vos demandes, vos soumissions et vos suivis à la même place. Growth Plan ERP filtre les "tireux de roches" et vous connecte avec des clients sérieux. Moins de soirées dans la paperasse, plus de chantiers rentables.
+        </p>
+        <div class="hero-cta-group">
+            <a href="#calculator" class="btn btn-primary">
+                <i class="fa-solid fa-play"></i> Voir la Plateforme en Action
+            </a>
+            <a href="#calculator" class="btn btn-secondary">
+                <i class="fa-solid fa-comments"></i> Parler à un Conseiller
+            </a>
+        </div>
+        <div class="social-proof">
+            <span class="stars">★★★★★</span>
+            <span>Déjà utilisé par des centaines de pros d'ici pour doubler leur taux de conversion. Sans engagement.</span>
+        </div>
+    </section>
+
+    <!-- Problem vs Solution Section -->
+    <section id="problem-solution" class="section-padding container">
+        <div class="section-header">
+            <h2 class="section-title">Le Constat sur le Terrain</h2>
+            <p class="section-subtitle">Chaque minute passée sur un mauvais prospect est une minute perdue sur vos chantiers rentables.</p>
+        </div>
+
+        <div class="grid-2">
+            <div class="glass-panel problem-card">
+                <div class="card-icon">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 class="card-title">Êtes-vous tanné de faire des soumissions dans le vide ?</h3>
+                <p style="color: var(--text-muted);">
+                    Vous passez vos soirées ou vos fins de semaine à préparer des estimés détaillés pour du monde qui cherche juste le prix le plus bas. Pendant ce temps-là, le manque de suivi rapide fait en sorte que les vrais bons clients vous glissent entre les doigts. Chaque lead perdu, c'est de l'argent laissé sur la table.
+                </p>
+            </div>
+
+            <div class="glass-panel solution-card">
+                <div class="card-icon">
+                    <i class="fa-solid fa-rocket"></i>
+                </div>
+                <h3 class="card-title">Votre machine à générer et closer des contrats.</h3>
+                <p style="color: var(--text-muted);">
+                    Avec Growth Plan ERP, vous ne faites pas qu'ajouter un autre logiciel à votre liste. Vous intégrez un système intelligent qui travaille activement pour vous.
+                </p>
+                <ul class="solution-list">
+                    <li>
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div><strong>Filtrez les curieux :</strong> Notre système qualifie les leads avant même que vous ne vous déplaciez.</div>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div><strong>Suivis automatisés :</strong> Le système relance vos soumissions au moment opportun sans effort.</div>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div><strong>Vue d'ensemble claire :</strong> De la première prise de contact jusqu'à la poignée de main finale.</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Benefits Cards -->
+    <section id="features" class="section-padding container">
+        <div class="section-header">
+            <h2 class="section-title">Bénéfices Conçus Pour Votre Croissance</h2>
+            <p class="section-subtitle">Des outils puissants masqués derrière une interface simple et intuitive.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="glass-panel feature-card">
+                <div class="icon-box">
+                    <i class="fa-solid fa-network-wired"></i>
+                </div>
+                <h3>1. Un Pipeline de Vente Visuel</h3>
+                <div class="benefit-tagline">Sachez exactement où est votre argent.</div>
+                <p>Voyez en un coup d'œil les nouveaux leads, les soumissions en attente de réponse et les chantiers gagnés. Rien ne tombe entre les mailles du filet.</p>
+            </div>
+
+            <div class="glass-panel feature-card">
+                <div class="icon-box">
+                    <i class="fa-solid fa-file-signature"></i>
+                </div>
+                <h3>2. Des Outils pour Convertir</h3>
+                <div class="benefit-tagline">Ayez l'air pro, signez plus vite.</div>
+                <p>Montrez à vos clients que vous êtes ultra-organisé. Un processus de vente fluide et moderne, c'est votre meilleure carte de visite pour vous démarquer.</p>
+            </div>
+
+            <div class="glass-panel feature-card">
+                <div class="icon-box">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <h3>3. Centralisation Totale</h3>
+                <div class="benefit-tagline">Reprenez le contrôle de votre horaire.</div>
+                <p>Lâchez les Post-its, les tableaux Excel brisés et les textos perdus. Retrouvez toutes les infos de vos clients et l'historique au même endroit.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Lead Qualification & Webhook Simulator -->
+    <section id="calculator" class="section-padding container">
+        <div class="section-header">
+            <div class="pre-headline"><i class="fa-solid fa-microchip"></i> Moteur Intelligents de Lead Scoring</div>
+            <h2 class="section-title">Testez la Qualification & Captation de Leads</h2>
+            <p class="section-subtitle">Simulez le parcours d'un prospect : observez le calcul de score en direct, la détection de température (Froid / Tiède / Chaud) et l'envoi Webhook CRM.</p>
+        </div>
+
+        <div class="calculator-wrapper">
+            <!-- Form Card -->
+            <div class="glass-panel form-section">
+                <h3 style="font-family: var(--font-heading); font-size: 1.4rem; margin-bottom: 20px; color: #fff;">
+                    <i class="fa-solid fa-wpforms" style="color: var(--primary);"></i> Formulaire d'Acquisition Intelligente
+                </h3>
+
+                <form id="leadForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Prénom <span class="req">*</span></label>
+                            <input type="text" id="firstName" class="form-control" placeholder="Jean" value="Jean" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nom <span class="req">*</span></label>
+                            <input type="text" id="lastName" class="form-control" placeholder="Tremblay" value="Tremblay" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Courriel Professionnel <span class="req">*</span></label>
+                        <input type="email" id="email" class="form-control" placeholder="j.tremblay@construction-jt.ca" value="j.tremblay@construction-jt.ca" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Téléphone</label>
+                            <input type="tel" id="phone" class="form-control" placeholder="(514) 555-0199" value="514-555-0199">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nom de l'Entreprise</label>
+                            <input type="text" id="company" class="form-control" placeholder="Construction J. Tremblay Inc." value="Construction J. Tremblay Inc.">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Rôle / Poste (Score Démographique)</label>
+                        <select id="jobTitle" class="form-control">
+                            <option value="15" selected>Propriétaire / C-Level / VP (+15 pts)</option>
+                            <option value="10">Directeur de Chantier / Manager (+10 pts)</option>
+                            <option value="8">Solopreneur / Entrepreneur Général (+8 pts)</option>
+                            <option value="5">Estimation / Employé (+5 pts)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Volume de Chantiers Annuel / Budget</label>
+                        <select id="budgetVolume" class="form-control">
+                            <option value="15" selected>Plus de 1 000 000 $ / > 10 projets (+15 pts)</option>
+                            <option value="10">250 000 $ - 1 000 000 $ / 5-10 projets (+10 pts)</option>
+                            <option value="5">Moins de 250 000 $ / 1-4 projets (+5 pts)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Actions & Intentions (Score Comportemental)</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="actionSoumission" checked>
+                                <span>Demande de soumission express rapide</span>
+                                <span class="pts-badge">+20 pts</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="actionDemo" checked>
+                                <span>Réservation d'une démonstration live avec un expert</span>
+                                <span class="pts-badge">+15 pts</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="actionTarifs" checked>
+                                <span>Consultation de la grille des tarifs Growth Plan</span>
+                                <span class="pts-badge">+10 pts</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="actionGuide">
+                                <span>Téléchargement du Guide d'Optimisation des Chantiers</span>
+                                <span class="pts-badge">+10 pts</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 16px;">
+                        <i class="fa-solid fa-paper-plane"></i> Simuler la Captation & Envoi Webhook
+                    </button>
+                </form>
+            </div>
+
+            <!-- Real-time Score Gauge & Status Sidebar -->
+            <div class="glass-panel score-sidebar">
+                <div class="score-header">
+                    <h3 style="font-family: var(--font-heading); font-size: 1.3rem; color: #fff;">
+                        <i class="fa-solid fa-gauge-high" style="color: var(--primary);"></i> Score de Qualification
+                    </h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Évaluation algorithmique en temps réel</p>
+                </div>
+
+                <div class="score-circle-container">
+                    <svg class="score-svg" viewBox="0 0 180 180">
+                        <circle class="score-bg-circle" cx="90" cy="90" r="80"></circle>
+                        <circle id="scoreProgress" class="score-progress-circle" cx="90" cy="90" r="80"></circle>
+                    </svg>
+                    <div class="score-text-content">
+                        <div id="scoreNumber" class="score-number">0</div>
+                        <div class="score-max">/ 100 PTS</div>
+                    </div>
+                </div>
+
+                <div class="temp-badge-container">
+                    <div id="tempBadge" class="temp-badge cold">
+                        <i id="tempIcon" class="fa-solid fa-snowflake"></i>
+                        <span id="tempText">LEAD FROID (MQL)</span>
+                    </div>
+                </div>
+
+                <div class="trigger-box">
+                    <div class="trigger-title">
+                        <i class="fa-solid fa-bolt" style="color: #fbbf24;"></i> Action Automatique CRM :
+                    </div>
+                    <div id="triggerDesc" class="trigger-desc">
+                        Initialisation du score... Remplissez le formulaire.
+                    </div>
+                </div>
+
+                <div style="font-size: 0.8rem; color: var(--text-dim); text-align: center; margin-top: 15px;">
+                    <i class="fa-solid fa-shield-halved"></i> Conforme aux seuils CRM (0-30 Froid | 31-60 Tiède | 61+ Chaud)
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="cta-final container">
+        <div class="glass-panel cta-card">
+            <h2>Prêt à faire passer votre entreprise au prochain niveau ?</h2>
+            <p>
+                Laissez la charge mentale de côté. Concentrez-vous sur ce que vous faites de mieux : livrer des projets de qualité. On s'occupe de structurer votre croissance.
+            </p>
+            <a href="#calculator" class="btn btn-primary" style="padding: 18px 36px; font-size: 1.1rem;">
+                <i class="fa-solid fa-rocket"></i> Démarrer avec Growth Plan ERP
+            </a>
+            <div style="margin-top: 16px; color: var(--text-muted); font-size: 0.9rem;">
+                <i class="fa-solid fa-check" style="color: var(--accent-green);"></i> Mise en place rapide. Support d'ici.
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-content">
+            <div>
+                © 2026 Growth Plan ERP. Tous droits réservés. Spécialement conçu pour l'industrie de la construction au Québec.
+            </div>
+            <div style="display: flex; gap: 20px;">
+                <a href="#" style="color: var(--text-dim); text-decoration: none;">Confidentialité</a>
+                <a href="#" style="color: var(--text-dim); text-decoration: none;">Conditions d'utilisation</a>
+                <a href="#" style="color: var(--text-dim); text-decoration: none;">Contact Support</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Webhook Simulation Modal -->
+    <div id="webhookModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-terminal"></i> Simulation Webhook API : `/api/v1/webhooks/leads/capture`
+                </div>
+                <button class="close-modal" id="closeModalBtn">&times;</button>
+            </div>
+
+            <div id="terminalBody" class="terminal-box">
+                <!-- Log content dynamically injected here -->
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button id="modalOkBtn" class="btn btn-primary" style="padding: 10px 20px;">Fermer la console</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript - Lead Scoring Engine & Interactive Webhook Simulator -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Form elements
+            const emailInput = document.getElementById('email');
+            const jobTitleSelect = document.getElementById('jobTitle');
+            const budgetVolumeSelect = document.getElementById('budgetVolume');
+            const actionSoumission = document.getElementById('actionSoumission');
+            const actionDemo = document.getElementById('actionDemo');
+            const actionTarifs = document.getElementById('actionTarifs');
+            const actionGuide = document.getElementById('actionGuide');
+            const leadForm = document.getElementById('leadForm');
+
+            // Gauge elements
+            const scoreNumber = document.getElementById('scoreNumber');
+            const scoreProgress = document.getElementById('scoreProgress');
+            const tempBadge = document.getElementById('tempBadge');
+            const tempIcon = document.getElementById('tempIcon');
+            const tempText = document.getElementById('tempText');
+            const triggerDesc = document.getElementById('triggerDesc');
+
+            // Modal elements
+            const webhookModal = document.getElementById('webhookModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const modalOkBtn = document.getElementById('modalOkBtn');
+            const terminalBody = document.getElementById('terminalBody');
+
+            // Circumference of SVG circle (r=80 -> 2 * PI * 80 ≈ 502.65)
+            const CIRCUMFERENCE = 502.65;
+
+            // Calculate score in real-time
+            function calculateScore() {
+                let score = 0;
+
+                // 1. Demographic - Job Title
+                score += parseInt(jobTitleSelect.value) || 0;
+
+                // 2. Demographic - Budget / Volume
+                score += parseInt(budgetVolumeSelect.value) || 0;
+
+                // 3. Demographic - Email check (Pro domain vs Free email)
+                const emailVal = emailInput.value.trim().toLowerCase();
+                const freeDomains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'yahoo.fr', 'outlook.com', 'icloud.com'];
+                const domain = emailVal.split('@')[1];
+                if (domain && !freeDomains.includes(domain)) {
+                    score += 5; // Professional email bonus
+                }
+
+                // 4. Behavioral Checkboxes
+                if (actionSoumission.checked) score += 20;
+                if (actionDemo.checked) score += 15;
+                if (actionTarifs.checked) score += 10;
+                if (actionGuide.checked) score += 10;
+
+                // Clamp score between 0 and 100
+                score = Math.min(Math.max(score, 0), 100);
+
+                updateGauge(score);
+                return score;
+            }
+
+            function updateGauge(score) {
+                // Animate score counter
+                scoreNumber.textContent = score;
+
+                // Update stroke offset
+                const offset = CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE;
+                scoreProgress.style.strokeDashoffset = offset;
+
+                // Determine temperature threshold & styling based on crm_architecture_design.md
+                // 0-30: COLD | 31-60: WARM | 61+: HOT
+                if (score <= 30) {
+                    tempBadge.className = 'temp-badge cold';
+                    tempIcon.className = 'fa-solid fa-snowflake';
+                    tempText.textContent = 'LEAD FROID (MQL)';
+                    scoreProgress.style.stroke = 'var(--temp-cold)';
+                    triggerDesc.innerHTML = '<strong>Nurturing Standard :</strong> Le prospect est inscrit à une séquence d\'éducation par courriel mensuelle.';
+                } else if (score <= 60) {
+                    tempBadge.className = 'temp-badge warm';
+                    tempIcon.className = 'fa-solid fa-fire-flame-simple';
+                    tempText.textContent = 'LEAD TIÈDE (MQL Mature)';
+                    scoreProgress.style.stroke = 'var(--temp-warm)';
+                    triggerDesc.innerHTML = '<strong>Surveillance Accrue :</strong> Suivi automatique programmé sous 48h. Envoi du comparatif des fonctionnalités ERP.';
+                } else {
+                    tempBadge.className = 'temp-badge hot';
+                    tempIcon.className = 'fa-solid fa-fire';
+                    tempText.textContent = 'LEAD CHAUD (SQL Prioritaire 🔥)';
+                    scoreProgress.style.stroke = 'var(--temp-hot)';
+                    triggerDesc.innerHTML = '<strong>🚨 ALERTE IMMÉDIATE :</strong> Déclenchement de la notification Slack `#leads-chauds`, création d\'une tâche prioritaire 24h & appel direct recommandé sous 15 minutes.';
+                }
+            }
+
+            // Attach event listeners for dynamic score calculation
+            [emailInput, jobTitleSelect, budgetVolumeSelect, actionSoumission, actionDemo, actionTarifs, actionGuide].forEach(el => {
+                el.addEventListener('input', calculateScore);
+                el.addEventListener('change', calculateScore);
+            });
+
+            // Initial calculation
+            const currentScore = calculateScore();
+
+            // Simulate Webhook POST Request
+            leadForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const score = calculateScore();
+                const firstName = document.getElementById('firstName').value;
+                const lastName = document.getElementById('lastName').value;
+                const email = emailInput.value;
+                const phone = document.getElementById('phone').value;
+                const company = document.getElementById('company').value;
+                
+                let temperature = 'COLD';
+                if (score > 60) temperature = 'HOT';
+                else if (score > 30) temperature = 'WARM';
+
+                // Open modal
+                webhookModal.classList.add('active');
+                terminalBody.innerHTML = '';
+
+                // Simulate terminal streaming logs
+                const logs = [
+                    { text: `[SYSTEM] Initialisation de la captation lead Webhook...`, delay: 200, class: 'info' },
+                    { text: `POST /api/v1/webhooks/leads/capture HTTP/1.1`, delay: 500, class: '' },
+                    { text: `Host: api.growthplan-erp.ca\nContent-Type: application/json`, delay: 700, class: '' },
+                    { text: `\nPayload JSON transmis:`, delay: 900, class: '' },
+                    { 
+                        text: JSON.stringify({
+                            event: "LEAD_CAPTURE_FORM_SUBMITTED",
+                            timestamp: new Date().toISOString(),
+                            lead: {
+                                first_name: firstName,
+                                last_name: lastName,
+                                email: email,
+                                phone: phone,
+                                company: company,
+                                job_title_code: jobTitleSelect.value,
+                                volume_code: budgetVolumeSelect.value
+                            },
+                            qualification: {
+                                total_score: score,
+                                temperature: temperature,
+                                status: temperature === 'HOT' ? 'SQL_READY' : 'MQL_NURTURING'
+                            }
+                        }, null, 2),
+                        delay: 1100,
+                        class: 'info'
+                    },
+                    { text: `\n[MOTEUR SCORING] Validation du payload & enregistrement dans la table 'Leads'...`, delay: 1600, class: '' },
+                    { text: `[DATABASE] Lead créé avec ID UUID: ${crypto.randomUUID()}`, delay: 2000, class: 'success' },
+                    { text: temperature === 'HOT' 
+                        ? `[TRIGGER] ⚡ SEUIL HOT FRANCHI (${score} pts > 60 pts) !\n  -> Message envoyé au canal Slack #leads-chauds\n  -> Notification push SMS envoyée à l'équipe des ventes\n  -> Tâche CRM prioritaire créée (Échéance 24h)`
+                        : `[ROUTING] Lead placé dans la file d'attente MQL (${temperature} - ${score} pts).`, 
+                      delay: 2400, 
+                      class: temperature === 'HOT' ? 'success' : 'info' 
+                    },
+                    { text: `\nHTTP/1.1 200 OK Response: {"success": true, "status": "PROCESSED", "lead_temperature": "${temperature}"}`, delay: 2800, class: 'success' }
+                ];
+
+                logs.forEach(item => {
+                    setTimeout(() => {
+                        const line = document.createElement('div');
+                        line.className = `terminal-line ${item.class}`;
+                        line.textContent = item.text;
+                        terminalBody.appendChild(line);
+                        terminalBody.scrollTop = terminalBody.scrollHeight;
+                    }, item.delay);
+                });
+            });
+
+            // Close modal handlers
+            [closeModalBtn, modalOkBtn].forEach(btn => {
+                btn.addEventListener('click', () => {
+                    webhookModal.classList.remove('active');
+                });
+            });
+
+            webhookModal.addEventListener('click', (e) => {
+                if (e.target === webhookModal) {
+                    webhookModal.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
