@@ -1,4 +1,10 @@
 import { FileText } from 'lucide-react'
+import {
+  SETUP_FEE_CAD,
+  PRICING_BASE_MONTHLY_CAD,
+  PRICING_TIERS,
+  formatPriceCad,
+} from '@/lib/stripe/pricing'
 
 export const metadata = {
   title: "Conditions générales d'utilisation — Plan Growth",
@@ -45,8 +51,8 @@ export default function CGUPage() {
       </Section>
 
       <Section titre="4. Abonnement et facturation">
-        <p><strong>4.1 Plans.</strong> Plan Growth est offert en deux plans : mensuel (175 $ CAD/mois) et annuel (2 000 $ CAD/an, soit l'équivalent de ~167 $/mois). Les prix s'entendent taxes en sus.</p>
-        <p><strong>4.2 Essai gratuit.</strong> Un essai gratuit de 45 jours peut être accordé sous conditions via code promotionnel. Aucune carte de crédit n'est requise pendant la période d'essai.</p>
+        <p><strong>4.1 Plans.</strong> Plan Growth est offert en forfaits annuels (engagement de 12 mois) selon le nombre d&apos;utilisateurs : {PRICING_TIERS.filter(t => !t.contactOnly).map(t => `${t.name} (${t.usersLabel}, ${formatPriceCad(t.annualTotalCad)} $/an)`).join(' · ')} · {PRICING_TIERS.find(t => t.contactOnly)?.name} (21+ utilisateurs, sur devis). Frais d&apos;adhésion unique de {SETUP_FEE_CAD} $ pour la configuration des intégrations. Les prix s&apos;entendent taxes en sus.</p>
+        <p><strong>4.2 Essai gratuit.</strong> Un essai gratuit de 14 à 45 jours peut être accordé sur l&apos;abonnement via code promotionnel. Les frais d&apos;adhésion sont facturés à l&apos;inscription.</p>
         <p><strong>4.3 Renouvellement automatique.</strong> L'abonnement se renouvelle automatiquement à la fin de chaque période sauf résiliation par l'Abonné avant la date de renouvellement.</p>
         <p><strong>4.4 Remboursements.</strong> Les sommes déjà facturées ne sont pas remboursables, sauf disposition contraire prévue par la loi ou accord écrit de Plan Growth.</p>
         <p><strong>4.5 Traitement des paiements.</strong> Les paiements sont traités par Stripe Inc. Plan Growth ne conserve aucune information de carte de crédit.</p>

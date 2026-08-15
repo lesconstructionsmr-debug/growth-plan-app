@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCompany, apiError } from '@/lib/api/auth'
+import {
+  appendQuoteMetadata,
+  appendSetupFeeLineItem,
+  appendSubscriptionLineItem,
+  computeTierQuote,
+  getPricingTier,
+  type PricingTierId,
+} from '@/lib/stripe/pricing'
 
 const PROMO_CODES: Record<string, { trialDays: number; label: string }> = {
   'PLANG45': { trialDays: 45, label: '45 jours gratuits' },
@@ -8,8 +16,22 @@ const PROMO_CODES: Record<string, { trialDays: number; label: string }> = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { periode, promoCode } = await request.json().catch(() => ({}))
+    const body = await request.json().catch(() => ({}))
+    const { tier: tierId, promoCode } = body as {
+      tier?: PricingTierId
+      promoCode?: string
+    }
+
+    const tier = getPricingTier(tierId)
+    if (!tier) {
+      return NextResponse.json({ error: 'Forfait invalide' }, { status: 400 })
+    }
+    if (tier.contactOnly) {
+      return NextResponse.json({ error: 'Contactez-nous pour un devis entreprise' }, { status: 400 })
+    }
+
     const { user, companyId } = await requireCompany()
+    const quote = computeTierQuote(tier.id)
 
     const promo = promoCode ? PROMO_CODES[promoCode.trim().toUpperCase()] : null
     const trialDays = promo ? promo.trialDays : 14
@@ -22,36 +44,27 @@ export async function POST(request: NextRequest) {
         trialDays,
         promoApplied: !!promo,
         fallbackTrial: true,
-      })
-    }
-
-    const priceId = (periode === 'annuel'
-      ? process.env.STRIPE_PRICE_ANNUAL
-      : process.env.STRIPE_PRICE_MONTHLY) || process.env.NEXT_PUBLIC_STRIPE_PRICE_MONTHLY
-
-    if (!priceId) {
-      return NextResponse.json({
-        url: `${baseUrl}/dashboard?abonnement=essai_actif&trial=${trialDays}`,
-        trialDays,
-        promoApplied: !!promo,
-        fallbackTrial: true,
+        quote,
       })
     }
 
     const params = new URLSearchParams({
-      'mode':                                   'subscription',
-      'line_items[0][price]':                   priceId,
-      'line_items[0][quantity]':                '1',
-      'success_url':                            `${baseUrl}/dashboard?abonnement=succes${promo ? `&promo=${promoCode}` : ''}`,
-      'cancel_url':                             `${baseUrl}/tarifs?annule=1`,
-      'billing_address_collection':             'auto',
-      'subscription_data[trial_period_days]':   String(trialDays),
-      'locale':                                 'fr-CA',
+      'mode':                                 'subscription',
+      'success_url':                          `${baseUrl}/dashboard?abonnement=succes${promo ? `&promo=${promoCode}` : ''}`,
+      'cancel_url':                           `${baseUrl}/tarifs?annule=1`,
+      'billing_address_collection':           'auto',
+      'subscription_data[trial_period_days]': String(trialDays),
+      'locale':                               'fr-CA',
       'subscription_data[metadata][company_id]': companyId,
-      'subscription_data[metadata][user_id]':   user.id,
+      'subscription_data[metadata][user_id]': user.id,
       'subscription_data[metadata][promo_code]': promoCode?.trim().toUpperCase() ?? '',
       'subscription_data[metadata][trial_days]': String(trialDays),
+      'subscription_data[metadata][setup_fee_cad]': String(500),
     })
+
+    appendSubscriptionLineItem(params, quote, 0)
+    appendSetupFeeLineItem(params, 1)
+    appendQuoteMetadata(params, quote)
 
     if (!promo) params.append('allow_promotion_codes', 'true')
     if (user.email) params.append('customer_email', user.email)
@@ -68,11 +81,13 @@ export async function POST(request: NextRequest) {
     const session = await res.json()
 
     if (!res.ok) {
+      console.error('[checkout] Stripe error:', session)
       return NextResponse.json({
         url: `${baseUrl}/dashboard?abonnement=essai_actif&trial=${trialDays}`,
         trialDays,
         promoApplied: !!promo,
         fallbackTrial: true,
+        quote,
       })
     }
 
@@ -81,6 +96,7 @@ export async function POST(request: NextRequest) {
       trialDays,
       promoApplied: !!promo,
       promoLabel: promo?.label ?? null,
+      quote,
     })
   } catch (err) {
     return apiError(err, '[POST /api/stripe/checkout]')

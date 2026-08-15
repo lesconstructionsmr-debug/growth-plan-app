@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Zap, X, Crown, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { PRICING_BASE_MONTHLY_CAD, formatPriceCad } from '@/lib/stripe/pricing'
 
 type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'none'
 
@@ -40,7 +41,7 @@ export default function SubscriptionBanner({ status, trialDaysLeft = 0 }: Subscr
           padding: '5px 14px', fontSize: '11px', fontWeight: 700, textDecoration: 'none',
           display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0,
         }}>
-          <Zap size={11} /> S'abonner — 165$/mois
+          <Zap size={11} /> S&apos;abonner — dès {formatPriceCad(PRICING_BASE_MONTHLY_CAD)}$/mois
         </Link>
         <button onClick={() => setDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)', flexShrink: 0 }}>
           <X size={14} />

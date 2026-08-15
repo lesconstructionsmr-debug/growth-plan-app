@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCompanyIdFromSubscription } from '@/lib/stripe/subscription'
+import { verifyStripeSignature } from '@/lib/stripe/webhook-signature'
 
 // POST /api/stripe/webhook
 // Reçoit les événements Stripe et met à jour les abonnements
@@ -231,8 +232,6 @@ async function notifyTrialEnding(sub: StripeSubscription) {
   }).catch(err => console.error('[webhook/trial_will_end] Resend:', err))
 }
 
-// ── Vérification signature Stripe (HMAC-SHA256 sans SDK) ──────────
-
 interface StripeEvent {
   id: string
   type: string
@@ -249,35 +248,4 @@ interface StripeInvoice {
   customer: string; customer_email: string | null; amount_paid: number
 }
 
-async function verifyStripeSignature(
-  payload: string,
-  header: string,
-  secret: string
-): Promise<StripeEvent> {
-  const parts = header.split(',').reduce<Record<string, string>>((acc, part) => {
-    const [k, v] = part.split('=')
-    acc[k.trim()] = v?.trim() ?? ''
-    return acc
-  }, {})
-
-  const timestamp = parts['t']
-  const signature = parts['v1']
-
-  if (!timestamp || !signature) throw new Error('En-tête stripe-signature malformé')
-
-  // Vérifier que le timestamp n'est pas trop vieux (5 minutes)
-  const age = Math.floor(Date.now() / 1000) - parseInt(timestamp)
-  if (age > 300) throw new Error('Webhook expiré (> 5 min)')
-
-  const signed  = `${timestamp}.${payload}`
-  const key     = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-  const mac     = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signed))
-  const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('')
-
-  if (expected !== signature) throw new Error('Signature invalide')
-
-  return JSON.parse(payload) as StripeEvent
-}
-
-// Désactiver le body parsing automatique de Next.js (on a besoin du raw body)
 export const runtime = 'nodejs'

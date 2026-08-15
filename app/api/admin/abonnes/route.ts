@@ -39,7 +39,7 @@ export async function GET() {
         prochain_paiement: s.current_period_end
           ? new Date(s.current_period_end).toISOString().split('T')[0]
           : null,
-        montant: plan === 'annuel' ? 2000 : 175,
+        montant: plan === 'annuel' ? 1999.99 : 199.99,
         stripe_customer_id: s.stripe_customer_id ?? '',
       }
     })
