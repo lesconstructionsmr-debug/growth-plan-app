@@ -1,9 +1,11 @@
 /** Décode le signing secret Stripe (préfixe whsec_ = base64). */
-export function decodeStripeWebhookSecret(secret: string): Uint8Array {
-  if (secret.startsWith('whsec_')) {
-    return Uint8Array.from(Buffer.from(secret.slice('whsec_'.length), 'base64'))
-  }
-  return new TextEncoder().encode(secret)
+export function decodeStripeWebhookSecret(secret: string): ArrayBuffer {
+  const buf = secret.startsWith('whsec_')
+    ? Buffer.from(secret.slice('whsec_'.length), 'base64')
+    : Buffer.from(secret, 'utf8')
+  const copy = new Uint8Array(buf.length)
+  copy.set(buf)
+  return copy.buffer
 }
 
 export async function verifyStripeSignature(
