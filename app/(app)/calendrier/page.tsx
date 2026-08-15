@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Calendar, ChevronLeft, ChevronRight, Plus, MapPin, Clock, Loader2, User } from 'lucide-react'
+import { normalizeStatut } from '@/lib/status'
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
@@ -88,7 +89,7 @@ export default function CalendrierPage() {
 
     // Factures → date d'échéance
     for (const f of factures || []) {
-      if (f.statut !== 'payée' && f.statut !== 'annulée') evts.push({
+      if (!['payee', 'annulee'].includes(normalizeStatut(f.statut, 'brouillon'))) evts.push({
         id: `fac-${f.id}`,
         date: f.date_echeance!,
         titre: `Échéance ${f.numero}`,

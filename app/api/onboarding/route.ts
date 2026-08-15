@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireAuth, apiError } from '@/lib/api/auth'
 import { createClientRecord } from '@/lib/api/clients'
 
 export const dynamic = 'force-dynamic'
@@ -7,18 +7,13 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     const { vertical, compagnie, client } = await req.json()
-    const supabase = createClient()
+    const { supabase, user } = await requireAuth()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-
-    // 1. Récupérer ou créer le profil
     let { data: profile } = await supabase
       .from('profiles').select('company_id').eq('id', user.id).single()
 
     let companyId = profile?.company_id
 
-    // 2. Créer la compagnie si elle n'existe pas encore
     if (!companyId) {
       const { data: newCompany } = await supabase
         .from('companies')
@@ -31,7 +26,6 @@ export async function POST(req: NextRequest) {
 
       companyId = newCompany?.id
 
-      // Créer ou mettre à jour le profil avec le company_id
       await supabase.from('profiles').upsert({
         id:         user.id,
         company_id: companyId,
@@ -39,7 +33,6 @@ export async function POST(req: NextRequest) {
         role:       'owner',
       })
     } else {
-      // Mettre à jour la compagnie existante
       const updates: Record<string, unknown> = {}
       if (compagnie?.nom)       updates.name      = compagnie.nom
       if (compagnie?.telephone) updates.telephone = compagnie.telephone
@@ -54,7 +47,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. Créer le premier client si fourni
     if (client?.nom) {
       await createClientRecord({
         nom:       client.nom,
@@ -65,10 +57,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('[POST /api/onboarding]', err)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erreur interne' },
-      { status: 500 }
-    )
+    return apiError(err, '[POST /api/onboarding]')
   }
 }

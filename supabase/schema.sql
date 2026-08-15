@@ -81,7 +81,7 @@ create table if not exists public.devis (
   job_id           uuid references public.jobs(id) on delete set null,
   numero           text not null,
   titre            text,
-  statut           text default 'brouillon',  -- brouillon | envoyé | approuvé | refusé | converti
+  statut           text default 'brouillon',  -- brouillon | envoye | vu | approuve | refuse | expire | converti
   lignes           jsonb default '[]',         -- [{ description, quantite, unite, prix_unitaire }]
   montant_ht       numeric(12,2) default 0,
   tps              numeric(12,2) default 0,
@@ -107,7 +107,7 @@ create table if not exists public.factures (
   devis_id        uuid references public.devis(id) on delete set null,
   numero          text not null,
   titre           text,
-  statut          text default 'brouillon',  -- brouillon | envoyée | payée | en_retard | annulée
+  statut          text default 'brouillon',  -- brouillon | envoyee | vue | partielle | payee | en_retard | annulee
   lignes          jsonb default '[]',         -- [{ description, quantite, unite, prix_unitaire }]
   montant_ht      numeric(12,2) default 0,
   tps             numeric(12,2) default 0,

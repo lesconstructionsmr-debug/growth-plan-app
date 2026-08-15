@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireAuth, apiError } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
@@ -37,10 +37,7 @@ export async function POST(req: NextRequest) {
     const { token } = await req.json()
     if (!token) return NextResponse.json({ error: 'Token manquant' }, { status: 400 })
 
-    // Session lue via le client cookie (auth), écritures via le client admin (bypass RLS)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Vous devez être connecté pour accepter cette invitation' }, { status: 401 })
+    const { user } = await requireAuth()
 
     const admin = createAdminClient()
 
@@ -98,7 +95,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('[POST /api/join]', err)
-    return NextResponse.json({ error: 'Erreur interne' }, { status: 500 })
+    return apiError(err, '[POST /api/join]')
   }
 }

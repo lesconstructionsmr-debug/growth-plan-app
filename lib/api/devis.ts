@@ -34,13 +34,11 @@ export async function getDevisById(id: string) {
   return data
 }
 
+import { createAnonClient } from '@/lib/supabase/anon'
+
 export async function getDevisByToken(token: string) {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('devis')
-    .select('*, clients(*)')
-    .eq('portal_token', token)
-    .single()
+  const supabase = createAnonClient()
+  const { data, error } = await supabase.rpc('portal_get_devis', { p_token: token })
 
   if (error) { console.error('[getDevisByToken]', error); return null }
   return data

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { normalizeStatut } from '@/lib/status'
 import {
   Target, Globe, Star, Calendar, CheckCircle2, TrendingUp,
   Settings, Loader2, Save, Sparkles, AlertCircle, RefreshCw,
@@ -76,7 +77,7 @@ export default function AcquisitionPage() {
         leadsTotal: l.length,
         leadsQualifies: l.filter(x => x.statut === 'qualifié' || x.statut === 'proposition' || x.statut === 'gagné').length,
         devisTotal: d.length,
-        devisApprouves: d.filter(x => x.statut === 'converti' || x.statut === 'approuvé').length,
+        devisApprouves: d.filter(x => ['converti', 'approuve'].includes(normalizeStatut(x.statut, 'brouillon'))).length,
         jobsActifs: j.filter(x => x.statut === 'en_cours').length
       })
     } catch (err) {

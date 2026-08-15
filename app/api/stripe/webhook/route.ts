@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveCompanyIdFromSubscription } from '@/lib/stripe/subscription'
 
 // POST /api/stripe/webhook
 // Reçoit les événements Stripe et met à jour les abonnements
@@ -85,12 +86,39 @@ export async function POST(request: NextRequest) {
 
 // ── Handlers ──────────────────────────────────────────────────────
 
+async function resolveCompanyId(
+  supabase: ReturnType<typeof createAdminClient>,
+  sub: StripeSubscription
+): Promise<string | null> {
+  let existingCompanyId: string | null = null
+  if (sub.customer) {
+    const { data: existing } = await supabase
+      .from('subscriptions')
+      .select('company_id')
+      .eq('stripe_customer_id', sub.customer)
+      .maybeSingle()
+    existingCompanyId = existing?.company_id ?? null
+  }
+
+  let emailCompanyId: string | null = null
+  if (sub.customer_email) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('id')
+      .ilike('email', sub.customer_email)
+      .maybeSingle()
+    emailCompanyId = company?.id ?? null
+  }
+
+  return resolveCompanyIdFromSubscription(sub, { existingCompanyId, emailCompanyId })
+}
+
 async function handleSubscriptionChange(sub: StripeSubscription) {
   const supabase = createAdminClient()
-  const companyId = sub.metadata?.company_id
+  const companyId = await resolveCompanyId(supabase, sub)
 
   if (!companyId) {
-    throw new Error(`[webhook] metadata company_id manquante pour la souscription ${sub.id}`)
+    throw new Error(`[webhook] company_id introuvable pour la souscription ${sub.id}`)
   }
 
   // Vérifier s'il existe déjà un abonnement pour cette compagnie
@@ -213,6 +241,7 @@ interface StripeEvent {
 interface StripeSubscription {
   id: string; customer: string; status: string; trial_end: number | null
   current_period_end: number
+  customer_email?: string | null
   items: { data: Array<{ price: { recurring: { interval: string } } }> }
   metadata?: Record<string, string>
 }

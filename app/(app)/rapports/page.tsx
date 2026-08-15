@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { BarChart3, TrendingUp, Receipt, FileText, Hammer, Loader2, RefreshCw } from 'lucide-react'
+import { normalizeStatut } from '@/lib/status'
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(n)
@@ -75,13 +76,16 @@ export default function RapportsPage() {
 
     setStats({
       facturesTotal:    f.reduce((s, x) => s + (x.montant_ttc || 0), 0),
-      facturesPaye:     f.filter(x => x.statut === 'payée').reduce((s, x) => s + (x.montant_ttc || 0), 0),
-      facturesEnvoyees: f.filter(x => x.statut === 'envoyée').reduce((s, x) => s + (x.montant_ttc || 0), 0),
-      facturesEnRetard: f.filter(x => x.statut === 'envoyée' && x.date_echeance && x.date_echeance < now).reduce((s, x) => s + (x.montant_ttc || 0), 0),
+      facturesPaye:     f.filter(x => normalizeStatut(x.statut, 'brouillon') === 'payee').reduce((s, x) => s + (x.montant_ttc || 0), 0),
+      facturesEnvoyees: f.filter(x => normalizeStatut(x.statut, 'brouillon') === 'envoyee').reduce((s, x) => s + (x.montant_ttc || 0), 0),
+      facturesEnRetard: f.filter(x => {
+        const s = normalizeStatut(x.statut, 'brouillon')
+        return (s === 'envoyee' || s === 'en_retard') && x.date_echeance && x.date_echeance < now
+      }).reduce((s, x) => s + (x.montant_ttc || 0), 0),
       devisTotal:     d.length,
-      devisApprouves: d.filter(x => x.statut === 'approuvé').length,
-      devisBrouillon: d.filter(x => x.statut === 'brouillon').length,
-      devisEnvoyes:   d.filter(x => x.statut === 'envoyé').length,
+      devisApprouves: d.filter(x => normalizeStatut(x.statut, 'brouillon') === 'approuve').length,
+      devisBrouillon: d.filter(x => normalizeStatut(x.statut, 'brouillon') === 'brouillon').length,
+      devisEnvoyes:   d.filter(x => normalizeStatut(x.statut, 'brouillon') === 'envoye').length,
       jobsTotal:      j.length,
       jobsEnCours:    j.filter(x => x.statut === 'en_cours').length,
       jobsTermines:   j.filter(x => x.statut === 'terminé').length,

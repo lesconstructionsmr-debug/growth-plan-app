@@ -72,7 +72,7 @@ export default function VentesDashboardPage() {
         ] = await Promise.all([
           supabase.from('leads').select('*', { count: 'exact', head: true }),
           supabase.from('jobs').select('*', { count: 'exact', head: true }),
-          supabase.from('devis').select('montant_ttc').eq('statut', 'approuvé')
+          supabase.from('devis').select('montant_ttc').eq('statut', 'approuve')
         ])
 
         const realProspects = countLeads || 176

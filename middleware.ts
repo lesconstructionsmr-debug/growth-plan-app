@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isPlatformAdmin } from '@/lib/platform-admin'
 
 const PUBLIC_PATHS = [
   '/login', '/register', '/forgot-password',
@@ -85,6 +86,13 @@ export async function middleware(request: NextRequest) {
       }
     })
     return redirectResponse
+  }
+
+  // Routes admin plateforme — réservées aux emails PLATFORM_ADMIN_EMAILS
+  if (pathname.startsWith('/admin')) {
+    if (!isPlatformAdmin(user.email)) {
+      return NextResponse.redirect(new URL('/dashboard?error=admin_forbidden', request.url))
+    }
   }
 
   return response

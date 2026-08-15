@@ -11,48 +11,6 @@ const fmt = (n: number) =>
 const fmtDate = (s: string) =>
   new Date(s).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })
 
-// Même mock que devis/[id] — remplacer par fetch Supabase
-const DEVIS_MOCK = {
-  numero: 'DEV-2026-001',
-  titre: 'Rénovation cuisine complète',
-  statut: 'envoye',
-  client_nom: 'Jean Tremblay',
-  client_email: 'jean.tremblay@example.com',
-  client_adresse: '245 Avenue des Pins',
-  client_ville: 'Québec, QC  G1R 2C7',
-  projet_titre: 'Maison Tremblay — Cuisine',
-  date_emission: '2026-06-10',
-  date_validite: '2026-07-10',
-  sous_total: 18500,
-  taux_tps: 5,
-  taux_tvq: 9.975,
-  montant_tps: 925,
-  montant_tvq: 1845.38,
-  total_ttc: 21270.38,
-  notes_client: 'Travaux à débuter dès approbation. Délai estimé : 3 semaines. Les matériaux inclus dans ce devis seront commandés à la signature.',
-  conditions: 'Un acompte de 30% est requis à la signature. Le solde est dû à la completion des travaux. Ce devis est valide 30 jours à compter de la date d\'émission.',
-  lignes: [
-    { id: '1', description: 'Démolition et préparation',      quantite: 1,  unite: 'forfait', prix_unitaire: 2500,  total_ligne: 2500  },
-    { id: '2', description: 'Armoires cuisine (supply)',       quantite: 1,  unite: 'forfait', prix_unitaire: 8000,  total_ligne: 8000  },
-    { id: '3', description: 'Installation armoires',          quantite: 16, unite: 'h',       prix_unitaire: 85,    total_ligne: 1360  },
-    { id: '4', description: 'Comptoir quartz 3cm',            quantite: 22, unite: 'pi²',     prix_unitaire: 145,   total_ligne: 3190  },
-    { id: '5', description: 'Plomberie — relocalisation',     quantite: 1,  unite: 'forfait', prix_unitaire: 1200,  total_ligne: 1200  },
-    { id: '6', description: 'Électricité — circuits dédiés',  quantite: 1,  unite: 'forfait', prix_unitaire: 950,   total_ligne: 950   },
-    { id: '7', description: 'Peinture & finitions',           quantite: 1,  unite: 'forfait', prix_unitaire: 1300,  total_ligne: 1300  },
-  ],
-  organisation: {
-    nom: 'ERP Construction Inc.',
-    email: 'info@erpconstruction.ca',
-    telephone: '(418) 555-0123',
-    adresse: '1200 boul. Lebourgneuf',
-    ville: 'Québec, QC  G2K 2G4',
-    tps_numero: '123456789 RT0001',
-    tvq_numero: '1234567890 TQ0001',
-    rbq_numero: '',
-    neq_numero: '',
-  },
-}
-
 export default function DevisPreviewPage() {
   const { id } = useParams<{ id: string }>()
   const [devis, setDevis] = useState<any>(null)

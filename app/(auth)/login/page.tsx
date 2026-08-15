@@ -119,6 +119,13 @@ function LoginForm() {
                 fontSize: '12px', color: 'var(--red)', marginBottom: '14px',
               }}>
                 {decodeURIComponent(error)}
+                {decodeURIComponent(error).toLowerCase().includes('confirm') && (
+                  <div style={{ marginTop: '8px' }}>
+                    <Link href="/onboarding/confirmation" style={{ color: 'var(--gold-2)', textDecoration: 'none' }}>
+                      Renvoyer le courriel de confirmation
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
 

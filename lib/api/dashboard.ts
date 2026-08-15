@@ -1,4 +1,5 @@
 import { createClient } from './supabase-server'
+import { normalizeStatut, DEVIS_EN_ATTENTE, FACTURES_IMPAYEES } from '@/lib/status'
 
 export async function getDashboardKPIs() {
   const supabase = createClient()
@@ -15,17 +16,28 @@ export async function getDashboardKPIs() {
     supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('statut', 'en_cours'),
   ])
 
-  const devisEnAttente  = devisData?.filter(d => d.statut === 'envoyé').length ?? 0
-  const devisMontant    = devisData?.filter(d => d.statut === 'envoyé')
-    .reduce((s, d) => s + (d.montant_ttc ?? 0), 0) ?? 0
+  const devisNorm = (devisData ?? []).map(d => ({
+    ...d,
+    statut: normalizeStatut(d.statut, 'brouillon'),
+  }))
+  const facturesNorm = (facturesData ?? []).map(f => ({
+    ...f,
+    statut: normalizeStatut(f.statut, 'brouillon'),
+  }))
+
+  const devisEnAttente = devisNorm.filter(d => DEVIS_EN_ATTENTE.includes(d.statut as typeof DEVIS_EN_ATTENTE[number])).length
+  const devisMontant = devisNorm
+    .filter(d => DEVIS_EN_ATTENTE.includes(d.statut as typeof DEVIS_EN_ATTENTE[number]))
+    .reduce((s, d) => s + (d.montant_ttc ?? 0), 0)
 
   const today = new Date().toISOString().split('T')[0]
-  const facturesEnRetard = facturesData?.filter(f =>
-    f.statut === 'envoyée' && f.date_echeance && f.date_echeance < today
-  ).length ?? 0
+  const facturesEnRetard = facturesNorm.filter(f =>
+    (f.statut === 'envoyee' || f.statut === 'en_retard') && f.date_echeance && f.date_echeance < today
+  ).length
 
-  const revenusRecents = facturesData?.filter(f => f.statut === 'payée')
-    .reduce((s, f) => s + (f.montant_ttc ?? 0), 0) ?? 0
+  const revenusRecents = facturesNorm
+    .filter(f => f.statut === 'payee')
+    .reduce((s, f) => s + (f.montant_ttc ?? 0), 0)
 
   return {
     totalClients:      totalClients ?? 0,

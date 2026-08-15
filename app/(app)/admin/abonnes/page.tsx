@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 import {
   Crown, TrendingUp, Users, DollarSign, AlertCircle,
   CheckCircle2, Clock, XCircle, Search, ExternalLink,
@@ -46,28 +45,15 @@ export default function AdminAbonnesPage() {
   const [abonnes, setAbonnes] = useState<Abonne[]>(MOCK_ABONNES)
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    supabase
-      .from('subscriptions')
-      .select('id, stripe_customer_id, stripe_subscription_id, status, plan, current_period_end, trial_end, companies(name, email)')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (!data || data.length === 0) return
-        setAbonnes(data.map((s: any) => ({
-          id: s.id,
-          nom: s.companies?.name ?? s.stripe_customer_id,
-          email: s.companies?.email ?? '',
-          plan: s.plan === 'year' ? 'annuel' : 'mensuel',
-          statut: (s.status as StatutAbo) ?? 'active',
-          debut: s.trial_end ? new Date(s.trial_end).toISOString().split('T')[0] : '',
-          prochain_paiement: s.current_period_end ? new Date(s.current_period_end).toISOString().split('T')[0] : null,
-          montant: s.plan === 'year' ? 2000 : 175,
-          stripe_customer_id: s.stripe_customer_id ?? '',
-        })))
+    fetch('/api/admin/abonnes')
+      .then(r => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json()
       })
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) setAbonnes(data)
+      })
+      .catch(() => { /* garde les mocks si non-admin ou API indisponible */ })
   }, [])
 
   const actifs    = abonnes.filter(a => a.statut === 'active')

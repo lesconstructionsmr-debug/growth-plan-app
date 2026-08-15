@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { isDuplicateSignup } from '@/lib/auth/site-url'
+import { resendConfirmation } from '@/app/actions/auth'
 
 export default function RegisterPage() {
   const [prenom, setPrenom] = useState('')
@@ -17,7 +19,7 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const router = useRouter()
   const supabase = createClient()
 
   async function handleRegister(e: React.FormEvent) {
@@ -31,57 +33,41 @@ export default function RegisterPage() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { prenom, nom, company },
+        data: {
+          prenom,
+          nom,
+          company,
+          full_name: `${prenom} ${nom}`.trim(),
+          company_name: company,
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
 
-    if (error) {
-      setError(error.message)
+    if (signUpError) {
+      setError(signUpError.message)
       setLoading(false)
       return
     }
 
-    setSuccess(true)
-    setLoading(false)
-  }
+    if (isDuplicateSignup(data.user)) {
+      setError('Un compte existe déjà pour ce courriel. Connectez-vous ou réinitialisez votre mot de passe.')
+      setLoading(false)
+      return
+    }
 
-  if (success) {
-    return (
-      <div style={{
-        minHeight: '100vh', background: 'var(--bg-0)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
-      }}>
-        <div style={{ textAlign: 'center', maxWidth: '380px' }}>
-          <div style={{
-            width: '60px', height: '60px', borderRadius: '50%',
-            background: 'rgba(92,184,122,0.1)',
-            border: '0.5px solid rgba(92,184,122,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1.25rem', fontSize: '24px', color: '#5CB87A',
-          }}>✓</div>
-          <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '8px' }}>
-            Compte créé !
-          </h2>
-          <p style={{ fontSize: '13px', color: 'var(--txt-2)', marginBottom: '1.5rem' }}>
-            Vérifiez votre courriel pour confirmer votre compte, puis connectez-vous.
-          </p>
-          <Link href="/login" style={{
-            display: 'inline-block',
-            background: 'var(--gold-3)', border: '0.5px solid var(--gold)',
-            borderRadius: '7px', padding: '9px 24px',
-            fontSize: '13px', fontWeight: 500, color: 'var(--gold-2)',
-            textDecoration: 'none',
-          }}>
-            Aller à la connexion
-          </Link>
-        </div>
-      </div>
-    )
+    if (data.session) {
+      router.replace('/dashboard')
+      return
+    }
+
+    const sent = await resendConfirmation(email)
+    const sentQs = !('ok' in sent && sent.ok) ? '&sent=0' : ''
+    router.replace(`/onboarding/confirmation?email=${encodeURIComponent(email)}${sentQs}`)
   }
 
   return (

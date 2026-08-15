@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/api/supabase-server'
+import { requireCompany, apiError } from '@/lib/api/auth'
+import { checkRateLimit } from '@/lib/api/rate-limit'
 
 const MASTER_PROMPT = `Agis en tant que Social Media Manager et Stratège de Contenu organique de classe mondiale, spécialisé dans la croissance des entreprises de services du bâtiment et de la construction au Québec. Ton objectif est de transformer une expertise terrain en une autorité incontournable sur les réseaux sociaux.
 
@@ -104,17 +105,18 @@ Voici une proposition de contenu sur-mesure pour développer votre visibilité a
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
-    
-    // Auth résiliente sans crash si le jeton du navigateur est invalide
-    let user = null
-    try {
-      const { data, error } = await supabase.auth.getUser()
-      if (!error && data?.user) {
-        user = data.user
-      }
-    } catch (e) {
-      console.warn('[Chat Route] Auth warning handled cleanly:', e)
+    const { user } = await requireCompany()
+
+    const rateKey = `chat:${user.id}`
+    const { allowed, retryAfterSec } = checkRateLimit(rateKey, {
+      maxRequests: 20,
+      windowMs: 60 * 60 * 1000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Limite atteinte. Réessayez dans ${retryAfterSec}s.` },
+        { status: 429, headers: { 'Retry-After': String(retryAfterSec) } }
+      )
     }
 
     const { messages } = await request.json()
@@ -205,6 +207,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ content: fallbackText })
 
   } catch (err) {
+    if (err instanceof Error && err.name === 'ApiError') {
+      return apiError(err, '[POST /api/chat]')
+    }
     console.error('[Chat API Error]', err)
     return NextResponse.json({ content: generateSmartFallbackResponse('') })
   }

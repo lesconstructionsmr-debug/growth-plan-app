@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { HardHat, Loader2, AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { sendResetPasswordEmail } from '@/app/actions/auth'
 
 function ForgotPasswordContent() {
   const searchParams = useSearchParams()
@@ -28,10 +29,8 @@ function ForgotPasswordContent() {
     setError(null)
     if (!email) { setError('Veuillez entrer votre adresse courriel.'); return }
     setLoading(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    })
-    if (error) { setError(error.message); setLoading(false); return }
+    const { error } = await sendResetPasswordEmail(email)
+    if (error) { setError(error); setLoading(false); return }
     setSent(true)
     setLoading(false)
   }

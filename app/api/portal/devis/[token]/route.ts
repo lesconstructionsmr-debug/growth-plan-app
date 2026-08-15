@@ -1,82 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createAnonClient } from '@/lib/supabase/anon'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/portal/devis/[token] — public, pas d'auth
+function isValidPortalToken(token: string): boolean {
+  return typeof token === 'string' && token.length >= 32 && /^[a-f0-9]+$/i.test(token)
+}
+
+// GET /api/portal/devis/[token] — public, via RPC SECURITY DEFINER (sans notes_internes)
 export async function GET(
   _req: NextRequest,
   { params }: { params: { token: string } }
 ) {
   try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from('devis')
-      .select(`
-        id, numero, titre, statut, lignes,
-        date_emission, valide_jusqu_au,
-        montant_ht, tps, tvq, montant_ttc,
-        notes, notes_internes, portal_token,
-        clients(nom, email, telephone, adresse),
-        companies(name, telephone, adresse, tps_no, tvq_no)
-      `)
-      .eq('portal_token', params.token)
-      .single()
+    if (!isValidPortalToken(params.token)) {
+      return NextResponse.json({ error: 'Token invalide' }, { status: 400 })
+    }
 
-    if (error || !data) return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 })
+    const supabase = createAnonClient()
+    const { data, error } = await supabase.rpc('portal_get_devis', { p_token: params.token })
+
+    if (error) {
+      console.error('[portal/devis GET]', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    }
+    if (!data) return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 })
+
     return NextResponse.json(data)
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    console.error('[portal/devis GET]', err)
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
 
-// POST /api/portal/devis/[token] — approuver ou refuser
+// POST /api/portal/devis/[token] — approuver ou refuser via RPC
 export async function POST(
   req: NextRequest,
   { params }: { params: { token: string } }
 ) {
   try {
+    if (!isValidPortalToken(params.token)) {
+      return NextResponse.json({ error: 'Token invalide' }, { status: 400 })
+    }
+
     const { action, motif, signatureData, signataireNom } = await req.json()
     if (action !== 'approuve' && action !== 'refuse') {
       return NextResponse.json({ error: 'action invalide' }, { status: 400 })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createAnonClient()
+    const { data, error } = await supabase.rpc('portal_update_devis', {
+      p_token:          params.token,
+      p_action:         action,
+      p_motif:          motif ?? null,
+      p_signature_data: signatureData ?? null,
+      p_signataire_nom: signataireNom ?? null,
+    })
 
-    // Récupérer le devis pour vérifier qu'il est bien en attente
-    const { data: existing } = await supabase
-      .from('devis')
-      .select('id, statut, clients(email, nom), companies(name)')
-      .eq('portal_token', params.token)
-      .single()
-
-    if (!existing) return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 })
-    if (!['envoye', 'vu', 'brouillon'].includes(existing.statut)) {
-      return NextResponse.json({ error: 'Ce devis a déjà été traité' }, { status: 409 })
+    if (error) {
+      const msg = error.message ?? ''
+      if (msg.includes('introuvable') || error.code === 'P0002') {
+        return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 })
+      }
+      if (msg.includes('déjà été traité') || msg.includes('deja ete traite')) {
+        return NextResponse.json({ error: 'Ce devis a déjà été traité' }, { status: 409 })
+      }
+      if (msg.includes('action invalide') || msg.includes('Token invalide')) {
+        return NextResponse.json({ error: msg }, { status: 400 })
+      }
+      console.error('[portal/devis POST]', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
-
-    const updateData: Record<string, unknown> = {
-      statut: action,
-      updated_at: new Date().toISOString(),
-    }
-    if (action === 'approuve') {
-      updateData.approuve_le = new Date().toISOString()
-      if (signatureData) updateData.signature_data = signatureData
-      if (signataireNom) updateData.signataire_nom = signataireNom
-      updateData.signe_le = new Date().toISOString()
-    }
-
-    const { error } = await supabase
-      .from('devis')
-      .update(updateData)
-      .eq('portal_token', params.token)
-
-    if (error) throw error
 
     // Notifier la compagnie par email si Resend est configuré
-    if (process.env.RESEND_API_KEY) {
-      const clientNom = (existing.clients as any)?.nom ?? 'Client'
-      const companyNom = (existing.companies as any)?.name ?? 'votre compagnie'
+    if (process.env.RESEND_API_KEY && data) {
+      const result = data as {
+        client_nom?: string
+        client_email?: string
+        company_name?: string
+        action?: string
+      }
+      const clientNom = result.client_nom ?? 'Client'
       const label = action === 'approuve' ? '✅ APPROUVÉ' : '❌ REFUSÉ'
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -104,6 +108,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, action })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    console.error('[portal/devis POST]', err)
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

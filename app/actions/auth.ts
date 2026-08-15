@@ -3,6 +3,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { getAuthCallbackUrl, isDuplicateSignup } from '@/lib/auth/site-url'
+import { sendSignupConfirmationEmail, sendPasswordResetEmail } from '@/lib/email/signup-confirmation'
 
 function makeSupabase() {
   const cookieStore = cookies()
@@ -26,7 +28,7 @@ function makeSupabase() {
 }
 
 export async function signUp(formData: FormData) {
-  const email       = formData.get('email') as string
+  const email       = (formData.get('email') as string)?.trim()
   const password    = formData.get('password') as string
   const fullName    = formData.get('full_name') as string
   const companyName = formData.get('company_name') as string
@@ -37,12 +39,12 @@ export async function signUp(formData: FormData) {
 
   const supabase = makeSupabase()
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { full_name: fullName, company_name: companyName, telephone, ville, vertical, team_size: teamSize },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.growth-plan.ca'}/auth/callback`,
+      emailRedirectTo: getAuthCallbackUrl(),
     },
   })
 
@@ -50,7 +52,24 @@ export async function signUp(formData: FormData) {
     redirect(`/onboarding?error=${encodeURIComponent(error.message)}`)
   }
 
-  redirect('/onboarding/confirmation')
+  if (isDuplicateSignup(data.user)) {
+    redirect(`/onboarding?error=${encodeURIComponent(
+      'Un compte existe déjà pour ce courriel. Connectez-vous ou réinitialisez votre mot de passe.'
+    )}`)
+  }
+
+  // Confirm email désactivé côté Supabase → session immédiate
+  if (data.session) {
+    redirect('/dashboard')
+  }
+
+  const sent = await sendSignupConfirmationEmail(email)
+  if (!sent.ok) {
+    console.error('[signUp] confirmation email', sent.error)
+    redirect(`/onboarding/confirmation?email=${encodeURIComponent(email)}&sent=0`)
+  }
+
+  redirect(`/onboarding/confirmation?email=${encodeURIComponent(email)}`)
 }
 
 export async function signIn(formData: FormData) {
@@ -64,10 +83,22 @@ export async function signIn(formData: FormData) {
   if (error) {
     let msg = 'Email ou mot de passe incorrect.'
     if (error.message.toLowerCase().includes('email not confirmed')) {
-      msg = 'Courriel non confirme - verifiez votre boite de reception.'
+      msg = 'Courriel non confirmé — vérifiez votre boîte de réception.'
     }
     redirect(`/login?error=${encodeURIComponent(msg)}`)
   }
 
   redirect('/dashboard')
+}
+
+export async function resendConfirmation(email: string) {
+  const sent = await sendSignupConfirmationEmail(email)
+  if (!sent.ok) return { error: sent.error }
+  return { ok: true as const }
+}
+
+export async function sendResetPasswordEmail(email: string) {
+  const sent = await sendPasswordResetEmail(email)
+  if (!sent.ok) return { error: sent.error }
+  return { ok: true as const }
 }

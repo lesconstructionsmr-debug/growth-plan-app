@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireCompany, apiError } from '@/lib/api/auth'
 import { createDevis } from '@/lib/api/devis'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    await requireCompany()
     const body = await req.json()
 
     const devis = await createDevis({
@@ -24,10 +26,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(devis, { status: 201 })
   } catch (err) {
-    console.error('[POST /api/devis]', err)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erreur interne' },
-      { status: 500 }
-    )
+    return apiError(err, '[POST /api/devis]')
   }
 }

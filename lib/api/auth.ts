@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from './supabase-server'
+import { isPlatformAdmin } from '@/lib/platform-admin'
 
-// Erreur typée : les routes la propagent, apiError() la convertit en réponse HTTP
+export { isPlatformAdmin }
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message)
@@ -9,12 +11,15 @@ export class ApiError extends Error {
   }
 }
 
-// Pattern d'auth unique pour toutes les routes API (S2.3).
-// Garantit : utilisateur connecté + rattaché à une compagnie.
-export async function requireCompany() {
+export async function requireAuth() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new ApiError(401, 'Non authentifié')
+  return { supabase, user }
+}
+
+export async function requireCompany() {
+  const { supabase, user } = await requireAuth()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -32,9 +37,14 @@ export async function requireCompany() {
   }
 }
 
-// Conversion uniforme erreur → réponse HTTP.
-// ApiError = message métier tel quel; tout le reste = log serveur + message générique
-// (jamais de détails internes renvoyés au client — S3.4).
+export async function requirePlatformAdmin() {
+  const { supabase, user } = await requireAuth()
+  if (!isPlatformAdmin(user.email)) {
+    throw new ApiError(403, 'Accès réservé aux administrateurs de la plateforme')
+  }
+  return { supabase, user }
+}
+
 export function apiError(err: unknown, tag: string): NextResponse {
   if (err instanceof ApiError) {
     return NextResponse.json({ error: err.message }, { status: err.status })
