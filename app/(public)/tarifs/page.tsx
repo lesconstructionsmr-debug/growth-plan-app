@@ -24,7 +24,11 @@ const FAQ = [
   },
   {
     q: 'Comment choisir mon forfait ?',
-    a: 'Comptez vos utilisateurs actifs (propriétaire, admins, employés avec accès). AUTONOME : 1-2 · ÉQUIPE : 3-10 · CROISSANCE : 11-20 · ENTREPRISE : 21+.',
+    a: 'Comptez les personnes avec un accès à l\'application (propriétaire, admins, employés qui pointent). AUTONOME : 1-2 · ÉQUIPE : 3-10 · CROISSANCE : 11-20 · ENTREPRISE : 21+.',
+  },
+  {
+    q: 'Qu\'est-ce qu\'un utilisateur ?',
+    a: 'Un utilisateur est toute personne qui se connecte à Plan Growth (propriétaire, admin ou employé qui pointe). Les contacts du répertoire de sous-traitants ne comptent pas — ils ne reçoivent pas d\'accès à l\'app.',
   },
   {
     q: 'Puis-je annuler en tout temps ?',
@@ -118,6 +122,9 @@ export default function TarifsPage() {
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--txt-3)', maxWidth: '560px', margin: '0 auto 16px', lineHeight: 1.6 }}>
           Abonnement annuel · engagement de 12 mois · + {SETUP_FEE_CAD} $ frais d&apos;adhésion (API & intégrations)
+        </p>
+        <p style={{ fontSize: '13px', color: 'var(--txt-3)', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
+          Un utilisateur = personne avec accès à l&apos;app (propriétaire ou employé qui pointe). Les sous-traitants du répertoire ne comptent pas.
         </p>
       </div>
 
@@ -229,6 +236,14 @@ export default function TarifsPage() {
           )
         })}
       </div>
+
+      <p style={{
+        maxWidth: '1120px', margin: '0 auto 32px', padding: '0 20px',
+        fontSize: '12px', color: 'var(--txt-3)', lineHeight: 1.6, textAlign: 'center',
+      }}>
+        <strong style={{ color: 'var(--txt-2)' }}>Utilisateur</strong> = connexion à l&apos;application (propriétaire, admin ou employé qui pointe).
+        Les entrées du répertoire de sous-traitants sont gratuites et ne sont pas comptabilisées.
+      </p>
 
       {/* Adhésion + promo */}
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '0 20px 48px' }}>

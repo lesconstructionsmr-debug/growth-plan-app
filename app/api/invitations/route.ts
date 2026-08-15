@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const { email, role } = await req.json()
     if (!email?.trim()) return NextResponse.json({ error: 'Email requis' }, { status: 400 })
 
-    const { supabase, user, companyId } = await requireCompany()
+    const { supabase, user, companyId } = await requireCompanyAdmin()
 
     // Vérifier si déjà invité
     const { data: existing } = await supabase
@@ -95,7 +95,7 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 })
 
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
 
     // .select('id') = vérifier qu'une ligne a réellement été supprimée (S2.2)
     const { data, error } = await supabase

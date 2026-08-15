@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from './supabase-server'
 import { isPlatformAdmin } from '@/lib/platform-admin'
+import { isCompanyAdmin } from '@/lib/auth/permissions'
 
 export { isPlatformAdmin }
 
@@ -43,6 +44,14 @@ export async function requirePlatformAdmin() {
     throw new ApiError(403, 'Accès réservé aux administrateurs de la plateforme')
   }
   return { supabase, user }
+}
+
+export async function requireCompanyAdmin() {
+  const ctx = await requireCompany()
+  if (!isCompanyAdmin(ctx.role)) {
+    throw new ApiError(403, 'Accès réservé aux propriétaires et administrateurs')
+  }
+  return ctx
 }
 
 export function apiError(err: unknown, tag: string): NextResponse {

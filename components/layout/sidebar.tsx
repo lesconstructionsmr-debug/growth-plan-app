@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from './theme-provider'
 import { useLanguage } from './language-provider'
+import { isCompanyAdmin, employeeNavHrefs } from '@/lib/auth/permissions'
 
 // ── Nav construction ───────────────────────────────────────────────
 const NAV_CONSTRUCTION = [
@@ -98,7 +99,11 @@ const NAV_AGENCE = [
 
 type Vertical = 'construction' | 'agence' | 'courtier'
 
-export default function Sidebar() {
+interface SidebarProps {
+  role?: string
+}
+
+export default function Sidebar({ role: roleProp = 'owner' }: SidebarProps) {
   const pathname = usePathname()
   const [vertical, setVertical]   = useState<Vertical>('construction')
   const [compName, setCompName]   = useState('Mon Entreprise')
@@ -134,7 +139,17 @@ export default function Sidebar() {
   const router = useRouter()
   const isCourtier = vertical === 'agence' || vertical === 'courtier'
   const rawNav = isCourtier ? NAV_AGENCE : NAV_CONSTRUCTION
-  const NAV = rawNav.filter(group => group.section !== 'Admin SaaS' || isAdmin)
+  const isAdminUser = isCompanyAdmin(roleProp)
+  const allowedHrefs = isAdminUser ? null : new Set(employeeNavHrefs())
+  const NAV = rawNav
+    .filter(group => group.section !== 'Admin SaaS' || isAdmin)
+    .map(group => ({
+      ...group,
+      items: isAdminUser
+        ? group.items
+        : group.items.filter(item => allowedHrefs!.has(item.href)),
+    }))
+    .filter(group => group.items.length > 0)
 
   async function handleLogout() {
     await fetch('/api/auth/signout', { method: 'POST' })
@@ -258,7 +273,8 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Bouton Switch Mode (Construction <-> Courtier) */}
+        {/* Bouton Switch Mode (Construction <-> Courtier) — admins seulement */}
+        {isAdminUser && (
         <button
           onClick={toggleVertical}
           disabled={switching}
@@ -281,6 +297,7 @@ export default function Sidebar() {
         >
           <ArrowLeftRight size={13} />
         </button>
+        )}
       </div>
 
       {/* ── Navigation ───────────────────────────── */}

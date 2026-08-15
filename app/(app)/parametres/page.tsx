@@ -49,11 +49,11 @@ const inp: React.CSSProperties = {
   fontSize: '13px', color: 'var(--txt-1)', outline: 'none', fontFamily: 'inherit',
 }
 
-function Inp({ value, onChange, placeholder, type = 'text' }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+function Inp({ value, onChange, placeholder, type = 'text', readOnly = false }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string; readOnly?: boolean }) {
   return (
-    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      style={inp}
-      onFocus={e => (e.target.style.borderColor = 'var(--gold-3)')}
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly}
+      style={{ ...inp, opacity: readOnly ? 0.85 : 1, cursor: readOnly ? 'default' : 'text' }}
+      onFocus={e => { if (!readOnly) e.target.style.borderColor = 'var(--gold-3)' }}
       onBlur={e => (e.target.style.borderColor = 'var(--line)')} />
   )
 }
@@ -76,7 +76,7 @@ interface TeamMember {
   created_at: string
 }
 
-function TeamPanel() {
+function TeamPanel({ canManage }: { canManage: boolean }) {
   const [members,   setMembers]   = useState<TeamMember[]>([])
   const [loading,   setLoading]   = useState(true)
   const [email,     setEmail]     = useState('')
@@ -154,7 +154,7 @@ function TeamPanel() {
             <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', color: roleColor(m.role), background: roleBg(m.role), flexShrink: 0 }}>
               {roleLabel(m.role)}
             </span>
-            {m.role !== 'owner' && (
+            {canManage && m.role !== 'owner' && (
               <button onClick={() => revoke(m.id)} title="Révoquer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)', padding: '2px' }}>
                 <XCircle size={14} />
               </button>
@@ -163,6 +163,7 @@ function TeamPanel() {
         ))}
       </div>
 
+      {canManage ? (
       <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '10px', padding: '16px' }}>
         <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UserPlus size={13} color="var(--gold)" /> Inviter un membre
@@ -184,7 +185,7 @@ function TeamPanel() {
               onChange={e => setRole(e.target.value as 'admin' | 'collaborateur')}
               style={{ flex: 1, background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', cursor: 'pointer' }}
             >
-              <option value="collaborateur">Collaborateur — lecture + ajout de notes</option>
+              <option value="collaborateur">Collaborateur — chantiers et pointage</option>
               <option value="admin">Admin — accès complet sauf facturation</option>
             </select>
             <button
@@ -199,6 +200,11 @@ function TeamPanel() {
           {error && <div style={{ fontSize: '11px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '8px 12px' }}>{error}</div>}
         </div>
       </div>
+      ) : (
+        <div style={{ fontSize: '11px', color: 'var(--txt-3)', padding: '12px 14px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px' }}>
+          Seuls le propriétaire et les administrateurs peuvent inviter ou gérer l&apos;équipe.
+        </div>
+      )}
     </div>
   )
 }
@@ -208,6 +214,7 @@ export default function ParametresPage() {
   const [form, setForm]     = useState<OrgProfile>(DEFAULT)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved]   = useState(false)
+  const [canManage, setCanManage] = useState(true)
   const logoRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
@@ -224,6 +231,9 @@ export default function ParametresPage() {
       .then(r => r.json())
       .then(d => {
         if (d.vertical) setVertical(d.vertical === 'courtier' ? 'agence' : d.vertical)
+        const admin = d.role === 'owner' || d.role === 'admin'
+        setCanManage(admin)
+        if (!admin) setOnglet('organisation')
       })
       .catch(() => {})
 
@@ -315,8 +325,8 @@ export default function ParametresPage() {
           <Settings size={18} color="var(--gold)" />
           <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>Paramètres</h1>
         </div>
-        <button onClick={save} disabled={saving} style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
+        <button onClick={save} disabled={saving || !canManage} style={{
+          display: canManage ? 'flex' : 'none', alignItems: 'center', gap: '6px',
           background: saved ? 'var(--green)' : 'var(--gold)', border: 'none', borderRadius: '8px',
           padding: '8px 16px', fontSize: '12px', fontWeight: 600,
           color: saved ? '#fff' : '#0A0A0A', cursor: saving ? 'default' : 'pointer', transition: 'background 0.2s',
@@ -331,7 +341,7 @@ export default function ParametresPage() {
 
         {/* Sidebar */}
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
-          {ONGLETS.map(o => {
+          {ONGLETS.filter(o => canManage || o.id === 'organisation').map(o => {
             const Icon = o.icon; const active = onglet === o.id
             return (
               <button key={o.id} onClick={() => setOnglet(o.id)} style={{
@@ -353,43 +363,52 @@ export default function ParametresPage() {
 
           {/* ── ORGANISATION ── */}
           {onglet === 'organisation' && (<>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', paddingBottom: '12px', borderBottom: '0.5px solid var(--line)' }}>Profil de l'organisation</div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', paddingBottom: '12px', borderBottom: '0.5px solid var(--line)' }}>
+              {canManage ? 'Profil de l\'organisation' : 'Mon profil — lecture seule'}
+            </div>
+            {!canManage && (
+              <div style={{ fontSize: '11px', color: 'var(--txt-3)', padding: '10px 12px', background: 'var(--bg-2)', borderRadius: '8px', border: '0.5px solid var(--line)' }}>
+                Consultation seule. Contactez un administrateur pour modifier les paramètres de l&apos;entreprise.
+              </div>
+            )}
 
             <F label="Logo">
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ width: '64px', height: '64px', borderRadius: '10px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
                   {logoPreview ? <img src={logoPreview} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={22} color="var(--gold-3)" />}
                 </div>
+                {canManage && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <button onClick={() => logoRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '7px', padding: '7px 12px', fontSize: '11px', color: 'var(--txt-2)', cursor: 'pointer' }}>
                     <Upload size={12} /> Choisir un fichier
                   </button>
                   <span style={{ fontSize: '10px', color: 'var(--txt-3)' }}>PNG, JPG — max 2 Mo · 200×200 px recommandé</span>
                 </div>
+                )}
                 <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogo} />
               </div>
             </F>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <F label="Nom affiché (devis/factures)"><Inp value={form.nom} onChange={v => set('nom', v)} placeholder="Construction Nova" /></F>
-              <F label="Raison sociale légale"><Inp value={form.nom_legal} onChange={v => set('nom_legal', v)} placeholder="Nova Structure AI inc." /></F>
+              <F label="Nom affiché (devis/factures)"><Inp readOnly={!canManage} value={form.nom} onChange={v => set('nom', v)} placeholder="Construction Nova" /></F>
+              <F label="Raison sociale légale"><Inp readOnly={!canManage} value={form.nom_legal} onChange={v => set('nom_legal', v)} placeholder="Nova Structure AI inc." /></F>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <F label="Courriel"><Inp value={form.email} onChange={v => set('email', v)} type="email" placeholder="info@..." /></F>
-              <F label="Téléphone"><Inp value={form.telephone} onChange={v => set('telephone', v)} placeholder="(418) 555-0000" /></F>
+              <F label="Courriel"><Inp readOnly={!canManage} value={form.email} onChange={v => set('email', v)} type="email" placeholder="info@..." /></F>
+              <F label="Téléphone"><Inp readOnly={!canManage} value={form.telephone} onChange={v => set('telephone', v)} placeholder="(418) 555-0000" /></F>
             </div>
-            <F label="Site web"><Inp value={form.site_web} onChange={v => set('site_web', v)} type="url" placeholder="https://..." /></F>
+            <F label="Site web"><Inp readOnly={!canManage} value={form.site_web} onChange={v => set('site_web', v)} type="url" placeholder="https://..." /></F>
 
             <div style={{ paddingTop: '12px', borderTop: '0.5px solid var(--line)', fontSize: '12px', fontWeight: 600, color: 'var(--txt-2)' }}>Adresse</div>
-            <F label="Rue"><Inp value={form.rue} onChange={v => set('rue', v)} placeholder="1200 boul. Lebourgneuf" /></F>
+            <F label="Rue"><Inp readOnly={!canManage} value={form.rue} onChange={v => set('rue', v)} placeholder="1200 boul. Lebourgneuf" /></F>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px', gap: '10px' }}>
-              <F label="Ville"><Inp value={form.ville} onChange={v => set('ville', v)} placeholder="Québec" /></F>
+              <F label="Ville"><Inp readOnly={!canManage} value={form.ville} onChange={v => set('ville', v)} placeholder="Québec" /></F>
               <F label="Province">
-                <select value={form.province} onChange={e => set('province', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                <select value={form.province} onChange={e => set('province', e.target.value)} disabled={!canManage} style={{ ...inp, cursor: canManage ? 'pointer' : 'default', opacity: canManage ? 1 : 0.85 }}>
                   {PROVINCES.map(p => <option key={p}>{p}</option>)}
                 </select>
               </F>
-              <F label="Code postal"><Inp value={form.code_postal} onChange={v => set('code_postal', v)} placeholder="G2K 2G4" /></F>
+              <F label="Code postal"><Inp readOnly={!canManage} value={form.code_postal} onChange={v => set('code_postal', v)} placeholder="G2K 2G4" /></F>
             </div>
           </>)}
 
@@ -693,7 +712,7 @@ export default function ParametresPage() {
 
           {/* ── ÉQUIPE ── */}
           {onglet === 'equipe' && (
-            <TeamPanel />
+            <TeamPanel canManage={canManage} />
           )}
 
         </div>

@@ -2,12 +2,14 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/layout/sidebar'
 import SubscriptionBanner from '@/components/subscription-banner'
+import { normalizeRole } from '@/lib/auth/permissions'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let subStatus: 'trialing' | 'active' | 'past_due' | 'canceled' | 'none' = 'none'
   let trialDaysLeft = 0
+  let userRole = 'owner'
 
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     try {
@@ -17,9 +19,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('company_id')
+        .select('company_id, role')
         .eq('id', user.id)
-        .single() as { data: { company_id: string } | null }
+        .single() as { data: { company_id: string; role: string | null } | null }
+
+      userRole = normalizeRole(profile?.role)
 
       if (profile?.company_id) {
         const { data: sub } = await supabase
@@ -45,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg-0)' }}>
       <SubscriptionBanner status={subStatus} trialDaysLeft={trialDaysLeft} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Sidebar />
+        <Sidebar role={userRole} />
         <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-0)' }}>
           {children}
         </main>

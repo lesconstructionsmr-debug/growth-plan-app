@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, requireCompany, apiError } from '@/lib/api/auth'
+import { requireAuth, requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +43,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
     const { vertical } = await req.json()
 
     if (!vertical || !['construction', 'agence', 'courtier'].includes(vertical)) {

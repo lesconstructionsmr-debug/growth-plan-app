@@ -61,6 +61,16 @@ export default function JobDetailPage() {
   const [tab, setTab] = useState('apercu')
   const [pointages, setPointages] = useState(MOCK_POINTAGES)
   const [projet, setProjet] = useState(MOCK_PROJET)
+  const [isAdmin, setIsAdmin] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(d => setIsAdmin(d.role === 'owner' || d.role === 'admin'))
+      .catch(() => {})
+  }, [])
+
+  const visibleTabs = isAdmin ? TABS : TABS.filter(t => t.id === 'apercu' || t.id === 'pointage')
 
   useEffect(() => {
     if (!id) return
@@ -159,7 +169,7 @@ export default function JobDetailPage() {
 
       {/* Tabs */}
       <div style={{display:'flex',gap:'2px',borderBottom:'0.5px solid var(--line)'}}>
-        {TABS.map(t=>(
+        {visibleTabs.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{
             background:'none',border:'none',cursor:'pointer',padding:'8px 14px',fontSize:'12px',
             color:tab===t.id?'var(--gold-2)':'var(--txt-3)',

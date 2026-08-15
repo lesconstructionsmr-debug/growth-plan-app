@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPlatformAdmin } from '@/lib/platform-admin'
+import { canAccessRoute } from '@/lib/auth/permissions'
 
 const PUBLIC_PATHS = [
   '/login', '/register', '/forgot-password',
@@ -93,6 +94,26 @@ export async function middleware(request: NextRequest) {
     if (!isPlatformAdmin(user.email)) {
       return NextResponse.redirect(new URL('/dashboard?error=admin_forbidden', request.url))
     }
+  }
+
+  // RBAC Phase 2 — employés limités aux chantiers, calendrier et paramètres
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const role = profile?.role ?? 'owner'
+
+  if (!canAccessRoute(role, pathname)) {
+    const dest = new URL('/jobs', request.url)
+    dest.searchParams.set('error', 'access_denied')
+    return NextResponse.redirect(dest)
+  }
+
+  // Employés : /dashboard → /jobs (canAccessRoute ci-dessus couvre déjà ce cas)
+  if (pathname === '/dashboard' && !canAccessRoute(role, '/dashboard')) {
+    return NextResponse.redirect(new URL('/jobs', request.url))
   }
 
   return response

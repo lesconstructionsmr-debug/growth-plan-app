@@ -38,36 +38,43 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isAdmin, setIsAdmin] = useState(true)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  useEffect(() => {
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(d => setIsAdmin(d.role === 'owner' || d.role === 'admin'))
+      .catch(() => {})
+  }, [])
+
   const loadJobs = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('jobs')
-      .select('id, titre, statut, date_debut, date_fin, budget, adresse, clients(nom)')
-      .order('created_at', { ascending: false })
+    const res = await fetch('/api/jobs')
+    const data = res.ok ? await res.json() : []
 
-    setJobs((data ?? []).map((j: any) => ({
+    setJobs((Array.isArray(data) ? data : []).map((j: any) => ({
       id: j.id,
       titre: j.titre,
       client_nom: j.clients?.nom ?? '—',
       statut: (j.statut || 'brouillon') as StatutProjet,
-      ville_chantier: j.adresse ?? null,
+      ville_chantier: j.adresse_chantier ?? j.adresse ?? null,
       date_debut: j.date_debut ?? null,
-      date_fin_prevue: j.date_fin ?? null,
+      date_fin_prevue: j.date_fin_prevue ?? j.date_fin ?? null,
       budget_estime: j.budget ? Number(j.budget) : null,
     })))
     setLoading(false)
-  }, [supabase])
+  }, [])
 
   useEffect(() => { loadJobs() }, [loadJobs])
 
   // ── ÉDITION DIRECTE SUR LA CELLULE ─────────────────────────────
   async function updateInlineField(id: string, field: 'titre' | 'statut' | 'budget' | 'adresse', value: any) {
+    if (!isAdmin) return
     setJobs(prev => prev.map(j => {
       if (j.id !== id) return j
       if (field === 'budget') return { ...j, budget_estime: parseFloat(value) || null }
@@ -114,6 +121,7 @@ export default function JobsPage() {
             Suivi des chantiers et modification directe du titre, budget et statut dans le tableau
           </div>
         </div>
+        {isAdmin && (
         <a
           href="/jobs/nouveau"
           style={{
@@ -124,10 +132,11 @@ export default function JobsPage() {
         >
           <Plus size={15} /> Nouveau chantier
         </a>
+        )}
       </div>
 
       {/* Sélection en masse */}
-      {selectedIds.length > 0 && (
+      {isAdmin && selectedIds.length > 0 && (
         <div style={{
           background: 'var(--ga)', border: '1px solid var(--gold)',
           borderRadius: '10px', padding: '12px 18px',
@@ -185,13 +194,18 @@ export default function JobsPage() {
 
       {/* TABLEAU AVEC ÉDITION DIRECTE SUR CELLULE */}
       <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 160px 140px 120px 60px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '40px 1fr 160px 140px 120px 60px' : '1fr 160px 120px 50px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+          {isAdmin && (
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <button onClick={() => setSelectedIds(allSelected ? [] : filtered.map(j => j.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: allSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
               {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
             </button>
           </div>
-          {['TITRE DE CHANTIERS (ÉDITABLE)', 'CLIENT', 'BUDGET ($ ÉDITABLE)', 'STATUT (ÉDITABLE)', 'ACTIONS'].map((h, i) => (
+          )}
+          {(isAdmin
+            ? ['TITRE DE CHANTIERS (ÉDITABLE)', 'CLIENT', 'BUDGET ($ ÉDITABLE)', 'STATUT (ÉDITABLE)', 'ACTIONS']
+            : ['CHANTIER', 'CLIENT', 'STATUT', '']
+          ).map((h, i) => (
             <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em', textAlign: h.includes('BUDGET') ? 'right' : 'left' }}>{h}</div>
           ))}
         </div>
@@ -215,20 +229,21 @@ export default function JobsPage() {
               <div
                 key={j.id}
                 style={{
-                  display: 'grid', gridTemplateColumns: '40px 1fr 160px 140px 120px 60px',
+                  display: 'grid', gridTemplateColumns: isAdmin ? '40px 1fr 160px 140px 120px 60px' : '1fr 160px 120px 50px',
                   padding: '10px 18px', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
                   alignItems: 'center', background: isSelected ? 'var(--ga)' : 'transparent',
                 }}
               >
-                {/* Checkbox */}
+                {isAdmin && (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <button onClick={() => setSelectedIds(prev => prev.includes(j.id) ? prev.filter(x => x !== j.id) : [...prev, j.id])} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: isSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
                     {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                   </button>
                 </div>
+                )}
 
-                {/* 1. TITRE EN SAISIE DIRECTE */}
                 <div>
+                  {isAdmin ? (
                   <input
                     type="text"
                     defaultValue={j.titre}
@@ -242,14 +257,16 @@ export default function JobsPage() {
                     onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
                     onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
                   />
+                  ) : (
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)' }}>{j.titre}</span>
+                  )}
                 </div>
 
-                {/* 2. CLIENT */}
                 <div style={{ fontSize: '12px', color: 'var(--txt-2)' }}>
                   {j.client_nom}
                 </div>
 
-                {/* 3. BUDGET EN SAISIE DIRECTE */}
+                {isAdmin && (
                 <div style={{ textAlign: 'right' }}>
                   <input
                     type="number"
@@ -267,9 +284,10 @@ export default function JobsPage() {
                     onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
                   />
                 </div>
+                )}
 
-                {/* 4. STATUT EN DROPDOWN DIRECT */}
                 <div>
+                  {isAdmin ? (
                   <select
                     value={j.statut}
                     onChange={e => updateInlineField(j.id, 'statut', e.target.value)}
@@ -287,9 +305,16 @@ export default function JobsPage() {
                       </option>
                     ))}
                   </select>
+                  ) : (
+                  <span style={{
+                    background: `${stCfg.color}18`, color: stCfg.color,
+                    border: `1px solid ${stCfg.color}40`,
+                    borderRadius: '20px', padding: '4px 10px',
+                    fontSize: '10px', fontWeight: 600,
+                  }}>{stCfg.label}</span>
+                  )}
                 </div>
 
-                {/* Actions */}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '4px' }}>
                   <a
                     href={`/jobs/${j.id}`}
@@ -298,6 +323,7 @@ export default function JobsPage() {
                   >
                     <Edit3 size={13} />
                   </a>
+                  {isAdmin && (
                   <button
                     onClick={() => handleDelete(j.id)}
                     title="Supprimer"
@@ -305,6 +331,7 @@ export default function JobsPage() {
                   >
                     <Trash2 size={13} />
                   </button>
+                  )}
                 </div>
               </div>
             )
