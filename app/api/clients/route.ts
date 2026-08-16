@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
 
     const body = await req.json()
     const { nom, email, telephone, adresse, ville, province, code_postal, notes } = body

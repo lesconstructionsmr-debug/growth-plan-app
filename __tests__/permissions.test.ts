@@ -39,4 +39,9 @@ describe('permissions RBAC', () => {
     expect(normalizeRole('administrateur')).toBe('admin')
     expect(normalizeRole('employé')).toBe('collaborateur')
   })
+
+  it('collaborateur exclu du rôle admin (garde API requireCompanyAdmin)', () => {
+    expect(isCompanyAdmin('collaborateur')).toBe(false)
+    expect(isCompanyAdmin('employee')).toBe(false)
+  })
 })

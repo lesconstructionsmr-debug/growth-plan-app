@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +9,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
     const { error } = await supabase
       .from('sous_traitants')
       .delete()
@@ -29,7 +29,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
     const body = await req.json()
 
     const { data, error } = await supabase

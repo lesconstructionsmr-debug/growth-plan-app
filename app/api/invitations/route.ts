@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
+import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
 // GET — liste les membres + invitations de la compagnie
 export async function GET() {
   try {
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
 
     const { data, error } = await supabase
       .from('invitations')

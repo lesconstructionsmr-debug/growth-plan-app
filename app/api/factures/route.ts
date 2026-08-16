@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 import { createFacture } from '@/lib/api/factures'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    await requireCompany()
+    await requireCompanyAdmin()
     const body = await req.json()
 
     const facture = await createFacture({

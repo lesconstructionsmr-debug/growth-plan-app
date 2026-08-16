@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 import {
   appendQuoteMetadata,
   appendSetupFeeLineItem,
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Contactez-nous pour un devis entreprise' }, { status: 400 })
     }
 
-    const { user, companyId } = await requireCompany()
+    const { user, companyId } = await requireCompanyAdmin()
     const quote = computeTierQuote(tier.id)
 
     const promo = promoCode ? PROMO_CODES[promoCode.trim().toUpperCase()] : null

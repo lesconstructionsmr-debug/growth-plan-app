@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/messages — Envoie un message par courriel au client et l'enregistre en base
 export async function POST(req: NextRequest) {
   try {
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
     const { client_id, contenu } = await req.json()
 
     if (!client_id || !contenu?.trim()) {

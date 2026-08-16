@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -71,7 +71,7 @@ export async function GET() {
 // POST /api/reminders — envoyer un rappel manuel
 export async function POST(request: NextRequest) {
   try {
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
 
     const { id, type } = await request.json()
     if (!id || !type) return NextResponse.json({ error: 'id et type requis' }, { status: 400 })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
 import { createNote, deleteNote, getNotesByClient, getNotesByJob } from '@/lib/api/notes'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireCompany()
+    await requireCompanyAdmin()
     const body = await req.json()
     if (!body.contenu?.trim()) {
       return NextResponse.json({ error: 'Contenu requis' }, { status: 400 })
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    await requireCompany()
+    await requireCompanyAdmin()
     const id = new URL(req.url).searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 })
     await deleteNote(id)

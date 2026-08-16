@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export async function POST(_request: NextRequest) {
   try {
@@ -7,7 +7,7 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ error: 'STRIPE_SECRET_KEY manquant' }, { status: 500 })
     }
 
-    const { supabase, companyId } = await requireCompany()
+    const { supabase, companyId } = await requireCompanyAdmin()
 
     const { data: subscription } = await supabase
       .from('subscriptions')

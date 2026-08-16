@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCompany, apiError } from '@/lib/api/auth'
+import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 import { createDevis } from '@/lib/api/devis'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    await requireCompany()
+    await requireCompanyAdmin()
     const body = await req.json()
 
     const devis = await createDevis({
