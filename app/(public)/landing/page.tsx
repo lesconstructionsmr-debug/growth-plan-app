@@ -5,7 +5,6 @@ import Link from 'next/link'
 import {
   TrendingUp,
   DollarSign,
-  Clock,
   ShieldCheck,
   Users,
   CheckCircle2,
@@ -16,22 +15,27 @@ import {
   BarChart3,
   FileText,
   Smartphone,
-  Layers,
-  Star,
-  Building2,
   Wrench,
-  ChevronDown,
-  ChevronRight,
-  Play,
   Send,
   X,
-  PhoneCall,
   Crown,
-  Check,
   Target,
   Calendar,
-  CreditCard
+  CreditCard,
+  FolderOpen,
+  HardHat,
+  UserCog,
+  Loader2,
+  Plug,
 } from 'lucide-react'
+import {
+  SETUP_FEE_CAD,
+  SETUP_FEE_LABEL,
+  PRICING_BASE_MONTHLY_CAD,
+  PRICING_TIERS,
+  TIER_FEATURE_BULLETS,
+  formatPriceCad,
+} from '@/lib/stripe/pricing'
 
 // Icone de Logo 3D Or Plangrowth (Barres + Flèche Ascendante + Courbe G)
 const PlangrowthGoldLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
@@ -74,6 +78,8 @@ export default function LandingPage() {
   // Demo Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [formSubmitted, setFormSubmitted] = useState<boolean>(false)
+  const [formSubmitting, setFormSubmitting] = useState<boolean>(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -81,9 +87,6 @@ export default function LandingPage() {
     phone: '',
     trade: 'Rénovation / Entrepreneur Général',
   })
-
-  // FAQ Accordion State
-  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   // ROI Calculations - Formule réaliste et conservatrice (+5% de taux de signature)
   const newWinRate = Math.min(80, currentWinRate + 5)
@@ -93,9 +96,27 @@ export default function LandingPage() {
   const yearlyGain = monthlyGain * 12
   const hoursSavedPerWeek = Math.round(quotesPerMonth * 0.4 + 2)
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setFormSubmitted(true)
+    setFormSubmitting(true)
+    setFormError(null)
+    try {
+      const res = await fetch('/api/contact/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setFormError(data.error || 'Erreur lors de l\'envoi. Réessayez.')
+        return
+      }
+      setFormSubmitted(true)
+    } catch {
+      setFormError('Erreur réseau. Réessayez.')
+    } finally {
+      setFormSubmitting(false)
+    }
   }
 
   return (
@@ -130,8 +151,9 @@ export default function LandingPage() {
             <a href="#roi-calculator" className="hover:text-amber-400 transition-colors">Calculateur ROI</a>
             <a href="#piliers" className="hover:text-amber-400 transition-colors">Les 3 Piliers</a>
             <a href="#modules" className="hover:text-amber-400 transition-colors">Fonctionnalités</a>
+            <a href="#quebec" className="hover:text-amber-400 transition-colors">Québec</a>
             <a href="#signature" className="hover:text-amber-400 transition-colors">Vision & Scalabilité</a>
-            <a href="#tarifs" className="hover:text-amber-400 transition-colors">Tarifs</a>
+            <Link href="/tarifs" className="hover:text-amber-400 transition-colors">Tarifs</Link>
           </nav>
 
           {/* CTA & ACCÈS ERP */}
@@ -174,8 +196,8 @@ export default function LandingPage() {
         </h1>
 
         <p className="mt-8 text-lg sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal">
-          De la relance automatique du devis sous 24h jusqu'à l'élimination des fuites d'argent sur le terrain. 
-          L'ERP conçu par <span className="text-amber-400 font-semibold">Plangrowth</span> pour structurer les entrepreneurs vers la scalabilité.
+          De la relance automatique du devis sous 24h jusqu&apos;au dossier chantier unifié et à la conformité QC.
+          L&apos;ERP conçu par <span className="text-amber-400 font-semibold">Plangrowth</span> pour structurer les entrepreneurs vers la scalabilité.
         </p>
 
         {/* CTA BUTTONS */}
@@ -334,7 +356,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Opérations</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Documentez les travaux exécutés sur le terrain et gérez la facturation.
+                Dossier chantier unifié : documents, pointages et facturation au même endroit.
               </p>
             </div>
 
@@ -643,6 +665,92 @@ export default function LandingPage() {
                 Listes de contrôle qualité obligatoires avant la fermeture du chantier pour garantir la satisfaction client.
               </p>
             </div>
+
+            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
+              <FolderOpen className="w-8 h-8 text-amber-400 mb-4" />
+              <h4 className="text-lg font-bold text-white">Dossier Chantier Unifié</h4>
+              <p className="text-slate-400 text-sm mt-2">
+                Un chantier, un dossier : devis, documents, pointages et factures centralisés pour chaque projet.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
+              <HardHat className="w-8 h-8 text-amber-400 mb-4" />
+              <h4 className="text-lg font-bold text-white">Conformité Québec (CCQ & Retenue)</h4>
+              <p className="text-slate-400 text-sm mt-2">
+                Suivi CCQ par métier, retenue de garantie 10 % et appels d&apos;offres SEAO intégrés.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
+              <UserCog className="w-8 h-8 text-amber-400 mb-4" />
+              <h4 className="text-lg font-bold text-white">Équipe & Assignations</h4>
+              <p className="text-slate-400 text-sm mt-2">
+                Rôles propriétaire/admin/employé : chaque membre voit uniquement ses chantiers assignés.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
+              <BarChart3 className="w-8 h-8 text-amber-400 mb-4" />
+              <h4 className="text-lg font-bold text-white">Pipeline Ventes Live</h4>
+              <p className="text-slate-400 text-sm mt-2">
+                Suivez vos devis, signatures et conversions en temps réel depuis votre tableau de bord ventes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* DIFFÉRENCIATEURS QUÉBEC */}
+      <section id="quebec" className="py-20 bg-slate-950 border-t border-slate-800 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
+              🍁 Conçu pour le Québec
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
+              Un ERP qui parle construction québécoise
+            </h2>
+            <p className="text-slate-400 mt-4 text-base">
+              CCQ, retenue légale, SEAO et gestion multi-chantiers — sans modules payants à la carte.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all">
+              <FolderOpen className="w-10 h-10 text-amber-400 mb-4" />
+              <h3 className="text-lg font-bold text-white">Un chantier, un dossier</h3>
+              <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+                Documents, pointages terrain, extras et factures liés au même chantier. Fini les fichiers éparpillés entre Excel, courriels et WhatsApp.
+              </p>
+            </div>
+
+            <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all">
+              <HardHat className="w-10 h-10 text-amber-400 mb-4" />
+              <h3 className="text-lg font-bold text-white">Module Conformité QC</h3>
+              <ul className="mt-4 space-y-2 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Temps CCQ par métier (électricien, plombier, charpentier…)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Retenue de garantie 10 % calculée automatiquement</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Suivi des appels d&apos;offres SEAO</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all">
+              <UserCog className="w-10 h-10 text-amber-400 mb-4" />
+              <h3 className="text-lg font-bold text-white">Équipe structurée</h3>
+              <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+                Propriétaire et admins voient tout ; les employés accèdent uniquement aux chantiers qui leur sont assignés. Les sous-traitants du répertoire ne comptent pas comme utilisateurs facturables.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -650,139 +758,110 @@ export default function LandingPage() {
       {/* TARIFICATION TRANSPARENTE */}
       <section id="tarifs" className="py-24 bg-slate-950 border-t border-slate-800 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-10">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              💰 Investissement Rentabilisé Dès Le Premier Devis
+              💰 À partir de {formatPriceCad(PRICING_BASE_MONTHLY_CAD)} $ / mois
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Des tarifs clairs pour chaque niveau d'entreprise.
+              Des tarifs clairs pour chaque niveau d&apos;entreprise.
             </h2>
+            <p className="text-slate-400 mt-4 text-sm">
+              Abonnement annuel · engagement 12 mois · + {SETUP_FEE_CAD} $ frais d&apos;adhésion (API & intégrations)
+            </p>
+            <p className="text-slate-500 mt-2 text-xs">
+              Un utilisateur = personne avec accès à l&apos;app (propriétaire, admin ou employé qui pointe). Les sous-traitants du répertoire ne comptent pas.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-            {/* PLAN PRO */}
-            <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <span className="text-xs font-mono font-bold text-slate-400 uppercase">Pro Solo</span>
-                <h3 className="text-2xl font-bold text-white mt-1">Artisan & Indépendant</h3>
-                <p className="text-slate-400 text-xs mt-2">Pour les entrepreneurs qui gèrent tout eux-mêmes.</p>
-                
-                <div className="mt-6">
-                  <span className="text-4xl font-extrabold text-white font-mono">149 $</span>
-                  <span className="text-slate-400 text-sm"> / mois</span>
-                </div>
-
-                <ul className="mt-8 space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Jusqu'à 2 utilisateurs</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Devis & Factures illimités</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Relances 24h automatisées</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>App mobile terrain</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-full mt-8 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-all"
-              >
-                Essayer 14 jours gratuit
-              </button>
-            </div>
-
-            {/* PLAN BUSINESS (POPULAIRE) */}
-            <div className="p-8 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500 relative flex flex-col justify-between shadow-2xl shadow-amber-500/10">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#F5D061] to-[#D4AF37] text-slate-950 font-black text-xs font-mono uppercase tracking-wider">
-                Le Plus Populaire
-              </div>
-
-              <div>
-                <span className="text-xs font-mono font-bold text-amber-400 uppercase">Croissance Équipe</span>
-                <h3 className="text-2xl font-bold text-white mt-1">Entrepreneur Général</h3>
-                <p className="text-slate-400 text-xs mt-2">Pour les entreprises avec équipes et sous-traitants.</p>
-
-                <div className="mt-6">
-                  <span className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37] font-mono">299 $</span>
-                  <span className="text-slate-400 text-sm"> / mois</span>
-                </div>
-
-                <ul className="mt-8 space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Jusqu'à 10 utilisateurs & sous-traitants</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Tout du plan Pro Solo</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Gestion avancée des sous-traitants</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Module Zéro Reprise & contrôle qualité</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Accompagnement Onboarding Lean (1h)</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-full mt-8 py-3 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all"
-              >
-                Démarrer mon audit & essai
-              </button>
-            </div>
-
-            {/* PLAN ENTERPRISE */}
-            <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <span className="text-xs font-mono font-bold text-slate-400 uppercase">Compagnie & Multi-Chantiers</span>
-                <h3 className="text-2xl font-bold text-white mt-1">Génie Civil & Commercial</h3>
-                <p className="text-slate-400 text-xs mt-2">Pour les grandes structures et réseaux de franchises.</p>
-
-                <div className="mt-6">
-                  <span className="text-4xl font-extrabold text-white font-mono">Sur mesure</span>
-                </div>
-
-                <ul className="mt-8 space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Utilisateurs illimités</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Intégrations sur mesure API & ERP legacy</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Account Manager & Consultant Lean dédié</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-full mt-8 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-all"
-              >
-                Nous contacter
-              </button>
+          <div className="max-w-2xl mx-auto mb-12 p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex gap-3 items-start">
+            <Plug className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-white">+ {SETUP_FEE_CAD} $ frais d&apos;adhésion (unique)</p>
+              <p className="text-xs text-slate-400 mt-1">{SETUP_FEE_LABEL}</p>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
+            {PRICING_TIERS.map(tier => (
+              <div
+                key={tier.id}
+                className={`p-6 rounded-2xl flex flex-col justify-between ${
+                  tier.popular
+                    ? 'bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500 shadow-2xl shadow-amber-500/10 relative'
+                    : 'bg-slate-900/90 border border-slate-800'
+                }`}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#F5D061] to-[#D4AF37] text-slate-950 font-black text-[10px] font-mono uppercase tracking-wider whitespace-nowrap">
+                    Le Plus Populaire
+                  </div>
+                )}
+
+                <div>
+                  <span className={`text-xs font-mono font-bold uppercase ${tier.popular ? 'text-amber-400' : 'text-slate-400'}`}>
+                    {tier.name}
+                  </span>
+                  <h3 className="text-lg font-bold text-white mt-1">{tier.subtitle}</h3>
+
+                  <div className="mt-5">
+                    {tier.contactOnly ? (
+                      <span className="text-2xl font-extrabold text-white font-mono">Sur mesure</span>
+                    ) : (
+                      <>
+                        <span className={`text-3xl font-extrabold font-mono ${tier.popular ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37]' : 'text-white'}`}>
+                          {formatPriceCad(tier.monthlyDisplayCad)} $
+                        </span>
+                        <span className="text-slate-400 text-sm"> / mois</span>
+                        <p className="text-[10px] text-slate-500 mt-2">
+                          {formatPriceCad(tier.annualTotalCad)} $ / an · engagement 12 mois
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  <ul className="mt-6 space-y-2.5 text-xs text-slate-300">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>{tier.usersLabel}</span>
+                    </li>
+                    {TIER_FEATURE_BULLETS.map(item => (
+                      <li key={item} className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {tier.contactOnly ? (
+                  <Link
+                    href="/support"
+                    className="w-full mt-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-all text-center block"
+                  >
+                    Nous contacter
+                  </Link>
+                ) : (
+                  <Link
+                    href="/tarifs"
+                    className={`w-full mt-6 py-3 rounded-xl font-bold text-sm transition-all text-center block ${
+                      tier.popular
+                        ? 'bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black uppercase tracking-wider shadow-lg shadow-amber-500/20'
+                        : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                    }`}
+                  >
+                    Essai gratuit 14 jours
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center mt-10">
+            <Link href="/tarifs" className="text-amber-400 hover:text-amber-300 text-sm font-semibold inline-flex items-center gap-2">
+              Voir tous les détails et codes promo
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </p>
         </div>
       </section>
 
@@ -821,7 +900,8 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link href="/conditions-utilisation" className="hover:text-slate-300">Conditions d'utilisation</Link>
+            <Link href="/tarifs" className="hover:text-slate-300">Tarifs</Link>
+            <Link href="/conditions-utilisation" className="hover:text-slate-300">Conditions d&apos;utilisation</Link>
             <Link href="/politique-confidentialite" className="hover:text-slate-300">Politique de confidentialité</Link>
             <Link href="/support" className="hover:text-slate-300">Support</Link>
           </div>
@@ -833,7 +913,7 @@ export default function LandingPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A0B0E]/80 backdrop-blur-md">
           <div className="relative w-full max-w-lg bg-slate-900 border border-amber-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl">
             <button
-              onClick={() => { setIsModalOpen(false); setFormSubmitted(false); }}
+              onClick={() => { setIsModalOpen(false); setFormSubmitted(false); setFormError(null); }}
               className="absolute top-4 right-4 text-slate-400 hover:text-white"
             >
               <X className="w-6 h-6" />
@@ -916,12 +996,20 @@ export default function LandingPage() {
                     </select>
                   </div>
 
+                  {formError && (
+                    <p className="text-xs text-red-400 text-center">{formError}</p>
+                  )}
+
                   <button
                     type="submit"
-                    className="w-full mt-6 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
+                    disabled={formSubmitting}
+                    className="w-full mt-6 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                   >
-                    <Send className="w-4 h-4 text-slate-950" />
-                    <span>Confirmer ma demande d'Audit ROI</span>
+                    {formSubmitting ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /><span>Envoi en cours…</span></>
+                    ) : (
+                      <><Send className="w-4 h-4 text-slate-950" /><span>Confirmer ma demande d&apos;Audit ROI</span></>
+                    )}
                   </button>
                 </form>
               </>
