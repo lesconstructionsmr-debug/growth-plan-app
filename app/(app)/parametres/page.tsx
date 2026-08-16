@@ -20,10 +20,10 @@ interface OrgProfile {
 const PROVINCES = ['QC','ON','BC','AB','MB','SK','NS','NB','NL','PE','YT','NT','NU']
 
 const DEFAULT: OrgProfile = {
-  nom: 'Construction Nova', nom_legal: 'Nova Structure AI inc.',
-  email: 'info@novastructureai.com', telephone: '(418) 555-0200',
-  site_web: 'https://novastructureai.com',
-  rue: '1200 boul. Lebourgneuf', ville: 'Québec', province: 'QC', code_postal: 'G2K 2G4',
+  nom: '', nom_legal: '',
+  email: '', telephone: '',
+  site_web: '',
+  rue: '', ville: '', province: 'QC', code_postal: '',
   numero_tps: '', numero_tvq: '', numero_rbq: '', numero_neq: '',
   mode_paiement_defaut: 'virement', delai_paiement: 30,
   notes_pied_devis: "Ce devis est valide pour 30 jours. Un acompte de 30% est requis au démarrage des travaux. Les travaux sont exécutés selon les normes du Code du bâtiment du Québec.",
@@ -381,6 +381,7 @@ export default function ParametresPage() {
   const [form, setForm]     = useState<OrgProfile>(DEFAULT)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved]   = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [canManage, setCanManage] = useState(true)
   const logoRef = useRef<HTMLInputElement>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -412,20 +413,26 @@ export default function ParametresPage() {
         supabase.from('companies').select('*').eq('id', profile.company_id).single().then(({ data: co }) => {
           if (!co) return
           if (co.vertical) setVertical(co.vertical === 'courtier' ? 'agence' : co.vertical)
-          setForm(f => ({
-            ...f,
-            nom:         co.name ?? f.nom,
-            email:       co.email ?? f.email,
-            telephone:   co.telephone ?? f.telephone,
-            rue:         co.adresse ?? f.rue,
-            ville:       co.ville ?? f.ville,
-            province:    co.province ?? f.province,
-            code_postal: co.code_postal ?? f.code_postal,
-            numero_tps:  co.tps_no ?? f.numero_tps,
-            numero_tvq:  co.tvq_no ?? f.numero_tvq,
-            numero_rbq:  co.rbq_no ?? f.numero_rbq,
-            numero_neq:  co.neq ?? f.numero_neq,
-          }))
+          setForm({
+            nom:         co.name ?? '',
+            nom_legal:   co.nom_legal ?? '',
+            email:       co.email ?? '',
+            telephone:   co.telephone ?? '',
+            site_web:    co.site_web ?? '',
+            rue:         co.adresse ?? '',
+            ville:       co.ville ?? '',
+            province:    co.province ?? 'QC',
+            code_postal: co.code_postal ?? '',
+            numero_tps:  co.tps_no ?? '',
+            numero_tvq:  co.tvq_no ?? '',
+            numero_rbq:  co.rbq_no ?? '',
+            numero_neq:  co.neq ?? '',
+            mode_paiement_defaut: (co.mode_paiement_defaut as OrgProfile['mode_paiement_defaut']) ?? 'virement',
+            delai_paiement: (co.delai_paiement as OrgProfile['delai_paiement']) ?? 30,
+            notes_pied_devis: co.notes_pied_devis ?? DEFAULT.notes_pied_devis,
+            notes_pied_facture: co.notes_pied_facture ?? DEFAULT.notes_pied_facture,
+            couleur_accent: co.couleur_accent ?? '#C9A84C',
+          })
         })
       })
     })
@@ -456,24 +463,43 @@ export default function ParametresPage() {
   }
 
   async function save() {
-    setSaving(true)
-    if (companyId) {
-      await supabase.from('companies').update({
-        name:        form.nom,
-        email:       form.email,
-        telephone:   form.telephone,
-        adresse:     form.rue,
-        ville:       form.ville,
-        province:    form.province,
-        code_postal: form.code_postal,
-        tps_no:      form.numero_tps,
-        tvq_no:      form.numero_tvq,
-        rbq_no:      form.numero_rbq,
-        neq:         form.numero_neq,
-        updated_at:  new Date().toISOString(),
-      }).eq('id', companyId)
+    if (!companyId) {
+      setSaveError('Compagnie introuvable — reconnectez-vous.')
+      return
     }
-    setSaving(false); setSaved(true)
+    setSaving(true)
+    setSaveError(null)
+    const { error } = await supabase.from('companies').update({
+      name:        form.nom,
+      nom_legal:   form.nom_legal || null,
+      email:       form.email || null,
+      telephone:   form.telephone || null,
+      site_web:    form.site_web || null,
+      adresse:     form.rue || null,
+      ville:       form.ville || null,
+      province:    form.province,
+      code_postal: form.code_postal || null,
+      tps_no:      form.numero_tps || null,
+      tvq_no:      form.numero_tvq || null,
+      rbq_no:      form.numero_rbq || null,
+      neq:         form.numero_neq || null,
+      mode_paiement_defaut: form.mode_paiement_defaut,
+      delai_paiement: form.delai_paiement,
+      notes_pied_devis: form.notes_pied_devis || null,
+      notes_pied_facture: form.notes_pied_facture || null,
+      couleur_accent: form.couleur_accent,
+      updated_at:  new Date().toISOString(),
+    }).eq('id', companyId)
+
+    setSaving(false)
+    if (error) {
+      console.error('[parametres save]', error)
+      setSaveError(error.message.includes('column')
+        ? 'Migration 0010_company_profile.sql requise dans Supabase — contactez le support.'
+        : `Erreur : ${error.message}`)
+      return
+    }
+    setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
@@ -503,6 +529,12 @@ export default function ParametresPage() {
            : <><Save size={13} /> Enregistrer</>}
         </button>
       </div>
+
+      {saveError && (
+        <div style={{ fontSize: '12px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '8px', padding: '10px 14px' }}>
+          {saveError}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: '16px', alignItems: 'start' }}>
 
