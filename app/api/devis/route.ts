@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
 
     const devis = await createDevis({
       client_id:        body.client_id,
+      job_id:           body.job_id,
       titre:            body.titre,
       numero:           body.numero,
       date_emission:    body.date_emission,

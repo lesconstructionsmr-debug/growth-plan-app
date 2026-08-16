@@ -8,7 +8,7 @@ import {
   FileText, Receipt, BarChart3, Settings,
   HardHat, LogOut, TrendingUp, Wallet, Target, Sparkles, Crown,
   FolderKanban, Landmark, PieChart, Home, Sun, Moon, ArrowLeftRight,
-  Menu, X
+  Menu, X, Shield
 } from 'lucide-react'
 import { useTheme } from './theme-provider'
 import { useLanguage } from './language-provider'
@@ -31,6 +31,7 @@ const NAV_CONSTRUCTION = [
       { href: '/clients',         label: 'Clients',         icon: Users      },
       { href: '/employes',        label: 'Employés',        icon: HardHat    },
       { href: '/sous-traitants',   label: 'Sous-traitants', icon: HardHat    },
+      { href: '/conformite',      label: 'Conformité QC',  icon: Shield     },
     ],
   },
   {

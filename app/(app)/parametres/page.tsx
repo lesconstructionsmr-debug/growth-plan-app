@@ -5,7 +5,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import {
   Settings, Building2, Hash, CreditCard, FileText, Palette,
   Upload, Save, Loader2, CheckCircle2, Shield, Trash2, Download, Mail, Lock,
-  Users, UserPlus, Crown, User as UserIcon, XCircle, Send, Home, ArrowLeftRight, HardHat, Landmark
+  Users, UserPlus, Crown, User as UserIcon, XCircle, Send, Home, ArrowLeftRight, HardHat, Landmark, Check
 } from 'lucide-react'
 
 interface OrgProfile {
@@ -204,6 +204,173 @@ function TeamPanel({ canManage }: { canManage: boolean }) {
         <div style={{ fontSize: '11px', color: 'var(--txt-3)', padding: '12px 14px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px' }}>
           Seuls le propriétaire et les administrateurs peuvent inviter ou gérer l&apos;équipe.
         </div>
+      )}
+    </div>
+  )
+}
+
+interface AssignEmployee {
+  id: string
+  full_name: string | null
+  role: string
+}
+
+interface AssignJob {
+  id: string
+  titre: string
+  statut: string | null
+}
+
+function AssignChantiersPanel({ canManage }: { canManage: boolean }) {
+  const [employees, setEmployees] = useState<AssignEmployee[]>([])
+  const [jobs, setJobs] = useState<AssignJob[]>([])
+  const [assigned, setAssigned] = useState<Set<string>>(new Set())
+  const [selectedEmployee, setSelectedEmployee] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/job-assignments')
+      .then(r => r.json())
+      .then(data => {
+        setEmployees(data.employees ?? [])
+        setJobs(data.jobs ?? [])
+        const keys = new Set<string>(
+          (data.assignments ?? []).map((a: { profile_id: string; job_id: string }) => `${a.profile_id}:${a.job_id}`),
+        )
+        setAssigned(keys)
+        if (data.employees?.length && !selectedEmployee) {
+          setSelectedEmployee(data.employees[0].id)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (employees.length && !selectedEmployee) {
+      setSelectedEmployee(employees[0].id)
+    }
+  }, [employees, selectedEmployee])
+
+  function isAssigned(profileId: string, jobId: string) {
+    return assigned.has(`${profileId}:${jobId}`)
+  }
+
+  async function toggleAssignment(jobId: string) {
+    if (!selectedEmployee || !canManage) return
+    const key = `${selectedEmployee}:${jobId}`
+    const currently = assigned.has(key)
+    setSaving(jobId)
+
+    try {
+      if (currently) {
+        const res = await fetch(`/api/job-assignments?job_id=${jobId}&profile_id=${selectedEmployee}`, { method: 'DELETE' })
+        if (res.ok) {
+          setAssigned(prev => {
+            const next = new Set(prev)
+            next.delete(key)
+            return next
+          })
+        }
+      } else {
+        const res = await fetch('/api/job-assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: jobId, profile_id: selectedEmployee }),
+        })
+        if (res.ok) {
+          setAssigned(prev => new Set(prev).add(key))
+        }
+      }
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const selectedName = employees.find(e => e.id === selectedEmployee)?.full_name ?? 'Employé'
+  const assignedCount = jobs.filter(j => isAssigned(selectedEmployee, j.id)).length
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px', paddingTop: '20px', borderTop: '0.5px solid var(--line)' }}>
+      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Building2 size={14} color="var(--gold)" /> Assignation employés → chantiers
+      </div>
+      <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: 0, lineHeight: 1.5 }}>
+        Les collaborateurs ne voient que les chantiers qui leur sont assignés. Cochez les jobs accessibles à chaque employé.
+      </p>
+
+      {!canManage && (
+        <div style={{ fontSize: '11px', color: 'var(--txt-3)', padding: '12px 14px', background: 'var(--bg-2)', borderRadius: '8px', border: '0.5px solid var(--line)' }}>
+          Consultation seule — seuls le propriétaire et les administrateurs peuvent modifier les assignations.
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ fontSize: '12px', color: 'var(--txt-3)', padding: '16px 0' }}>Chargement des chantiers…</div>
+      ) : employees.length === 0 ? (
+        <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '20px', textAlign: 'center', fontSize: '12px', color: 'var(--txt-3)' }}>
+          Aucun employé actif. Invitez un collaborateur ci-dessus pour commencer les assignations.
+        </div>
+      ) : jobs.length === 0 ? (
+        <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '20px', textAlign: 'center', fontSize: '12px', color: 'var(--txt-3)' }}>
+          Aucun chantier créé. Ajoutez des jobs dans Chantiers pour les assigner.
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-2)' }}>Employé :</label>
+            <select
+              value={selectedEmployee}
+              onChange={e => setSelectedEmployee(e.target.value)}
+              disabled={!canManage}
+              style={{ flex: 1, minWidth: '200px', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '9px 12px', fontSize: '12px', color: 'var(--txt-1)', outline: 'none', cursor: canManage ? 'pointer' : 'default' }}
+            >
+              {employees.map(e => (
+                <option key={e.id} value={e.id}>{e.full_name ?? 'Sans nom'} ({e.role})</option>
+              ))}
+            </select>
+            <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>
+              {assignedCount}/{jobs.length} chantier{jobs.length > 1 ? 's' : ''} assigné{assignedCount > 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {jobs.map(job => {
+              const checked = isAssigned(selectedEmployee, job.id)
+              const busy = saving === job.id
+              return (
+                <label
+                  key={job.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '10px 14px', background: checked ? 'var(--ga)' : 'var(--bg-2)',
+                    border: `0.5px solid ${checked ? 'var(--gold-3)' : 'var(--line)'}`,
+                    borderRadius: '9px', cursor: canManage ? 'pointer' : 'default', opacity: busy ? 0.6 : 1,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={!canManage || busy}
+                    onChange={() => toggleAssignment(job.id)}
+                    style={{ accentColor: 'var(--gold)', width: '16px', height: '16px' }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>{job.titre}</div>
+                    {job.statut && <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '1px' }}>{job.statut}</div>}
+                  </div>
+                  {checked && <Check size={14} color="var(--gold)" />}
+                  {busy && <Loader2 size={14} color="var(--txt-3)" style={{ animation: 'spin 0.8s linear infinite' }} />}
+                </label>
+              )
+            })}
+          </div>
+
+          <div style={{ fontSize: '10px', color: 'var(--txt-3)', lineHeight: 1.5 }}>
+            Assignations pour <strong style={{ color: 'var(--txt-2)' }}>{selectedName}</strong> — les changements sont enregistrés immédiatement.
+          </div>
+        </>
       )}
     </div>
   )
@@ -712,7 +879,10 @@ export default function ParametresPage() {
 
           {/* ── ÉQUIPE ── */}
           {onglet === 'equipe' && (
-            <TeamPanel canManage={canManage} />
+            <>
+              <TeamPanel canManage={canManage} />
+              <AssignChantiersPanel canManage={canManage} />
+            </>
           )}
 
         </div>

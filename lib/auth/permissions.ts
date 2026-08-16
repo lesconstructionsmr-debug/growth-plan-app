@@ -51,6 +51,7 @@ export const ADMIN_ONLY_PREFIXES = [
   '/commissions',
   '/dossiers',
   '/preteurs',
+  '/conformite',
   '/admin',
 ] as const
 

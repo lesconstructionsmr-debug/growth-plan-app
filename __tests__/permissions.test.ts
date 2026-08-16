@@ -20,6 +20,7 @@ describe('permissions RBAC', () => {
     expect(canAccessRoute('collaborateur', '/ventes')).toBe(false)
     expect(canAccessRoute('collaborateur', '/rapports')).toBe(false)
     expect(canAccessRoute('collaborateur', '/devis')).toBe(false)
+    expect(canAccessRoute('collaborateur', '/conformite')).toBe(false)
   })
 
   it('employé autorisé sur chantiers et calendrier', () => {

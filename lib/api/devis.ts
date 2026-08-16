@@ -46,6 +46,7 @@ export async function getDevisByToken(token: string) {
 
 export async function createDevis(payload: {
   client_id: string
+  job_id?: string
   titre: string
   numero?: string
   date_emission: string
@@ -81,6 +82,7 @@ export async function createDevis(payload: {
     .insert({
       company_id: companyId,
       client_id: payload.client_id,
+      job_id: payload.job_id ?? null,
       numero: autoNumero,
       titre: payload.titre,
       date_emission: payload.date_emission,
