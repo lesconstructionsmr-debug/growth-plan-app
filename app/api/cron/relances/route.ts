@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { verifyCronSecret } from '@/lib/api/cron-auth'
+import { checkCronSecret, cronAuthResponse } from '@/lib/api/cron-auth'
 
 export const dynamic = 'force-dynamic'
 
 // GET ou POST /api/cron/relances — Exécution automatique des relances aux 24h
 export async function GET(req: NextRequest) {
-  if (!verifyCronSecret(req)) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
+  const auth = checkCronSecret(req)
+  const denied = cronAuthResponse(auth)
+  if (denied) return denied
   return handleRelancesAuto()
 }
 
 export async function POST(req: NextRequest) {
-  if (!verifyCronSecret(req)) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
+  const auth = checkCronSecret(req)
+  const denied = cronAuthResponse(auth)
+  if (denied) return denied
   return handleRelancesAuto()
 }
 

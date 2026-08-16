@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { verifyCronSecret } from '@/lib/api/cron-auth'
+import { checkCronSecret, cronAuthResponse } from '@/lib/api/cron-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,16 +10,14 @@ export const dynamic = 'force-dynamic'
  * et génère des prédictions dynamiques des coûts des matériaux BTP & Peinture.
  */
 export async function GET(req: NextRequest) {
-  if (!verifyCronSecret(req)) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
+  const denied = cronAuthResponse(checkCronSecret(req))
+  if (denied) return denied
   return syncMarketTrends()
 }
 
 export async function POST(req: NextRequest) {
-  if (!verifyCronSecret(req)) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
+  const denied = cronAuthResponse(checkCronSecret(req))
+  if (denied) return denied
   return syncMarketTrends()
 }
 
