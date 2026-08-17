@@ -16,75 +16,97 @@ function JoinContent() {
   const [password, setPassword] = useState('')
   const [formError, setFormError] = useState('')
 
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null)
+
   useEffect(() => {
     if (!token) { setStatus('invalid'); return }
-    fetch(`/api/join?token=${token}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { setStatus('invalid') }
+    const supabase = createClient()
+    Promise.all([
+      fetch(`/api/join?token=${token}`).then(r => r.json()),
+      supabase.auth.getUser().then(({ data }) => data.user?.email ?? null),
+    ])
+      .then(([data, email]) => {
+        setSessionEmail(email)
+        if (data.error) setStatus('invalid')
         else { setInfo(data); setStatus('valid') }
       })
       .catch(() => setStatus('invalid'))
   }, [token])
 
-  async function accept() {
-    setJoining(true)
-    setFormError('')
+  async function finishJoin(afterSignup = false) {
     const res = await fetch('/api/join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
     })
-    if (res.ok) {
+    if (res.ok || (afterSignup && res.status === 404)) {
       setStatus('accepted')
-      setTimeout(() => router.push('/dashboard'), 2000)
-      return
-    }
-    if (res.status === 401) {
-      if (!password || password.length < 8) {
-        setJoining(false)
-        setFormError('Choisis un mot de passe (8 caractères minimum), ou connecte-toi si tu as déjà un compte.')
-        return
-      }
-      if (!info?.email) {
-        setJoining(false)
-        setFormError('Invitation incomplète.')
-        return
-      }
-      const supabase = createClient()
-      const { data: signed, error: signErr } = await supabase.auth.signUp({
-        email: info.email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      })
-      if (signErr) {
-        setJoining(false)
-        setFormError(signErr.message)
-        return
-      }
-      if (signed.session) {
-        const retry = await fetch('/api/join', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        })
-        if (retry.ok || retry.status === 409 || retry.status === 404) {
-          setStatus('accepted')
-          setTimeout(() => router.push('/dashboard'), 1500)
-          return
-        }
-        const retryData = await retry.json().catch(() => ({}))
-        setJoining(false)
-        setFormError(retryData.error || 'Compte créé. Reconnecte-toi pour rejoindre l’équipe.')
-        return
-      }
-      setJoining(false)
-      setFormError('Compte créé. Confirme le courriel, puis reviens sur ce lien.')
-      return
+      setTimeout(() => router.push('/dashboard'), 1500)
+      return true
     }
     const data = await res.json().catch(() => ({}))
+    setFormError(data.error || 'Impossible de rejoindre l’équipe.')
+    return false
+  }
+
+  async function accept() {
+    setJoining(true)
+    setFormError('')
+    if (!info?.email || !token) {
+      setJoining(false)
+      setFormError('Invitation incomplète.')
+      return
+    }
+
+    const supabase = createClient()
+    const invited = info.email.toLowerCase()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user?.email?.toLowerCase() === invited) {
+      const ok = await finishJoin()
+      if (!ok) setJoining(false)
+      return
+    }
+
+    if (!password || password.length < 8) {
+      setJoining(false)
+      setFormError(
+        user
+          ? `Tu es connecté avec ${user.email}. Entre le mot de passe de ${info.email} pour changer de compte.`
+          : 'Choisis un mot de passe (8 caractères minimum).',
+      )
+      return
+    }
+
+    if (user) await supabase.auth.signOut()
+
+    const { error: inErr } = await supabase.auth.signInWithPassword({
+      email: invited,
+      password,
+    })
+    if (!inErr) {
+      const ok = await finishJoin()
+      if (!ok) setJoining(false)
+      return
+    }
+
+    const { data: signed, error: signErr } = await supabase.auth.signUp({
+      email: invited,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    })
+    if (signErr) {
+      setJoining(false)
+      setFormError(signErr.message)
+      return
+    }
+    if (signed.session) {
+      const ok = await finishJoin(true)
+      if (!ok) setJoining(false)
+      return
+    }
     setJoining(false)
-    setFormError(data.error || 'Erreur lors de l\'acceptation. Veuillez réessayer.')
+    setFormError('Compte créé. Confirme le courriel, puis reviens sur ce lien.')
   }
 
   return (
@@ -122,12 +144,17 @@ function JoinContent() {
             <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--txt-3)' }}>
               {info.email}
             </div>
+            {sessionEmail && sessionEmail.toLowerCase() !== info.email.toLowerCase() && (
+              <div style={{ fontSize: '12px', color: 'var(--txt-2)', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', lineHeight: 1.5 }}>
+                Tu es connecté avec <strong>{sessionEmail}</strong>. L’invitation est pour <strong>{info.email}</strong>. Entre le mot de passe de cette adresse — on change de compte.
+              </div>
+            )}
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Mot de passe (si nouveau compte)"
-              autoComplete="new-password"
+              placeholder={`Mot de passe de ${info.email}`}
+              autoComplete="current-password"
               style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '11px 12px', fontSize: '13px', color: 'var(--txt-1)', marginBottom: '12px', outline: 'none' }}
             />
             {formError && (
