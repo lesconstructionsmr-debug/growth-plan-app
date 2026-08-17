@@ -43,6 +43,11 @@ interface Lead {
   taille_equipe: string | null
   score: number | null
   notes: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_content?: string | null
+  abandoned_at?: string | null
 }
 
 const TASK_STATUT: Record<string, string> = {
@@ -55,6 +60,7 @@ const PRIORITE: Record<string, { label: string; color: string }> = {
   urgente: { label: 'Urgente', color: 'var(--red)' },
 }
 const LEAD_STATUT: Record<string, { label: string; color: string }> = {
+  incomplet: { label: 'Incomplet / Abandon ⚠️', color: 'var(--amber)' },
   nouveau: { label: 'Nouveau', color: 'var(--txt-3)' },
   contacte: { label: 'Contacté', color: 'var(--blue)' },
   qualifie: { label: 'Qualifié', color: 'var(--amber)' },
@@ -630,27 +636,52 @@ export default function ControlCenterPage() {
               {leads.length === 0 ? <Empty text="Aucun lead d'adhésion pour le moment. Utilise le générer d'essai express pour en créer un." pad /> : leads.map(l => {
                 const st = LEAD_STATUT[l.statut] ?? LEAD_STATUT.nouveau
                 return (
-                  <div key={l.id} style={{ padding: '16px 18px', borderBottom: '0.5px solid var(--line)', display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <div key={l.id} style={{
+                    padding: '16px 18px', borderBottom: '0.5px solid var(--line)',
+                    display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap',
+                    background: l.statut === 'incomplet' ? 'rgba(245,158,11,0.03)' : 'transparent'
+                  }}>
                     <div style={{ flex: 1, minWidth: '220px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)' }}>{l.nom}</span>
                         {l.entreprise && <span style={{ fontSize: '12px', color: 'var(--txt-3)' }}>— {l.entreprise}</span>}
+                        {l.statut === 'incomplet' && (
+                          <span style={{
+                            background: 'rgba(245,158,11,0.15)', color: 'var(--amber)',
+                            border: '0.5px solid rgba(245,158,11,0.4)', borderRadius: '6px',
+                            padding: '1px 6px', fontSize: '9px', fontWeight: 800
+                          }}>
+                            ⚠️ ABANDON FORMULAIRE
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '3px' }}>
                         {[l.email, l.telephone].filter(Boolean).join(' · ')}
                       </div>
-                      <div style={{ fontSize: '10px', color: 'var(--txt-2)', marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+
+                      {/* UTM Parameters & Source Badges */}
+                      <div style={{ fontSize: '10px', color: 'var(--txt-2)', marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <span>Besoin: {l.besoin ? BESOIN[l.besoin] || l.besoin : '—'}</span>
                         {l.taille_equipe && <span>Équipe: {l.taille_equipe}</span>}
                         {l.score != null && <span style={{ color: 'var(--gold-2)', fontWeight: 700 }}>Score: {l.score}/100</span>}
-                        {l.source && <span>Source: {l.source}</span>}
+                        {l.source && <span style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', padding: '1px 6px', borderRadius: '4px' }}>Source: {l.source}</span>}
+                        {l.utm_source && (
+                          <span style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue)', border: '0.5px solid rgba(59,130,246,0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                            📱 Ads: {l.utm_source}{l.utm_campaign ? ` (${l.utm_campaign})` : ''}
+                          </span>
+                        )}
+                        {l.abandoned_at && (
+                          <span style={{ color: 'var(--amber)', fontSize: '10px' }}>
+                            · Abandonné le {new Date(l.abandoned_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
                       </div>
                       {l.notes && <div style={{ fontSize: '11px', color: 'var(--txt-2)', marginTop: '4px' }}>{l.notes}</div>}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <select value={l.statut} onChange={e => patchLead(l.id, { statut: e.target.value })}
-                        style={{ ...inp, width: '130px', fontSize: '11px', color: st.color, fontWeight: 700 }}>
+                        style={{ ...inp, width: '150px', fontSize: '11px', color: st.color, fontWeight: 700 }}>
                         {Object.entries(LEAD_STATUT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                       </select>
 

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition, Suspense } from 'react'
+import { useState, useTransition, Suspense, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signUp } from '@/app/actions/auth'
 import { Eye, EyeOff, Loader2, ChevronLeft, Check } from 'lucide-react'
 import Link from 'next/link'
+import { useUtmCapture, sendLeadDraft } from '@/lib/hooks/useUtmCapture'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,16 @@ function StepCompany({ vertical, onNext, onBack }: {
   const selectedVertical = VERTICALS.find(v => v.id === vertical)
   const canContinue = companyName.trim().length > 0
 
+  const handleBlurDraft = () => {
+    if (companyName.trim() || telephone.trim()) {
+      sendLeadDraft({
+        entreprise: companyName,
+        telephone,
+        besoin: vertical === 'construction' ? 'structure_numerique' : 'optimisation',
+      })
+    }
+  }
+
   const placeholder =
     vertical === 'construction' ? 'Construction Dupont Inc.' :
     vertical === 'marketing' ? 'Agence Créative XYZ' :
@@ -94,7 +105,10 @@ function StepCompany({ vertical, onNext, onBack }: {
           placeholder={placeholder}
           style={inputStyle}
           onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
-          onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
+          onBlur={e => {
+            e.target.style.borderColor = 'var(--line-2)'
+            handleBlurDraft()
+          }}
         />
       </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -105,7 +119,10 @@ function StepCompany({ vertical, onNext, onBack }: {
             placeholder="514-555-0100"
             style={inputStyle}
             onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
-            onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
+            onBlur={e => {
+              e.target.style.borderColor = 'var(--line-2)'
+              handleBlurDraft()
+            }}
           />
         </Field>
         <Field label="Ville">
@@ -144,7 +161,10 @@ function StepCompany({ vertical, onNext, onBack }: {
 
       <NavButtons
         onBack={onBack}
-        onNext={() => onNext({ companyName, telephone, ville })}
+        onNext={() => {
+          handleBlurDraft()
+          onNext({ companyName, telephone, ville })
+        }}
         canNext={canContinue}
         nextLabel="Continuer"
       />
@@ -174,6 +194,18 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
   const teamLabel = TEAM_SIZES.find(t => t.id === teamSize)?.label ?? '—'
   const verticalLabel = VERTICALS.find(v => v.id === vertical)?.label ?? '—'
 
+  const handleAccountDraft = () => {
+    if (email.trim() || prenom.trim() || nom.trim()) {
+      sendLeadDraft({
+        email,
+        nom: `${prenom} ${nom}`.trim(),
+        entreprise: companyData.companyName,
+        telephone: companyData.telephone,
+        taille_equipe: teamSize === 'solo' ? 'solo' : teamSize === 'small' ? '2-5' : teamSize === 'medium' ? '6-15' : '16+',
+      })
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -184,7 +216,10 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
             placeholder="Jean"
             style={inputStyle}
             onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
-            onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
+            onBlur={e => {
+              e.target.style.borderColor = 'var(--line-2)'
+              handleAccountDraft()
+            }}
           />
         </Field>
         <Field label="Nom *">
@@ -194,7 +229,10 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
             placeholder="Dupont"
             style={inputStyle}
             onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
-            onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
+            onBlur={e => {
+              e.target.style.borderColor = 'var(--line-2)'
+              handleAccountDraft()
+            }}
           />
         </Field>
       </div>
@@ -205,7 +243,10 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
           placeholder="jean@entreprise.com"
           style={inputStyle}
           onFocus={e => e.target.style.borderColor = 'var(--gold-3)'}
-          onBlur={e => e.target.style.borderColor = 'var(--line-2)'}
+          onBlur={e => {
+            e.target.style.borderColor = 'var(--line-2)'
+            handleAccountDraft()
+          }}
         />
       </Field>
       <Field label="Mot de passe *">

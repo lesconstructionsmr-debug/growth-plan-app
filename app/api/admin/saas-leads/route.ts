@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
-const STATUTS = new Set(['nouveau', 'contacte', 'qualifie', 'essai', 'client', 'perdu'])
+const STATUTS = new Set(['incomplet', 'nouveau', 'contacte', 'qualifie', 'essai', 'client', 'perdu'])
 const BESOINS = new Set(['structure_numerique', 'optimisation', 'les_deux', 'autre'])
 
 function scoreFromAnswers(besoin?: string, taille?: string): number {
@@ -35,7 +35,7 @@ export async function GET() {
   }
 }
 
-/** input { nom, email?, telephone?, entreprise?, source?, besoin?, taille_equipe?, notes? } */
+/** input { nom, email?, telephone?, entreprise?, source?, besoin?, taille_equipe?, notes?, utm_source?, utm_medium?, utm_campaign?, utm_content? } */
 export async function POST(req: NextRequest) {
   try {
     await requirePlatformAdmin()
@@ -61,6 +61,11 @@ export async function POST(req: NextRequest) {
         taille_equipe: taille,
         score,
         notes: body.notes?.trim() || null,
+        utm_source: body.utm_source?.trim() || null,
+        utm_medium: body.utm_medium?.trim() || null,
+        utm_campaign: body.utm_campaign?.trim() || null,
+        utm_content: body.utm_content?.trim() || null,
+        abandoned_at: body.statut === 'incomplet' ? new Date().toISOString() : null,
       })
       .select()
       .single()
@@ -79,12 +84,13 @@ export async function PATCH(req: NextRequest) {
     if (!body.id) return NextResponse.json({ error: 'ID requis' }, { status: 400 })
 
     const updates: Record<string, unknown> = {}
-    for (const key of ['nom', 'email', 'telephone', 'entreprise', 'source', 'notes', 'taille_equipe'] as const) {
+    for (const key of ['nom', 'email', 'telephone', 'entreprise', 'source', 'notes', 'taille_equipe', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content'] as const) {
       if (body[key] !== undefined) updates[key] = body[key] === '' ? null : body[key]
     }
     if (body.statut !== undefined) {
       if (!STATUTS.has(body.statut)) return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })
       updates.statut = body.statut
+      if (body.statut === 'incomplet') updates.abandoned_at = new Date().toISOString()
     }
     if (body.besoin !== undefined) {
       updates.besoin = BESOINS.has(body.besoin) ? body.besoin : null
