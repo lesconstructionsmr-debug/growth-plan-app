@@ -83,18 +83,18 @@ export default function DepensesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    let depQuery = await supabase
+    const withSource = await supabase
       .from('depenses')
       .select('id, description, montant, categorie, date_depense, job_id, source, jobs(titre)')
       .order('date_depense', { ascending: false })
-    if (depQuery.error) {
-      depQuery = await supabase
-        .from('depenses')
-        .select('id, description, montant, categorie, date_depense, job_id, jobs(titre)')
-        .order('date_depense', { ascending: false })
-    }
+    const depRows = withSource.error
+      ? (await supabase
+          .from('depenses')
+          .select('id, description, montant, categorie, date_depense, job_id, jobs(titre)')
+          .order('date_depense', { ascending: false })).data
+      : withSource.data
     const { data: jobsData } = await supabase.from('jobs').select('id, titre').order('titre')
-    const loadedDepenses = (depQuery.data as unknown as Depense[]) || []
+    const loadedDepenses = (depRows as unknown as Depense[]) || []
     setDepenses(loadedDepenses)
     setJobs(jobsData || [])
 
