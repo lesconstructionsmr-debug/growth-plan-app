@@ -10,6 +10,7 @@ import {
 import {
   SETUP_FEE_CAD,
   SETUP_FEE_LABEL,
+  SETUP_FEE_INCLUDES,
   PRICING_BASE_MONTHLY_CAD,
   PRICING_TIERS,
   TIER_FEATURE_BULLETS,
@@ -20,7 +21,7 @@ import {
 const FAQ = [
   {
     q: 'Est-ce que je peux essayer gratuitement ?',
-    a: '14 jours d\'essai gratuit sur l\'abonnement. Les frais d\'adhésion (500$) pour la configuration des intégrations sont facturés une seule fois à l\'inscription.',
+    a: '14 jours d\'essai gratuit sur l\'abonnement. Les 500 $ d\'adhésion (site, Google Ads, Meta/Instagram et QuickBooks) sont facturés une seule fois à l\'inscription.',
   },
   {
     q: 'Comment choisir mon forfait ?',
@@ -35,8 +36,12 @@ const FAQ = [
     a: 'Les forfaits sont sur abonnement annuel avec engagement de 12 mois. Contactez le support pour toute question de renouvellement ou changement de palier.',
   },
   {
+    q: 'Est-ce que Google Ads, Facebook et Instagram sont branchés ?',
+    a: 'Oui, inclus dans les 500 $ d\'adhésion. Plan Growth branche vos formulaires de pub (Google Lead Form et Lead Ads Meta/Instagram) au CRM. Vous gardez vos campagnes ; on fait arriver les demandes dans Leads. Instagram passe par le même compte Meta que Facebook.',
+  },
+  {
     q: 'Y a-t-il des frais d\'installation ?',
-    a: `Oui — frais d'adhésion unique de ${SETUP_FEE_CAD}$ pour la configuration API, QuickBooks et vos intégrations tierces.`,
+    a: `Oui — ${SETUP_FEE_CAD} $ une seule fois. Plan Growth branche votre site, Google Ads et Meta/Instagram (Lead Ads) au CRM, plus QuickBooks si vous l'utilisez. Vous ne collez aucun code.`,
   },
 ]
 
@@ -121,7 +126,7 @@ export default function TarifsPage() {
           Des tarifs clairs pour chaque niveau d&apos;entreprise
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--txt-3)', maxWidth: '560px', margin: '0 auto 16px', lineHeight: 1.6 }}>
-          Abonnement annuel · engagement de 12 mois · + {SETUP_FEE_CAD} $ frais d&apos;adhésion (API & intégrations)
+          Abonnement annuel · engagement de 12 mois · + {SETUP_FEE_CAD} $ d&apos;adhésion (site, Google Ads, Meta/Instagram)
         </p>
         <p style={{ fontSize: '13px', color: 'var(--txt-3)', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
           Un utilisateur = personne avec accès à l&apos;app (propriétaire ou employé qui pointe). Les sous-traitants du répertoire ne comptent pas.
@@ -253,10 +258,15 @@ export default function TarifsPage() {
         }}>
           <Plug size={16} color="var(--gold)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '6px' }}>
               + {SETUP_FEE_CAD} $ frais d&apos;adhésion (unique)
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--txt-3)', lineHeight: 1.5 }}>{SETUP_FEE_LABEL}</div>
+            <div style={{ fontSize: '12px', color: 'var(--txt-3)', lineHeight: 1.5, marginBottom: '10px' }}>{SETUP_FEE_LABEL}</div>
+            <ul style={{ margin: 0, padding: '0 0 0 18px', fontSize: '12px', color: 'var(--txt-2)', lineHeight: 1.7 }}>
+              {SETUP_FEE_INCLUDES.map(item => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </div>
         </div>
 
@@ -313,6 +323,7 @@ export default function TarifsPage() {
             { titre: 'Rappels automatiques', desc: 'Relances devis et factures sans effort.', icon: Bell },
             { titre: 'Chat intégré', desc: 'Échanges clients centralisés dans l\'ERP.', icon: MessageSquare },
             { titre: 'IA Social Media', desc: 'Contenu Instagram, LinkedIn et TikTok.', icon: Sparkles },
+            { titre: 'Pubs Google, Meta & Instagram', desc: 'Inclus dans l\'adhésion : on branche vos formulaires pub au CRM. Instagram = Meta.', icon: Plug },
             { titre: 'Pipeline de leads', desc: 'Du prospect à la signature.', icon: BarChart3 },
           ].map(f => {
             const Icon = f.icon

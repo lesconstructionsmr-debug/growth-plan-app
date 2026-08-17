@@ -72,8 +72,8 @@ const CATALOG = [
   },
   {
     envKey: 'STRIPE_PRICE_SETUP',
-    productName: "Frais d'adhésion — Configuration intégrations",
-    description: 'API, QuickBooks, connexions tierces (unique)',
+    productName: "Frais d'adhésion — site, Google Ads, Meta/Instagram",
+    description: 'Branchement site web, Google Ads et Lead Ads Meta/Instagram au CRM (unique)',
     unitAmount: 50000,
     oneTime: true,
   },

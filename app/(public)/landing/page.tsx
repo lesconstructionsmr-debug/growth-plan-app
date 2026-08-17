@@ -27,10 +27,12 @@ import {
   UserCog,
   Loader2,
   Plug,
+  Megaphone,
 } from 'lucide-react'
 import {
   SETUP_FEE_CAD,
   SETUP_FEE_LABEL,
+  SETUP_FEE_INCLUDES,
   PRICING_BASE_MONTHLY_CAD,
   PRICING_TIERS,
   TIER_FEATURE_BULLETS,
@@ -152,6 +154,7 @@ export default function LandingPage() {
             <a href="#piliers" className="hover:text-amber-400 transition-colors">Les 3 Piliers</a>
             <a href="#modules" className="hover:text-amber-400 transition-colors">Fonctionnalités</a>
             <a href="#quebec" className="hover:text-amber-400 transition-colors">Québec</a>
+            <a href="#acquisition" className="hover:text-amber-400 transition-colors">Pubs → CRM</a>
             <a href="#signature" className="hover:text-amber-400 transition-colors">Vision & Scalabilité</a>
             <Link href="/tarifs" className="hover:text-amber-400 transition-colors">Tarifs</Link>
           </nav>
@@ -226,6 +229,10 @@ export default function LandingPage() {
 
         {/* TRUST BADGES */}
         <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-8 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-amber-400" />
+            <span>Site, Google Ads &amp; Meta branchés au CRM</span>
+          </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-amber-400" />
             <span>Relances Automatiques 24h</span>
@@ -312,7 +319,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">CRM &amp; Leads</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Centralisez vos requêtes entrantes et intégrez automatiquement vos prospects publicitaires.
+                Site, Google Ads et Meta/Instagram : une demande, un prospect dans le CRM.
               </p>
             </div>
 
@@ -697,6 +704,14 @@ export default function LandingPage() {
                 Suivez vos devis, signatures et conversions en temps réel depuis votre tableau de bord ventes.
               </p>
             </div>
+
+            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
+              <Megaphone className="w-8 h-8 text-amber-400 mb-4" />
+              <h4 className="text-lg font-bold text-white">Pubs Google, Meta &amp; Instagram</h4>
+              <p className="text-slate-400 text-sm mt-2">
+                Inclus dans l&apos;adhésion : on branche vos formulaires pub au CRM. Vous ne collez rien. Instagram = Meta.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -755,6 +770,69 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ADHÉSION : SITE + PUBS → CRM */}
+      <section id="acquisition" className="py-24 bg-slate-900/30 border-t border-slate-800 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
+              Inclus dans les {SETUP_FEE_CAD} $ d&apos;adhésion
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
+              On branche vos demandes au CRM. Vous ne collez rien.
+            </h2>
+            <p className="text-slate-400 mt-4 text-base leading-relaxed">
+              Site web, Google Ads, Facebook et Instagram : quand quelqu&apos;un demande une soumission, ça tombe dans Leads.
+              Instagram passe par Meta — c&apos;est le même compte.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <div className="p-8 rounded-2xl bg-slate-950 border border-amber-500/30">
+              <Plug className="w-10 h-10 text-amber-400 mb-4" />
+              <h3 className="text-lg font-bold text-white">Votre site</h3>
+              <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+                Le formulaire Contact de votre site envoie les demandes dans Leads. Pas de webmestre ? On le fait pour vous.
+              </p>
+            </div>
+            <div className="p-8 rounded-2xl bg-slate-950 border border-amber-500/30">
+              <Target className="w-10 h-10 text-amber-400 mb-4" />
+              <h3 className="text-lg font-bold text-white">Google Ads</h3>
+              <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+                Les formulaires de vos pubs Google (Lead Form) créent un prospect dans le même CRM. Vous continuez à gérer vos campagnes.
+              </p>
+            </div>
+            <div className="p-8 rounded-2xl bg-slate-950 border border-amber-500/30">
+              <Megaphone className="w-10 h-10 text-amber-400 mb-4" />
+              <h3 className="text-lg font-bold text-white">Meta &amp; Instagram</h3>
+              <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+                Lead Ads Facebook et Instagram : la personne remplit le formulaire dans la pub, ça arrive dans Leads. Un seul branchement Meta.
+              </p>
+            </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto p-6 sm:p-8 rounded-2xl bg-slate-950 border border-slate-800">
+            <p className="text-sm font-semibold text-white mb-4">Comment ça se passe après l&apos;inscription</p>
+            <ol className="space-y-3 text-sm text-slate-300">
+              <li className="flex gap-3">
+                <span className="text-amber-400 font-mono font-bold shrink-0">1.</span>
+                Vous nous donnez l&apos;adresse du site et, si vous en avez, vos comptes Google Ads et Meta.
+              </li>
+              <li className="flex gap-3">
+                <span className="text-amber-400 font-mono font-bold shrink-0">2.</span>
+                Plan Growth branche les formulaires. Vous n&apos;avez rien à coller.
+              </li>
+              <li className="flex gap-3">
+                <span className="text-amber-400 font-mono font-bold shrink-0">3.</span>
+                Les demandes arrivent dans Leads. L&apos;entonnoir (prospect → devis → vente) se remplit tout seul.
+              </li>
+            </ol>
+            <p className="text-xs text-slate-500 mt-5">
+              Vous gardez vos campagnes. On ne gère pas votre budget pub — on fait arriver les demandes dans Plan Growth.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* TARIFICATION TRANSPARENTE */}
       <section id="tarifs" className="py-24 bg-slate-950 border-t border-slate-800 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -766,19 +844,29 @@ export default function LandingPage() {
               Des tarifs clairs pour chaque niveau d&apos;entreprise.
             </h2>
             <p className="text-slate-400 mt-4 text-sm">
-              Abonnement annuel · engagement 12 mois · + {SETUP_FEE_CAD} $ frais d&apos;adhésion (API & intégrations)
+              Abonnement annuel · engagement 12 mois · + {SETUP_FEE_CAD} $ d&apos;adhésion (site, Google Ads, Meta/Instagram)
             </p>
             <p className="text-slate-500 mt-2 text-xs">
               Un utilisateur = personne avec accès à l&apos;app (propriétaire, admin ou employé qui pointe). Les sous-traitants du répertoire ne comptent pas.
             </p>
           </div>
 
-          <div className="max-w-2xl mx-auto mb-12 p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex gap-3 items-start">
-            <Plug className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-white">+ {SETUP_FEE_CAD} $ frais d&apos;adhésion (unique)</p>
-              <p className="text-xs text-slate-400 mt-1">{SETUP_FEE_LABEL}</p>
+          <div className="max-w-2xl mx-auto mb-12 p-5 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div className="flex gap-3 items-start mb-4">
+              <Plug className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-white">+ {SETUP_FEE_CAD} $ frais d&apos;adhésion (unique)</p>
+                <p className="text-xs text-slate-400 mt-1">{SETUP_FEE_LABEL}</p>
+              </div>
             </div>
+            <ul className="space-y-2 text-xs text-slate-300 pl-8">
+              {SETUP_FEE_INCLUDES.map(item => (
+                <li key={item} className="flex items-start gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">

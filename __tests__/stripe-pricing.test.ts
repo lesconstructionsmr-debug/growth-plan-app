@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   SETUP_FEE_CAD,
+  SETUP_FEE_LABEL,
+  SETUP_FEE_INCLUDES,
   PRICING_TIERS,
   PRICING_BASE_MONTHLY_CAD,
   appendSetupFeeLineItem,
@@ -43,6 +45,12 @@ describe('stripe setup fee', () => {
 
   it('expose 500$ CAD pour les frais d\'adhésion', () => {
     expect(SETUP_FEE_CAD).toBe(500)
+  })
+
+  it('décrit l\'adhésion comme le branchement site + Google + Meta', () => {
+    expect(SETUP_FEE_LABEL).toMatch(/Google Ads/i)
+    expect(SETUP_FEE_LABEL).toMatch(/Meta/i)
+    expect(SETUP_FEE_INCLUDES.length).toBeGreaterThanOrEqual(3)
   })
 
   it('utilise STRIPE_PRICE_SETUP si défini', () => {

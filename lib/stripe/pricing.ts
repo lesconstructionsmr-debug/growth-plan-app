@@ -1,8 +1,16 @@
-/** Frais unique d'adhésion — configuration API, QuickBooks, intégrations tierces. */
+/** Frais unique d'adhésion — Plan Growth branche le site et les pubs au CRM. */
 export const SETUP_FEE_CAD = 500
 
 export const SETUP_FEE_LABEL =
-  "Frais d'adhésion — configuration API & intégrations (QuickBooks, etc.)"
+  "Frais d'adhésion — on branche votre site, Google Ads et Meta/Instagram au CRM"
+
+/** Ce que l'entrepreneur reçoit pour les 500 $ — langage métier, pas technique. */
+export const SETUP_FEE_INCLUDES = [
+  'Le formulaire Contact de votre site envoie les demandes dans Leads & CRM',
+  'Les formulaires Google Ads tombent dans le même CRM',
+  'Les Lead Ads Facebook et Instagram (Meta) aussi — Instagram = Meta',
+  'QuickBooks, si vous l\'utilisez déjà',
+] as const
 
 export type PricingTierId = 'autonome' | 'equipe' | 'croissance' | 'entreprise'
 

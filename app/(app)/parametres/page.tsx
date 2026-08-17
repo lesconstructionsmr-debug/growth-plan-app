@@ -6,9 +6,10 @@ import {
   Settings, Building2, Hash, CreditCard, FileText, Palette,
   Upload, Save, Loader2, CheckCircle2, Shield, Trash2, Download, Mail, Lock,
   Users, UserPlus, Crown, User as UserIcon, XCircle, Send, Home, HardHat, Landmark, Check,
-  Plug,
+  Plug, Megaphone,
 } from 'lucide-react'
 import WebCrmPanel from './web-crm-panel'
+import AdsCrmPanel from './ads-crm-panel'
 
 interface OrgProfile {
   nom: string; nom_legal: string; email: string; telephone: string; site_web: string
@@ -36,6 +37,7 @@ const DEFAULT: OrgProfile = {
 const ONGLETS = [
   { id: 'organisation',    label: 'Organisation',    icon: Building2 },
   { id: 'site-crm',        label: 'Site web → CRM',  icon: Plug      },
+  { id: 'ads-crm',         label: 'Pubs → CRM',      icon: Megaphone },
   { id: 'secteur',         label: 'Secteur & Mode',  icon: Home      },
   { id: 'fiscal',          label: 'Fiscal & RBQ',    icon: Hash      },
   { id: 'facturation',     label: 'Facturation',     icon: CreditCard},
@@ -921,6 +923,7 @@ export default function ParametresPage() {
           )}
 
           {onglet === 'site-crm' && <WebCrmPanel canManage={canManage} />}
+          {onglet === 'ads-crm' && <AdsCrmPanel canManage={canManage} />}
 
         </div>
       </div>

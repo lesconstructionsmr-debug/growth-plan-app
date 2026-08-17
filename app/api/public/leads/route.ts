@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { parseJsonLead, type IngestFields } from '@/lib/leads/parse-ingest'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,35 +19,35 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS })
 }
 
-async function readFields(req: NextRequest): Promise<Record<string, string>> {
+async function readFields(req: NextRequest): Promise<IngestFields> {
   const urlToken = req.nextUrl.searchParams.get('token') || ''
   const contentType = req.headers.get('content-type') || ''
+  const isForm =
+    contentType.includes('application/x-www-form-urlencoded') ||
+    contentType.includes('multipart/form-data')
 
-  if (contentType.includes('application/json')) {
-    const body = await req.json().catch(() => ({})) as Record<string, unknown>
-    return {
-      token: String(body.token ?? urlToken),
-      nom: String(body.nom ?? body.name ?? ''),
-      email: String(body.email ?? ''),
-      telephone: String(body.telephone ?? body.phone ?? ''),
-      source: String(body.source ?? 'Formulaire site web'),
-      notes: String(body.notes ?? ''),
+  if (!isForm) {
+    const body = await req.json().catch(() => null)
+    if (body && typeof body === 'object') {
+      return parseJsonLead(body as Record<string, unknown>, urlToken)
     }
   }
 
   const form = await req.formData().catch(() => null)
   if (form) {
     return {
-      token: String(form.get('token') ?? urlToken),
-      nom: String(form.get('nom') ?? form.get('name') ?? ''),
-      email: String(form.get('email') ?? ''),
-      telephone: String(form.get('telephone') ?? form.get('phone') ?? ''),
-      source: String(form.get('source') ?? 'Formulaire site web'),
-      notes: String(form.get('notes') ?? ''),
+      token: String(form.get('token') ?? urlToken).trim(),
+      nom: String(form.get('nom') ?? form.get('name') ?? '').trim(),
+      email: String(form.get('email') ?? '').trim(),
+      telephone: String(form.get('telephone') ?? form.get('phone') ?? '').trim(),
+      source: String(form.get('source') ?? 'Formulaire site web').trim() || 'Formulaire site web',
+      notes: String(form.get('notes') ?? '').trim(),
+      googleKey: '',
+      isGoogle: false,
     }
   }
 
-  return { token: urlToken, nom: '', email: '', telephone: '', source: 'Formulaire site web', notes: '' }
+  return parseJsonLead({}, urlToken)
 }
 
 /** POST /api/public/leads — Capture publique depuis le site du client (jeton par compagnie). */
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     const nom = fields.nom.trim()
     const email = fields.email.trim()
     const telephone = fields.telephone.trim()
-    const source = fields.source.trim() || 'Formulaire site web'
+    const source = fields.source.trim() || (fields.isGoogle ? 'Google Ads' : 'Formulaire site web')
     const notes = fields.notes.trim()
 
     if (!token) {
@@ -73,12 +74,16 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient()
     const { data: company, error: companyError } = await admin
       .from('companies')
-      .select('id, name')
+      .select('id, name, leads_ingest_token')
       .eq('leads_ingest_token', token)
       .maybeSingle()
 
     if (companyError || !company) {
       return json({ error: 'Jeton invalide', stored: false }, 401)
+    }
+
+    if (fields.googleKey && fields.googleKey !== company.leads_ingest_token) {
+      return json({ error: 'Clé Google Ads invalide', stored: false }, 401)
     }
 
     const { data: lead, error } = await admin
