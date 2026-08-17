@@ -35,6 +35,7 @@ const DEFAULT: OrgProfile = {
 
 const ONGLETS = [
   { id: 'organisation',    label: 'Organisation',    icon: Building2 },
+  { id: 'site-crm',        label: 'Site web → CRM',  icon: Plug      },
   { id: 'secteur',         label: 'Secteur & Mode',  icon: Home      },
   { id: 'fiscal',          label: 'Fiscal & RBQ',    icon: Hash      },
   { id: 'facturation',     label: 'Facturation',     icon: CreditCard},
@@ -42,7 +43,6 @@ const ONGLETS = [
   { id: 'apparence',       label: 'Apparence',       icon: Palette   },
   { id: 'confidentialite', label: 'Confidentialité', icon: Shield    },
   { id: 'equipe',          label: 'Équipe',           icon: Users     },
-  { id: 'site-crm',        label: 'Site web → CRM',  icon: Plug      },
 ]
 
 const inp: React.CSSProperties = {
@@ -542,7 +542,7 @@ export default function ParametresPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: '16px', alignItems: 'start' }}>
 
         {/* Sidebar */}
-        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'auto', maxHeight: 'calc(100vh - 140px)' }}>
           {ONGLETS.filter(o => canManage || o.id === 'organisation').map(o => {
             const Icon = o.icon; const active = onglet === o.id
             return (
