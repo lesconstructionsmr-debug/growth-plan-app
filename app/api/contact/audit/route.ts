@@ -3,6 +3,31 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
+const ALLOWED_ORIGINS = [
+  'https://growth-plan.ca',
+  'https://www.growth-plan.ca',
+  'https://app.growth-plan.ca',
+]
+
+function corsHeaders(req: NextRequest) {
+  const origin = req.headers.get('origin') || ''
+  const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
+  }
+}
+
+function json(req: NextRequest, body: object, status: number) {
+  return NextResponse.json(body, { status, headers: corsHeaders(req) })
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) })
+}
+
 /** POST /api/contact/audit — Demande d'audit ROI depuis la landing page */
 export async function POST(req: NextRequest) {
   try {
@@ -22,27 +47,21 @@ export async function POST(req: NextRequest) {
     const secteur = trade?.trim() || 'Non précisé'
 
     if (!nom || !entreprise) {
-      return NextResponse.json({ error: 'Nom et entreprise requis', stored: false }, { status: 400 })
+      return json(req, { error: 'Nom et entreprise requis', stored: false }, 400)
     }
     if (!emailTrim && !tel) {
-      return NextResponse.json({ error: 'Email ou téléphone requis', stored: false }, { status: 400 })
+      return json(req, { error: 'Email ou téléphone requis', stored: false }, 400)
     }
 
     const companyId = process.env.LANDING_LEADS_COMPANY_ID?.trim()
     if (!companyId) {
       console.error('[Contact Audit] LANDING_LEADS_COMPANY_ID manquant')
-      return NextResponse.json(
-        { error: 'LANDING_LEADS_COMPANY_ID non configuré sur Netlify', stored: false },
-        { status: 503 },
-      )
+      return json(req, { error: 'LANDING_LEADS_COMPANY_ID non configuré sur Netlify', stored: false }, 503)
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
       console.error('[Contact Audit] SUPABASE_SERVICE_ROLE_KEY manquant')
-      return NextResponse.json(
-        { error: 'SUPABASE_SERVICE_ROLE_KEY non configuré sur Netlify', stored: false },
-        { status: 503 },
-      )
+      return json(req, { error: 'SUPABASE_SERVICE_ROLE_KEY non configuré sur Netlify', stored: false }, 503)
     }
 
     const notes = [
@@ -64,16 +83,13 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('[Contact Audit] Erreur Supabase:', error)
-      return NextResponse.json(
-        { error: `Enregistrement échoué: ${error.message}`, stored: false },
-        { status: 500 },
-      )
+      return json(req, { error: `Enregistrement échoué: ${error.message}`, stored: false }, 500)
     }
 
-    return NextResponse.json({ success: true, stored: true, lead_id: data.id })
+    return json(req, { success: true, stored: true, lead_id: data.id }, 200)
   } catch (err) {
     console.error('[Contact Audit]', err)
     const message = err instanceof Error ? err.message : 'Erreur serveur'
-    return NextResponse.json({ error: message, stored: false }, { status: 500 })
+    return json(req, { error: message, stored: false }, 500)
   }
 }

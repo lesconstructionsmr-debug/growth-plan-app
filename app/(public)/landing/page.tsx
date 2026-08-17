@@ -101,7 +101,7 @@ export default function LandingPage() {
     setFormSubmitting(true)
     setFormError(null)
     try {
-      const res = await fetch('/api/contact/audit', {
+      const res = await fetch('https://app.growth-plan.ca/api/contact/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
