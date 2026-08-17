@@ -29,27 +29,39 @@ export async function POST(req: NextRequest) {
   try {
     await requirePlatformAdmin()
     const body = await req.json()
-    const titre = typeof body.titre === 'string' ? body.titre.trim() : ''
-    if (!titre) return NextResponse.json({ error: 'Titre requis' }, { status: 400 })
-
-    const statut = STATUTS.has(body.statut) ? body.statut : 'a_faire'
-    const priorite = PRIORITES.has(body.priorite) ? body.priorite : 'normale'
-
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('platform_tasks')
-      .insert({
+
+    const rawTasks = Array.isArray(body) ? body : (Array.isArray(body.tasks) ? body.tasks : [body])
+    const toInsert = []
+
+    for (const item of rawTasks) {
+      const titre = typeof item.titre === 'string' ? item.titre.trim() : ''
+      if (!titre) continue
+
+      const statut = STATUTS.has(item.statut) ? item.statut : 'a_faire'
+      const priorite = PRIORITES.has(item.priorite) ? item.priorite : 'normale'
+
+      toInsert.push({
         titre,
-        notes: body.notes?.trim() || null,
+        notes: item.notes?.trim() || null,
         statut,
         priorite,
-        due_date: body.due_date || null,
-        lead_id: body.lead_id || null,
+        due_date: item.due_date || null,
+        lead_id: item.lead_id || null,
       })
+    }
+
+    if (toInsert.length === 0) {
+      return NextResponse.json({ error: 'Aucune tâche valide fournie' }, { status: 400 })
+    }
+
+    const { data, error } = await admin
+      .from('platform_tasks')
+      .insert(toInsert)
       .select()
-      .single()
+
     if (error) throw error
-    return NextResponse.json(data, { status: 201 })
+    return NextResponse.json(Array.isArray(body) || Array.isArray(body.tasks) ? data : data[0], { status: 201 })
   } catch (err) {
     return apiError(err, '[POST /api/admin/tasks]')
   }
