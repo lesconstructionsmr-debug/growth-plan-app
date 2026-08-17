@@ -3,36 +3,69 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getAuthCallbackUrl } from '@/lib/auth/site-url'
 import { buildAuthCallbackUrl, escapeHtml } from '@/lib/email/links'
 
+function formatFrom(raw: string): string {
+  const s = raw.trim()
+  if (!s || s.includes('votredomaine')) return ''
+  if (s.includes('<')) return s
+  return `Plan Growth <${s}>`
+}
+
+function fromCandidates(): string[] {
+  const out: string[] = []
+  for (const item of [
+    process.env.RESEND_FROM || '',
+    'noreply@growth-plan.ca',
+    'max@growth-plan.ca',
+  ]) {
+    const f = formatFrom(item)
+    if (f && !out.includes(f)) out.push(f)
+  }
+  return out
+}
+
+function explainResend(status: number, body: string): string {
+  const lower = body.toLowerCase()
+  if (status === 403 || lower.includes('testing emails') || lower.includes('own email')) {
+    return 'Resend n’envoie qu’à l’adresse du compte (mode test). Copie le lien.'
+  }
+  if (lower.includes('not verified') || lower.includes('domain is not')) {
+    return 'Le domaine d’envoi n’est pas vérifié. Copie le lien.'
+  }
+  if (status === 429) return 'Trop d’envois. Réessaie dans une minute, ou copie le lien.'
+  if (status === 0) return 'Resend injoignable. Copie le lien.'
+  return 'Le courriel n’est pas parti. Copie le lien ci-dessous.'
+}
+
 export async function sendResendEmail(opts: {
   to: string
   subject: string
   html: string
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) return { ok: false, error: 'RESEND_API_KEY manquante sur le serveur' }
+  if (!apiKey) return { ok: false, error: 'L’envoi n’est pas branché sur le serveur. Copie le lien.' }
 
-  const from = process.env.RESEND_FROM ?? 'Plan Growth <noreply@growth-plan.ca>'
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
-    }),
-  }).catch(() => null)
+  let last = 'Le courriel n’est pas parti. Copie le lien ci-dessous.'
+  for (const from of fromCandidates()) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+      }),
+    }).catch(() => null)
 
-  if (!res) return { ok: false, error: 'Resend injoignable' }
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    console.error('[resend]', res.status, body)
-    return { ok: false, error: `Resend a refusé l'envoi (${res.status})` }
+    if (res?.ok) return { ok: true }
+    const body = res ? await res.text().catch(() => '') : ''
+    console.error('[resend]', from, res?.status, body)
+    last = explainResend(res?.status ?? 0, body)
   }
-  return { ok: true }
+  return { ok: false, error: last }
 }
 
 async function generateHashedToken(email: string, type: 'signup' | 'magiclink' | 'recovery') {

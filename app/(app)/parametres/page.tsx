@@ -115,7 +115,7 @@ function TeamPanel({ canManage }: { canManage: boolean }) {
       setEmail('')
       if (data.join_url) setJoinUrl(data.join_url)
       if (data.email_sent === false) {
-        setError('Le courriel n’est pas parti. Copie le lien ci-dessous et envoie-le à la personne.')
+        setError(data.email_error || 'Le courriel n’est pas parti. Copie le lien ci-dessous et envoie-le à la personne.')
       } else {
         setInvited(true)
         setTimeout(() => setInvited(false), 3000)
@@ -233,7 +233,17 @@ function TeamPanel({ canManage }: { canManage: boolean }) {
               {inviting ? 'Envoi…' : invited ? 'Envoyé !' : 'Inviter'}
             </button>
           </div>
-          {error && <div style={{ fontSize: '11px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '8px 12px' }}>{error}</div>}
+          {error && (
+            <div style={{
+              fontSize: '11px',
+              color: joinUrl ? 'var(--txt-2)' : 'var(--red)',
+              background: joinUrl ? 'var(--ga)' : 'var(--red)12',
+              border: joinUrl ? '0.5px solid var(--gold-3)' : '0.5px solid var(--red)',
+              borderRadius: '7px', padding: '8px 12px', lineHeight: 1.5,
+            }}>
+              {joinUrl ? 'Invitation créée. ' : ''}{error}
+            </div>
+          )}
           {joinUrl && (
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
