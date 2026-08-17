@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plug, Copy, CheckCircle2, Loader2, RefreshCw, Send, ChevronDown, Mail } from 'lucide-react'
+import { Plug, Copy, CheckCircle2, Loader2, RefreshCw, Send, ChevronDown, Mail, User, UserRound } from 'lucide-react'
 import { SETUP_FEE_CAD } from '@/lib/stripe/pricing'
 
 export default function WebCrmPanel({ canManage }: { canManage: boolean }) {
@@ -91,8 +91,7 @@ export default function WebCrmPanel({ canManage }: { canManage: boolean }) {
           Vous n&apos;avez rien à programmer.
         </p>
         <p style={{ fontSize: '13px', color: 'var(--txt-2)', margin: 0, lineHeight: 1.65 }}>
-          Envoyez-nous l&apos;adresse de votre site (et le contact de votre webmestre s&apos;il y en a un).
-          On branche le formulaire à l&apos;onboarding.
+          Pas de webmestre ? On le fait pour vous. Vous en avez un ? On lui envoie le bloc à coller.
         </p>
       </div>
 
@@ -109,16 +108,49 @@ export default function WebCrmPanel({ canManage }: { canManage: boolean }) {
         ))}
       </div>
 
-      <a
-        href="mailto:max@growth-plan.ca?subject=Brancher%20mon%20site%20au%20CRM"
-        style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          background: 'var(--gold)', color: '#0A0A0A', fontWeight: 700, fontSize: '13px',
-          borderRadius: '10px', padding: '12px 16px', textDecoration: 'none',
-        }}
-      >
-        <Mail size={15} /> Demander le branchement de mon site
-      </a>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ ...box, border: '1.5px solid var(--gold-3)', background: 'var(--ga)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <User size={16} color="var(--gold)" />
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>Je n&apos;ai pas de webmestre</div>
+          </div>
+          <p style={{ fontSize: '12px', color: 'var(--txt-2)', margin: '0 0 12px', lineHeight: 1.55 }}>
+            On s&apos;occupe de tout. Envoyez-nous l&apos;adresse de votre site — inclus dans l&apos;adhésion.
+          </p>
+          <a
+            href="mailto:max@growth-plan.ca?subject=Brancher%20mon%20site%20%E2%80%94%20je%20n%27ai%20pas%20de%20webmaster&body=Bonjour%2C%0A%0AJe%20n%27ai%20pas%20de%20webmaster.%20Pouvez-vous%20brancher%20mon%20site%20au%20CRM%20%3F%0A%0AAdresse%20du%20site%20%3A%20"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: 'var(--gold)', color: '#0A0A0A', fontWeight: 700, fontSize: '12px',
+              borderRadius: '8px', padding: '10px 12px', textDecoration: 'none',
+            }}
+          >
+            <Mail size={14} /> Oui, faites-le pour moi
+          </a>
+        </div>
+
+        <div style={{ ...box }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <UserRound size={16} color="var(--txt-2)" />
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>J&apos;ai déjà un webmestre</div>
+          </div>
+          <p style={{ fontSize: '12px', color: 'var(--txt-2)', margin: '0 0 12px', lineHeight: 1.55 }}>
+            On lui envoie le bloc à coller sur votre page Contact. Vous n&apos;avez rien à coder.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowTech(true)}
+            style={{
+              display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: 'var(--bg-1)', border: '0.5px solid var(--line)',
+              borderRadius: '8px', padding: '10px 12px', fontSize: '12px', fontWeight: 600,
+              color: 'var(--txt-1)', cursor: 'pointer',
+            }}
+          >
+            Préparer le message pour mon webmestre
+          </button>
+        </div>
+      </div>
 
       {canManage && (
         <button
@@ -166,7 +198,7 @@ export default function WebCrmPanel({ canManage }: { canManage: boolean }) {
             }}
           >
             <ChevronDown size={14} style={{ transform: showTech ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
-            Pour votre webmestre (facultatif)
+            {showTech ? 'Masquer le bloc webmestre' : 'Bloc à envoyer à votre webmestre'}
           </button>
 
           {showTech && (
