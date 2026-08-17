@@ -5,8 +5,10 @@ import { createBrowserClient } from '@supabase/ssr'
 import {
   Settings, Building2, Hash, CreditCard, FileText, Palette,
   Upload, Save, Loader2, CheckCircle2, Shield, Trash2, Download, Mail, Lock,
-  Users, UserPlus, Crown, User as UserIcon, XCircle, Send, Home, ArrowLeftRight, HardHat, Landmark, Check
+  Users, UserPlus, Crown, User as UserIcon, XCircle, Send, Home, HardHat, Landmark, Check,
+  Plug,
 } from 'lucide-react'
+import WebCrmPanel from './web-crm-panel'
 
 interface OrgProfile {
   nom: string; nom_legal: string; email: string; telephone: string; site_web: string
@@ -40,6 +42,7 @@ const ONGLETS = [
   { id: 'apparence',       label: 'Apparence',       icon: Palette   },
   { id: 'confidentialite', label: 'Confidentialité', icon: Shield    },
   { id: 'equipe',          label: 'Équipe',           icon: Users     },
+  { id: 'site-crm',        label: 'Site web → CRM',  icon: Plug      },
 ]
 
 const inp: React.CSSProperties = {
@@ -916,6 +919,8 @@ export default function ParametresPage() {
               <AssignChantiersPanel canManage={canManage} />
             </>
           )}
+
+          {onglet === 'site-crm' && <WebCrmPanel canManage={canManage} />}
 
         </div>
       </div>
