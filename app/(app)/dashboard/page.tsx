@@ -5,8 +5,10 @@ import { createBrowserClient } from '@supabase/ssr'
 import {
   TrendingUp, FileText, Building2, Receipt,
   Clock, ChevronRight, Plus, AlertCircle,
-  CheckCircle2, Circle, ArrowUpRight, Zap, Trash2, X
+  CheckCircle2, Circle, ArrowUpRight, Zap, Trash2, X,
+  FolderKanban, Landmark, Users,
 } from 'lucide-react'
+import { etiquetteLabel } from '@/lib/agence/constants'
 
 interface KpiData {
   ca30j: number
@@ -23,6 +25,13 @@ interface RecentItem {
   statutColor: string
   date: string
   href: string
+}
+
+interface AgenceKpi {
+  pipelineActif: number
+  commissionsARecevoir: number
+  commissionsRecues30j: number
+  dossiersActifs: number
 }
 
 function formatCAD(n: number) {
@@ -101,13 +110,19 @@ function SectionCard({ title, href, icon: Icon, items, emptyLabel, addHref, load
   )
 }
 
-function QuickActions() {
-  const actions = [
-    { label: 'Nouveau devis',    href: '/devis/nouveau',    icon: FileText,   color: 'var(--gold)'  },
-    { label: 'Nouveau job',      href: '/jobs/nouveau',     icon: Building2,  color: 'var(--blue)'  },
-    { label: 'Nouveau client',   href: '/clients/nouveau',  icon: TrendingUp, color: 'var(--green)' },
-    { label: 'Nouvelle facture', href: '/factures/nouvelle',icon: Receipt,    color: 'var(--amber)' },
-  ]
+function QuickActions({ agence = false }: { agence?: boolean }) {
+  const actions = agence
+    ? [
+        { label: 'Nouveau dossier',     href: '/dossiers',         icon: FolderKanban, color: 'var(--gold)'  },
+        { label: 'Nouvel emprunteur',   href: '/clients/nouveau',  icon: Users,        color: 'var(--green)' },
+        { label: 'Nouveau prêteur',     href: '/preteurs',         icon: Landmark,     color: 'var(--blue)'  },
+      ]
+    : [
+        { label: 'Nouveau devis',    href: '/devis/nouveau',    icon: FileText,   color: 'var(--gold)'  },
+        { label: 'Nouveau job',      href: '/jobs/nouveau',     icon: Building2,  color: 'var(--blue)'  },
+        { label: 'Nouveau client',   href: '/clients/nouveau',  icon: TrendingUp, color: 'var(--green)' },
+        { label: 'Nouvelle facture', href: '/factures/nouvelle',icon: Receipt,    color: 'var(--amber)' },
+      ]
   return (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       {actions.map((a) => {
@@ -131,8 +146,11 @@ export default function DashboardPage() {
   const salutation = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir'
 
   const [kpi, setKpi] = useState<KpiData>({ ca30j: 0, devisEnAttente: 0, jobsActifs: 0, facturesImpayees: 0 })
+  const [agenceKpi, setAgenceKpi] = useState<AgenceKpi>({ pipelineActif: 0, commissionsARecevoir: 0, commissionsRecues30j: 0, dossiersActifs: 0 })
+  const [isAgence, setIsAgence] = useState<boolean | null>(null)
   const [recentDevis, setRecentDevis] = useState<RecentItem[]>([])
   const [recentJobs, setRecentJobs] = useState<RecentItem[]>([])
+  const [recentDossiers, setRecentDossiers] = useState<RecentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activite, setActivite] = useState<{ id: string; label: string; date: string; color: string; href: string }[]>([])
   const [isAdmin, setIsAdmin] = useState(true) // Actif pour tous les utilisateurs connectés
@@ -170,81 +188,136 @@ export default function DashboardPage() {
       }
     })
 
-    const il30j = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().split('T')[0]
+    let cancelled = false
 
-    const STATUT_COLOR: Record<string, string> = {
-      brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
-      approuve: 'var(--green)', refuse: 'var(--red)', expire: 'var(--amber)', converti: 'var(--gold)',
-      en_cours: 'var(--blue)', planifie: 'var(--amber)', termine: 'var(--green)', annule: 'var(--red)',
-    }
-    const STATUT_LABEL: Record<string, string> = {
-      brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
-      refuse: 'Refusé', expire: 'Expiré', converti: 'Facturé',
-      en_cours: 'En cours', planifie: 'Planifié', termine: 'Terminé', annule: 'Annulé',
-    }
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(me => {
+        if (cancelled) return
+        const agence = false
+        setIsAgence(agence)
 
-    Promise.all([
-      supabase.from('factures').select('montant_ttc').eq('statut', 'payee').gte('date_paiement', il30j),
-      supabase.from('devis').select('id', { count: 'exact', head: true }).in('statut', ['envoye', 'vu']),
-      supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('statut', 'en_cours'),
-      supabase.from('factures').select('montant_ttc').in('statut', ['envoyee', 'vue', 'partielle', 'en_retard']),
-      supabase.from('devis').select('id, numero, titre, statut, montant_ttc, date_emission, clients(nom)').order('created_at', { ascending: false }).limit(5),
-      supabase.from('jobs').select('id, titre, statut, budget, date_debut, clients(nom)').order('created_at', { ascending: false }).limit(5),
-      supabase.from('devis').select('id, numero, titre, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
-      supabase.from('factures').select('id, numero, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
-    ]).then(([facPay, devisAtt, jobsAct, facImp, devisRec, jobsRec, devisAct, facAct]) => {
-      setKpi({
-        ca30j: (facPay.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
-        devisEnAttente: devisAtt.count ?? 0,
-        jobsActifs: jobsAct.count ?? 0,
-        facturesImpayees: (facImp.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
+        if (agence) {
+          return fetch('/api/agence/kpis')
+            .then(r => r.json())
+            .then(data => {
+              if (cancelled) return
+              setAgenceKpi({
+                pipelineActif: Number(data.pipelineActif ?? 0),
+                commissionsARecevoir: Number(data.commissionsARecevoir ?? 0),
+                commissionsRecues30j: Number(data.commissionsRecues30j ?? 0),
+                dossiersActifs: Number(data.dossiersActifs ?? 0),
+              })
+              const recents = Array.isArray(data.recents) ? data.recents : []
+              setRecentDossiers(recents.map((d: {
+                id: string
+                numero?: string
+                etiquette?: string
+                montant_pret?: number | null
+                created_at?: string
+                clients?: { nom?: string } | { nom?: string }[] | null
+              }) => {
+                const clients = d.clients
+                const nom = Array.isArray(clients) ? clients[0]?.nom : clients?.nom
+                return {
+                  id: d.id,
+                  nom: `${d.numero ?? 'Dossier'}${nom ? ` — ${nom}` : ''}`,
+                  montant: d.montant_pret != null
+                    ? Number(d.montant_pret).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+                    : '—',
+                  statut: etiquetteLabel(d.etiquette) || '—',
+                  statutColor: 'var(--gold)',
+                  date: d.created_at
+                    ? new Date(d.created_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })
+                    : '—',
+                  href: `/dossiers/${d.id}`,
+                }
+              }))
+              setLoading(false)
+            })
+            .catch(() => { if (!cancelled) setLoading(false) })
+        }
+
+        const il30j = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().split('T')[0]
+
+        const STATUT_COLOR: Record<string, string> = {
+          brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
+          approuve: 'var(--green)', refuse: 'var(--red)', expire: 'var(--amber)', converti: 'var(--gold)',
+          en_cours: 'var(--blue)', planifie: 'var(--amber)', termine: 'var(--green)', annule: 'var(--red)',
+        }
+        const STATUT_LABEL: Record<string, string> = {
+          brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
+          refuse: 'Refusé', expire: 'Expiré', converti: 'Facturé',
+          en_cours: 'En cours', planifie: 'Planifié', termine: 'Terminé', annule: 'Annulé',
+        }
+
+        Promise.all([
+          supabase.from('factures').select('montant_ttc').eq('statut', 'payee').gte('date_paiement', il30j),
+          supabase.from('devis').select('id', { count: 'exact', head: true }).in('statut', ['envoye', 'vu']),
+          supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('statut', 'en_cours'),
+          supabase.from('factures').select('montant_ttc').in('statut', ['envoyee', 'vue', 'partielle', 'en_retard']),
+          supabase.from('devis').select('id, numero, titre, statut, montant_ttc, date_emission, clients(nom)').order('created_at', { ascending: false }).limit(5),
+          supabase.from('jobs').select('id, titre, statut, budget, date_debut, clients(nom)').order('created_at', { ascending: false }).limit(5),
+          supabase.from('devis').select('id, numero, titre, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
+          supabase.from('factures').select('id, numero, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
+        ]).then(([facPay, devisAtt, jobsAct, facImp, devisRec, jobsRec, devisAct, facAct]) => {
+          if (cancelled) return
+          setKpi({
+            ca30j: (facPay.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
+            devisEnAttente: devisAtt.count ?? 0,
+            jobsActifs: jobsAct.count ?? 0,
+            facturesImpayees: (facImp.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
+          })
+          setRecentDevis((devisRec.data ?? []).map((d: any) => ({
+            id: d.id,
+            nom: `${d.clients?.nom ?? '—'} — ${d.titre ?? d.numero}`,
+            montant: Number(d.montant_ttc ?? 0).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }),
+            statut: STATUT_LABEL[d.statut] ?? d.statut,
+            statutColor: STATUT_COLOR[d.statut] ?? 'var(--txt-3)',
+            date: new Date(d.date_emission).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }),
+            href: `/devis/${d.id}`,
+          })))
+          setRecentJobs((jobsRec.data ?? []).map((j: any) => ({
+            id: j.id,
+            nom: `${j.titre} — ${j.clients?.nom ?? '—'}`,
+            montant: j.budget ? Number(j.budget).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }) : '—',
+            statut: STATUT_LABEL[j.statut] ?? j.statut,
+            statutColor: STATUT_COLOR[j.statut] ?? 'var(--txt-3)',
+            date: j.date_debut ? new Date(j.date_debut).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }) : '—',
+            href: `/jobs/${j.id}`,
+          })))
+          const COULEUR: Record<string, string> = {
+            brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
+            approuve: 'var(--green)', refuse: 'var(--red)', converti: 'var(--gold)',
+            envoyee: 'var(--blue)', payee: 'var(--green)', en_retard: 'var(--red)',
+          }
+          const LABEL_STATUT: Record<string, string> = {
+            brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
+            refuse: 'Refusé', converti: 'Facturé', envoyee: 'Envoyée', payee: 'Payée', en_retard: 'En retard',
+          }
+          const feed = [
+            ...(devisAct.data ?? []).map((d: any) => ({
+              id: 'dv-' + d.id,
+              label: `Devis ${d.numero} — ${(d.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[d.statut] ?? d.statut}`,
+              date: d.created_at,
+              color: COULEUR[d.statut] ?? 'var(--txt-3)',
+              href: `/devis/${d.id}`,
+            })),
+            ...(facAct.data ?? []).map((f: any) => ({
+              id: 'fc-' + f.id,
+              label: `Facture ${f.numero} — ${(f.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[f.statut] ?? f.statut}`,
+              date: f.created_at,
+              color: COULEUR[f.statut] ?? 'var(--txt-3)',
+              href: `/factures/${f.id}`,
+            })),
+          ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
+          setActivite(feed)
+          setLoading(false)
+        })
       })
-      setRecentDevis((devisRec.data ?? []).map((d: any) => ({
-        id: d.id,
-        nom: `${d.clients?.nom ?? '—'} — ${d.titre ?? d.numero}`,
-        montant: Number(d.montant_ttc ?? 0).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }),
-        statut: STATUT_LABEL[d.statut] ?? d.statut,
-        statutColor: STATUT_COLOR[d.statut] ?? 'var(--txt-3)',
-        date: new Date(d.date_emission).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }),
-        href: `/devis/${d.id}`,
-      })))
-      setRecentJobs((jobsRec.data ?? []).map((j: any) => ({
-        id: j.id,
-        nom: `${j.titre} — ${j.clients?.nom ?? '—'}`,
-        montant: j.budget ? Number(j.budget).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }) : '—',
-        statut: STATUT_LABEL[j.statut] ?? j.statut,
-        statutColor: STATUT_COLOR[j.statut] ?? 'var(--txt-3)',
-        date: j.date_debut ? new Date(j.date_debut).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }) : '—',
-        href: `/jobs/${j.id}`,
-      })))
-      const COULEUR: Record<string, string> = {
-        brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
-        approuve: 'var(--green)', refuse: 'var(--red)', converti: 'var(--gold)',
-        envoyee: 'var(--blue)', payee: 'var(--green)', en_retard: 'var(--red)',
-      }
-      const LABEL_STATUT: Record<string, string> = {
-        brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
-        refuse: 'Refusé', converti: 'Facturé', envoyee: 'Envoyée', payee: 'Payée', en_retard: 'En retard',
-      }
-      const feed = [
-        ...(devisAct.data ?? []).map((d: any) => ({
-          id: 'dv-' + d.id,
-          label: `Devis ${d.numero} — ${(d.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[d.statut] ?? d.statut}`,
-          date: d.created_at,
-          color: COULEUR[d.statut] ?? 'var(--txt-3)',
-          href: `/devis/${d.id}`,
-        })),
-        ...(facAct.data ?? []).map((f: any) => ({
-          id: 'fc-' + f.id,
-          label: `Facture ${f.numero} — ${(f.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[f.statut] ?? f.statut}`,
-          date: f.created_at,
-          color: COULEUR[f.statut] ?? 'var(--txt-3)',
-          href: `/factures/${f.id}`,
-        })),
-      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
-      setActivite(feed)
-      setLoading(false)
-    })
+      .catch(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
   }, [])
 
   return (
@@ -293,16 +366,37 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <QuickActions />
+      {isAgence !== null && <QuickActions agence={isAgence} />}
 
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <KpiBlock label="Chiffre d'affaires (30j)" value={formatCAD(kpi.ca30j)} sub="Factures payées" icon={TrendingUp} color="var(--green)" loading={loading} />
-        <KpiBlock label="Devis en attente" value={String(kpi.devisEnAttente)} sub="Approbation client" icon={FileText} color="var(--amber)" loading={loading} />
-        <KpiBlock label="Jobs actifs" value={String(kpi.jobsActifs)} sub="En cours" icon={Building2} color="var(--blue)" loading={loading} />
-        <KpiBlock label="Factures impayées" value={formatCAD(kpi.facturesImpayees)} sub="À collecter" icon={Receipt} color="var(--red)" loading={loading} />
-      </div>
+      {isAgence === true ? (
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <KpiBlock label="Pipeline actif $" value={formatCAD(agenceKpi.pipelineActif)} sub="Dossiers non fermés" icon={TrendingUp} color="var(--green)" loading={loading} />
+          <KpiBlock label="Commissions à recevoir" value={formatCAD(agenceKpi.commissionsARecevoir)} sub="En attente" icon={Clock} color="var(--amber)" loading={loading} />
+          <KpiBlock label="Commissions 30j" value={formatCAD(agenceKpi.commissionsRecues30j)} sub="Reçues récemment" icon={Receipt} color="var(--gold)" loading={loading} />
+          <KpiBlock label="Dossiers actifs" value={String(agenceKpi.dossiersActifs)} sub="En cours" icon={FolderKanban} color="var(--blue)" loading={loading} />
+        </div>
+      ) : isAgence === false ? (
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <KpiBlock label="Chiffre d'affaires (30j)" value={formatCAD(kpi.ca30j)} sub="Factures payées" icon={TrendingUp} color="var(--green)" loading={loading} />
+          <KpiBlock label="Devis en attente" value={String(kpi.devisEnAttente)} sub="Approbation client" icon={FileText} color="var(--amber)" loading={loading} />
+          <KpiBlock label="Jobs actifs" value={String(kpi.jobsActifs)} sub="En cours" icon={Building2} color="var(--blue)" loading={loading} />
+          <KpiBlock label="Factures impayées" value={formatCAD(kpi.facturesImpayees)} sub="À collecter" icon={Receipt} color="var(--red)" loading={loading} />
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <KpiBlock label="Chargement" value="…" sub="" icon={Clock} color="var(--txt-3)" loading />
+        </div>
+      )}
 
-      {!loading && kpi.ca30j === 0 && kpi.devisEnAttente === 0 && kpi.jobsActifs === 0 && (
+      {!loading && isAgence === true && agenceKpi.pipelineActif === 0 && agenceKpi.dossiersActifs === 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(212,150,12,0.08)', border: '0.5px solid rgba(212,150,12,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--amber)' }}>
+          <AlertCircle size={14} />
+          <span>Aucun dossier pour l&apos;instant — commencez par créer un emprunteur ou un dossier.</span>
+          <a href="/dossiers" style={{ marginLeft: 'auto', color: 'var(--gold-2)', textDecoration: 'none', fontWeight: 500, fontSize: '12px' }}>Démarrer →</a>
+        </div>
+      )}
+
+      {!loading && isAgence === false && kpi.ca30j === 0 && kpi.devisEnAttente === 0 && kpi.jobsActifs === 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(212,150,12,0.08)', border: '0.5px solid rgba(212,150,12,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--amber)' }}>
           <AlertCircle size={14} />
           <span>Aucune activité pour l'instant — commence par créer un client ou un devis.</span>
@@ -310,11 +404,18 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-        <SectionCard title="Devis récents" href="/devis" icon={FileText} items={recentDevis} emptyLabel="Aucun devis pour l'instant" addHref="/devis/nouveau" loading={loading} />
-        <SectionCard title="Jobs actifs" href="/jobs" icon={Building2} items={recentJobs} emptyLabel="Aucun job actif" addHref="/jobs/nouveau" loading={loading} />
-      </div>
+      {isAgence === true ? (
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <SectionCard title="Dossiers récents" href="/dossiers" icon={FolderKanban} items={recentDossiers} emptyLabel="Aucun dossier pour l'instant" addHref="/dossiers" loading={loading} />
+        </div>
+      ) : isAgence === false ? (
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <SectionCard title="Devis récents" href="/devis" icon={FileText} items={recentDevis} emptyLabel="Aucun devis pour l'instant" addHref="/devis/nouveau" loading={loading} />
+          <SectionCard title="Jobs actifs" href="/jobs" icon={Building2} items={recentJobs} emptyLabel="Aucun job actif" addHref="/jobs/nouveau" loading={loading} />
+        </div>
+      ) : null}
 
+      {isAgence === false && (
       <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
         <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <CheckCircle2 size={14} color="var(--purple)" strokeWidth={1.8} />
@@ -342,6 +443,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* MODAL GESTION DÉMO (⚡) */}
       {showDemoModal && (

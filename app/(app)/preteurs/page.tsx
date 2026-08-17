@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Landmark, Search, Loader2, X, Phone, Mail, Check } from 'lucide-react'
+import { PRETEUR_TYPES } from '@/lib/agence/constants'
 
 export const dynamic = 'force-dynamic'
 
-const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  banque:    { label: 'Banque',      color: '#3B82F6', bg: 'rgba(59,130,246,0.1)' },
-  caisse:    { label: 'Caisse pop.', color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
-  prive:     { label: 'Privé',       color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-  assureur:  { label: 'Assureur',    color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
-  autre:     { label: 'Autre',       color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
+const TYPE_COLORS: Record<string, { color: string; bg: string }> = {
+  banque:    { color: '#3B82F6', bg: 'rgba(59,130,246,0.1)' },
+  caisse:    { color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
+  prive:     { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+  assureur:  { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
+  autre:     { color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
 }
 
 interface Preteur {
@@ -25,6 +26,7 @@ export default function PreteursPage() {
   const [search, setSearch]       = useState('')
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving]       = useState(false)
+  const [formError, setFormError] = useState('')
   const [form, setForm] = useState({ nom: '', type: 'banque', contact_nom: '', contact_email: '', contact_tel: '', notes: '' })
 
   useEffect(() => { load() }, [])
@@ -42,22 +44,33 @@ export default function PreteursPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+    setFormError('')
     try {
       const r = await fetch('/api/preteurs', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
       })
-      if (r.ok) {
-        setShowModal(false)
-        setForm({ nom: '', type: 'banque', contact_nom: '', contact_email: '', contact_tel: '', notes: '' })
-        await load()
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        setFormError(data.error || data.email_error || 'Impossible d’ajouter le prêteur.')
+        return
       }
+      setShowModal(false)
+      setForm({ nom: '', type: 'banque', contact_nom: '', contact_email: '', contact_tel: '', notes: '' })
+      await load()
+    } catch {
+      setFormError('Erreur réseau. Réessayez.')
     } finally { setSaving(false) }
   }
 
   async function toggleActif(id: string, actif: boolean) {
-    await fetch('/api/preteurs', {
+    const r = await fetch('/api/preteurs', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, actif: !actif }),
     })
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}))
+      alert(data.error || 'Impossible de modifier le prêteur.')
+      return
+    }
     await load()
   }
 
@@ -97,7 +110,7 @@ export default function PreteursPage() {
             <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: 0 }}>{preteurs.filter(p => p.actif).length} actif{preteurs.filter(p => p.actif).length !== 1 ? 's' : ''} · {preteurs.length} total</p>
           </div>
         </div>
-        <button onClick={() => setShowModal(true)}
+        <button onClick={() => { setFormError(''); setShowModal(true) }}
           style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'var(--gold)', border: 'none', borderRadius: '9px', padding: '9px 16px', fontSize: '12px', fontWeight: 700, color: '#0A0A0A', cursor: 'pointer' }}>
           <Plus size={14} /> Ajouter un prêteur
         </button>
@@ -119,7 +132,8 @@ export default function PreteursPage() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
           {filtered.map(p => {
-            const t = TYPE_LABELS[p.type] || TYPE_LABELS.autre
+            const typeLabel = PRETEUR_TYPES.find(t => t.id === p.type)?.label ?? p.type
+            const t = TYPE_COLORS[p.type] || TYPE_COLORS.autre
             return (
               <div key={p.id} style={{ background: 'var(--bg-1)', border: `0.5px solid ${p.actif ? 'var(--line)' : 'var(--line)'}`, borderRadius: '12px', padding: '18px', opacity: p.actif ? 1 : 0.5, transition: 'border-color 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gold-3)')}
@@ -127,7 +141,7 @@ export default function PreteursPage() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <div>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '5px' }}>{p.nom}</div>
-                    <span style={{ fontSize: '10px', fontWeight: 600, color: t.color, background: t.bg, padding: '2px 8px', borderRadius: '99px' }}>{t.label}</span>
+                    <span style={{ fontSize: '10px', fontWeight: 600, color: t.color, background: t.bg, padding: '2px 8px', borderRadius: '99px' }}>{typeLabel}</span>
                   </div>
                   <button onClick={() => toggleActif(p.id, p.actif)}
                     title={p.actif ? 'Désactiver' : 'Activer'}
@@ -172,6 +186,12 @@ export default function PreteursPage() {
               <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}><X size={18} /></button>
             </div>
 
+            {formError && (
+              <div style={{ fontSize: '11px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '8px 12px', lineHeight: 1.5 }}>
+                {formError}
+              </div>
+            )}
+
             <div>
               <label style={labelSt}>Nom de l'institution *</label>
               <input required value={form.nom} onChange={e => setForm(p => ({ ...p, nom: e.target.value }))} placeholder="Ex : Caisse Desjardins Québec" style={inputStyle} />
@@ -179,7 +199,7 @@ export default function PreteursPage() {
             <div>
               <label style={labelSt}>Type</label>
               <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={inputStyle}>
-                {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                {PRETEUR_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

@@ -15,6 +15,7 @@ interface OrgProfile {
   nom: string; nom_legal: string; email: string; telephone: string; site_web: string
   rue: string; ville: string; province: string; code_postal: string
   numero_tps: string; numero_tvq: string; numero_rbq: string; numero_neq: string
+  numero_amf: string; amf_expiration: string
   mode_paiement_defaut: 'virement' | 'cheque' | 'carte' | 'comptant' | 'autre'
   delai_paiement: 15 | 30 | 45 | 60
   notes_pied_devis: string; notes_pied_facture: string; couleur_accent: string
@@ -28,6 +29,7 @@ const DEFAULT: OrgProfile = {
   site_web: '',
   rue: '', ville: '', province: 'QC', code_postal: '',
   numero_tps: '', numero_tvq: '', numero_rbq: '', numero_neq: '',
+  numero_amf: '', amf_expiration: '',
   mode_paiement_defaut: 'virement', delai_paiement: 30,
   notes_pied_devis: "Ce devis est valide pour 30 jours. Un acompte de 30% est requis au démarrage des travaux. Les travaux sont exécutés selon les normes du Code du bâtiment du Québec.",
   notes_pied_facture: "Paiement dû dans le délai indiqué. Des intérêts de 1,5%/mois s'appliquent sur les soldes en retard. Merci de votre confiance.",
@@ -38,7 +40,6 @@ const ONGLETS = [
   { id: 'organisation',    label: 'Organisation',    icon: Building2 },
   { id: 'site-crm',        label: 'Site web → CRM',  icon: Plug      },
   { id: 'ads-crm',         label: 'Pubs → CRM',      icon: Megaphone },
-  { id: 'secteur',         label: 'Secteur & Mode',  icon: Home      },
   { id: 'fiscal',          label: 'Fiscal & RBQ',    icon: Hash      },
   { id: 'facturation',     label: 'Facturation',     icon: CreditCard},
   { id: 'documents',       label: 'Documents',       icon: FileText  },
@@ -451,6 +452,7 @@ export default function ParametresPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [vertical, setVertical] = useState<'construction' | 'agence'>('construction')
+  const [agenceEnabled, setAgenceEnabled] = useState(false)
   const [updatingVertical, setUpdatingVertical] = useState(false)
 
   const supabase = createBrowserClient(
@@ -463,6 +465,7 @@ export default function ParametresPage() {
       .then(r => r.json())
       .then(d => {
         if (d.vertical) setVertical(d.vertical === 'courtier' ? 'agence' : d.vertical)
+        setAgenceEnabled(d.agence_enabled === true)
         const admin = d.role === 'owner' || d.role === 'admin'
         setCanManage(admin)
         if (!admin) setOnglet('organisation')
@@ -476,7 +479,6 @@ export default function ParametresPage() {
         setCompanyId(profile.company_id)
         supabase.from('companies').select('*').eq('id', profile.company_id).single().then(({ data: co }) => {
           if (!co) return
-          if (co.vertical) setVertical(co.vertical === 'courtier' ? 'agence' : co.vertical)
           setForm({
             nom:         co.name ?? '',
             nom_legal:   co.nom_legal ?? '',
@@ -491,6 +493,8 @@ export default function ParametresPage() {
             numero_tvq:  co.tvq_no ?? '',
             numero_rbq:  co.rbq_no ?? '',
             numero_neq:  co.neq ?? '',
+            numero_amf:  co.numero_amf ?? '',
+            amf_expiration: co.amf_expiration ? String(co.amf_expiration).slice(0, 10) : '',
             mode_paiement_defaut: (co.mode_paiement_defaut as OrgProfile['mode_paiement_defaut']) ?? 'virement',
             delai_paiement: (co.delai_paiement as OrgProfile['delai_paiement']) ?? 30,
             notes_pied_devis: co.notes_pied_devis ?? DEFAULT.notes_pied_devis,
@@ -533,7 +537,7 @@ export default function ParametresPage() {
     }
     setSaving(true)
     setSaveError(null)
-    const { error } = await supabase.from('companies').update({
+    const payload: Record<string, unknown> = {
       name:        form.nom,
       nom_legal:   form.nom_legal || null,
       email:       form.email || null,
@@ -553,13 +557,20 @@ export default function ParametresPage() {
       notes_pied_facture: form.notes_pied_facture || null,
       couleur_accent: form.couleur_accent,
       updated_at:  new Date().toISOString(),
-    }).eq('id', companyId)
+    }
+    if (vertical === 'agence') {
+      payload.numero_amf = form.numero_amf || null
+      payload.amf_expiration = form.amf_expiration || null
+    }
+
+    const { error } = await supabase.from('companies').update(payload).eq('id', companyId)
 
     setSaving(false)
     if (error) {
       console.error('[parametres save]', error)
-      setSaveError(error.message.includes('column')
-        ? 'Migration 0010_company_profile.sql requise dans Supabase — contactez le support.'
+      const col = error.message.includes('column') || error.message.includes('numero_amf')
+      setSaveError(col
+        ? 'Migration SQL requise dans Supabase (0010 profil ou 0015 courtier).'
         : `Erreur : ${error.message}`)
       return
     }
@@ -678,11 +689,11 @@ export default function ParametresPage() {
           {/* ── SECTEUR & MODE ERP ── */}
           {onglet === 'secteur' && (<>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', paddingBottom: '12px', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Home size={14} color="var(--gold)" /> Mode &amp; Secteur d'activité ERP
+              <Home size={14} color="var(--gold)" /> Tes modules (toi seulement)
             </div>
 
             <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: 0, lineHeight: 1.5 }}>
-              Choisissez le mode d'utilisation adapté à votre métier. Le changement réorganise instantanément les modules, menus et vocabulaires de votre ERP.
+              Tes clients restent en Construction. Ces modules-là, c’est pour toi : dossiers de prêts, prêteurs, commissions.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '10px' }}>
@@ -730,12 +741,15 @@ export default function ParametresPage() {
                     <Landmark size={20} color="#60A5FA" />
                   </div>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>Courtier Immobilier &amp; Prêts</div>
-                    <div style={{ fontSize: '10px', color: '#60A5FA' }}>Dossiers &amp; Prêteurs</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>Mes dossiers de prêts</div>
+                    <div style={{ fontSize: '10px', color: '#60A5FA' }}>Usage personnel — pas un mode client</div>
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--txt-3)', lineHeight: 1.5 }}>
                   Inclus : Dossiers d'emprunt, Répertoire des Prêteurs &amp; Banques, Commissions de courtage, Emprunteurs &amp; Offres.
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--txt-2)', lineHeight: 1.5, fontWeight: 600 }}>
+                  Mode réel : dossiers, prêteurs, commissions, emprunteurs.
                 </div>
                 {vertical === 'agence' && (
                   <span style={{ fontSize: '10px', fontWeight: 700, color: '#60A5FA', background: 'rgba(96,165,250,0.2)', padding: '3px 8px', borderRadius: '6px', alignSelf: 'flex-start' }}>
@@ -751,7 +765,18 @@ export default function ParametresPage() {
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', paddingBottom: '12px', borderBottom: '0.5px solid var(--line)' }}>Numéros fiscaux et licences</div>
             <F label="Numéro TPS (Gouvernement fédéral)" hint="Format : 123456789 RT 0001"><Inp value={form.numero_tps} onChange={v => set('numero_tps', v)} placeholder="123456789 RT 0001" /></F>
             <F label="Numéro TVQ (Revenu Québec)" hint="Format : 1234567890 TQ 0001"><Inp value={form.numero_tvq} onChange={v => set('numero_tvq', v)} placeholder="1234567890 TQ 0001" /></F>
-            <F label="Numéro RBQ (Régie du bâtiment du Québec)" hint="Requis pour les entrepreneurs généraux et sous-traitants en construction au Québec. Obligatoire sur les soumissions."><Inp value={form.numero_rbq} onChange={v => set('numero_rbq', v)} placeholder="8264-1234-01" /></F>
+            {vertical === 'agence' ? (
+              <>
+                <F label="Numéro AMF (permis de courtier hypothécaire)" hint="Permis délivré par l'Autorité des marchés financiers.">
+                  <Inp value={form.numero_amf} onChange={v => set('numero_amf', v)} placeholder="AMF-123456" />
+                </F>
+                <F label="Expiration du permis AMF" hint="Rappel à prévoir 90 / 30 / 7 jours avant l'échéance.">
+                  <Inp type="date" value={form.amf_expiration} onChange={v => set('amf_expiration', v)} />
+                </F>
+              </>
+            ) : (
+              <F label="Numéro RBQ (Régie du bâtiment du Québec)" hint="Requis pour les entrepreneurs généraux et sous-traitants en construction au Québec. Obligatoire sur les soumissions."><Inp value={form.numero_rbq} onChange={v => set('numero_rbq', v)} placeholder="8264-1234-01" /></F>
+            )}
             <F label="NEQ (Registraire des entreprises du Québec)" hint="Numéro d'entreprise du Québec — 10 chiffres."><Inp value={form.numero_neq} onChange={v => set('numero_neq', v)} placeholder="1234567890" /></F>
             <div style={{ padding: '12px 14px', background: 'rgba(184,146,42,0.06)', border: '0.5px solid var(--gold-3)', borderRadius: '8px', fontSize: '11px', color: 'var(--txt-2)', lineHeight: 1.6 }}>
               💡 Ces numéros apparaissent automatiquement dans le bas de page de tous vos devis et factures, conformément aux exigences de Revenu Québec.

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { PieChart, Plus, Search, Loader2, X, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { COMMISSION_STATUTS } from '@/lib/agence/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,39 +27,86 @@ const fmt = (n: number) =>
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 
+interface DossierOption {
+  id: string
+  numero: string
+  preteur_id?: string | null
+  clients?: { nom: string } | { nom: string }[] | null
+}
+
+interface PreteurOption {
+  id: string
+  nom: string
+}
+
 export default function CommissionsPage() {
   const [commissions, setCommissions] = useState<Commission[]>([])
+  const [dossiers, setDossiers]       = useState<DossierOption[]>([])
+  const [preteurs, setPreteurs]       = useState<PreteurOption[]>([])
   const [loading, setLoading]         = useState(true)
   const [search, setSearch]           = useState('')
   const [filterStatut, setFilterStatut] = useState<string | null>(null)
   const [showModal, setShowModal]     = useState(false)
   const [saving, setSaving]           = useState(false)
-  const [form, setForm] = useState({ montant: '', statut: 'a_recevoir', date_prevue: '', notes: '' })
+  const [formError, setFormError]     = useState('')
+  const [loadError, setLoadError]     = useState('')
+  const [form, setForm] = useState({ montant: '', statut: 'a_recevoir', date_prevue: '', notes: '', dossier_id: '', preteur_id: '' })
 
   useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
+    setLoadError('')
     try {
-      const r = await fetch('/api/commissions')
-      const d = await r.json()
-      setCommissions(Array.isArray(d) ? d : [])
-    } catch { setCommissions([]) }
+      const [cRes, dRes, pRes] = await Promise.all([
+        fetch('/api/commissions'),
+        fetch('/api/dossiers'),
+        fetch('/api/preteurs'),
+      ])
+      const cData = await cRes.json()
+      const dData = await dRes.json()
+      const pData = await pRes.json()
+      if (!cRes.ok) {
+        setLoadError(cData.error || 'Impossible de charger les commissions.')
+        setCommissions([])
+      } else {
+        setCommissions(Array.isArray(cData) ? cData : [])
+      }
+      setDossiers(Array.isArray(dData) ? dData : [])
+      setPreteurs(Array.isArray(pData) ? pData : [])
+    } catch {
+      setCommissions([])
+      setLoadError('Erreur réseau. Réessayez.')
+    }
     setLoading(false)
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+    setFormError('')
     try {
       const r = await fetch('/api/commissions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          montant: form.montant,
+          statut: form.statut,
+          date_prevue: form.date_prevue || null,
+          notes: form.notes,
+          dossier_id: form.dossier_id || null,
+          preteur_id: form.preteur_id || null,
+        }),
       })
-      if (r.ok) {
-        setShowModal(false)
-        setForm({ montant: '', statut: 'a_recevoir', date_prevue: '', notes: '' })
-        await load()
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        setFormError(data.error || data.email_error || 'Impossible d’ajouter la commission.')
+        return
       }
+      setShowModal(false)
+      setForm({ montant: '', statut: 'a_recevoir', date_prevue: '', notes: '', dossier_id: '', preteur_id: '' })
+      await load()
+    } catch {
+      setFormError('Erreur réseau. Réessayez.')
     } finally { setSaving(false) }
   }
 
@@ -115,11 +164,17 @@ export default function CommissionsPage() {
             <p style={{ fontSize: '11px', color: 'var(--txt-3)', margin: 0 }}>Suivi des revenus par dossier</p>
           </div>
         </div>
-        <button onClick={() => setShowModal(true)}
+        <button onClick={() => { setFormError(''); setShowModal(true) }}
           style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'var(--gold)', border: 'none', borderRadius: '9px', padding: '9px 16px', fontSize: '12px', fontWeight: 700, color: '#0A0A0A', cursor: 'pointer' }}>
           <Plus size={14} /> Ajouter
         </button>
       </div>
+
+      {loadError && (
+        <div style={{ fontSize: '12px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '8px', padding: '10px 14px', marginBottom: '20px' }}>
+          {loadError}
+        </div>
+      )}
 
       {/* KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '28px' }}>
@@ -179,7 +234,13 @@ export default function CommissionsPage() {
                   <tr key={c.id} style={{ borderBottom: '0.5px solid var(--line)' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>{c.dossiers?.clients?.nom || '—'}</div>
-                      <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>{c.dossiers?.numero || '—'}</div>
+                      {c.dossier_id && c.dossiers?.numero ? (
+                        <Link href={`/dossiers/${c.dossier_id}`} style={{ fontSize: '10px', color: 'var(--gold)', textDecoration: 'none', fontWeight: 600 }}>
+                          {c.dossiers.numero}
+                        </Link>
+                      ) : (
+                        <div style={{ fontSize: '10px', color: 'var(--txt-3)' }}>{c.dossiers?.numero || '—'}</div>
+                      )}
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--txt-2)' }}>{c.preteurs?.nom || '—'}</td>
                     <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 700, color: 'var(--txt-1)' }}>{fmt(c.montant)}</td>
@@ -215,6 +276,38 @@ export default function CommissionsPage() {
               <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--txt-1)', margin: 0 }}>Nouvelle commission</h2>
               <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}><X size={18} /></button>
             </div>
+            {formError && (
+              <div style={{ fontSize: '11px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '8px 12px', lineHeight: 1.5 }}>
+                {formError}
+              </div>
+            )}
+            <div>
+              <label style={labelSt}>Dossier *</label>
+              <select
+                required
+                value={form.dossier_id}
+                onChange={e => {
+                  const dossier_id = e.target.value
+                  const d = dossiers.find(x => x.id === dossier_id)
+                  setForm(p => ({ ...p, dossier_id, preteur_id: d?.preteur_id || p.preteur_id }))
+                }}
+                style={inputStyle}
+              >
+                <option value="">Choisir un dossier</option>
+                {dossiers.map(d => {
+                  const clients = d.clients
+                  const nom = Array.isArray(clients) ? clients[0]?.nom : clients?.nom
+                  return <option key={d.id} value={d.id}>{d.numero}{nom ? ` — ${nom}` : ''}</option>
+                })}
+              </select>
+            </div>
+            <div>
+              <label style={labelSt}>Prêteur (optionnel)</label>
+              <select value={form.preteur_id} onChange={e => setForm(p => ({ ...p, preteur_id: e.target.value }))} style={inputStyle}>
+                <option value="">Aucun prêteur</option>
+                {preteurs.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+              </select>
+            </div>
             <div>
               <label style={labelSt}>Montant ($) *</label>
               <input required type="number" step="0.01" value={form.montant} onChange={e => setForm(p => ({ ...p, montant: e.target.value }))} placeholder="1200.00" style={inputStyle} />
@@ -222,7 +315,7 @@ export default function CommissionsPage() {
             <div>
               <label style={labelSt}>Statut</label>
               <select value={form.statut} onChange={e => setForm(p => ({ ...p, statut: e.target.value }))} style={inputStyle}>
-                {Object.entries(STATUT_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                {COMMISSION_STATUTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </div>
             <div>

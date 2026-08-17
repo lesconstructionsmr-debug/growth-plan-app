@@ -21,6 +21,10 @@ export function isEmployee(role: string | null | undefined): boolean {
   return EMPLOYEE_ROLES.has(normalizeRole(role))
 }
 
+function isAgenceVertical(vertical?: string): boolean {
+  return vertical === 'agence' || vertical === 'courtier'
+}
+
 /** Routes accessibles aux collaborateurs / employés. */
 export const EMPLOYEE_ALLOWED_PREFIXES = [
   '/jobs',
@@ -55,14 +59,53 @@ export const ADMIN_ONLY_PREFIXES = [
   '/admin',
 ] as const
 
+/** Collab courtier / agence — allow-list uniquement. */
+export const AGENCE_EMPLOYEE_ALLOWED_PREFIXES = [
+  '/dossiers',
+  '/clients',
+  '/calendrier',
+  '/parametres',
+] as const
+
+/** Collab courtier / agence — routes explicitement interdites. */
+export const AGENCE_EMPLOYEE_FORBIDDEN_PREFIXES = [
+  '/commissions',
+  '/preteurs',
+  '/devis',
+  '/factures',
+  '/depenses',
+  '/dashboard',
+  '/acquisition',
+  '/contenu',
+  '/leads',
+  '/admin',
+  '/employes',
+  '/sous-traitants',
+  '/conformite',
+  '/ventes',
+  '/rapports',
+  '/marche',
+] as const
+
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
-export function canAccessRoute(role: string | null | undefined, pathname: string): boolean {
+export function canAccessRoute(
+  role: string | null | undefined,
+  pathname: string,
+  vertical?: string,
+): boolean {
   if (isCompanyAdmin(role)) return true
 
   if (!isEmployee(role)) return true
+
+  if (isAgenceVertical(vertical)) {
+    if (AGENCE_EMPLOYEE_FORBIDDEN_PREFIXES.some(p => matchesPrefix(pathname, p))) {
+      return false
+    }
+    return AGENCE_EMPLOYEE_ALLOWED_PREFIXES.some(p => matchesPrefix(pathname, p))
+  }
 
   if (EMPLOYEE_FORBIDDEN_PREFIXES.some(p => matchesPrefix(pathname, p))) {
     return false
@@ -76,7 +119,10 @@ export function canAccessRoute(role: string | null | undefined, pathname: string
 }
 
 /** Href de navigation autorisés pour la sidebar employé. */
-export function employeeNavHrefs(): string[] {
+export function employeeNavHrefs(vertical?: string): string[] {
+  if (isAgenceVertical(vertical)) {
+    return ['/dossiers', '/clients', '/calendrier', '/parametres']
+  }
   return ['/jobs', '/calendrier', '/parametres']
 }
 
@@ -106,4 +152,32 @@ export async function getAssignedJobIds(
   }
 
   return (data ?? []).map(r => r.job_id)
+}
+
+/** Filtre une requête dossiers pour un collab via dossier_assignments (si la table existe). */
+export async function getAssignedDossierIds(
+  supabase: { from: (table: string) => unknown },
+  userId: string,
+  companyId: string,
+): Promise<string[] | null> {
+  const { data, error } = await (supabase.from('dossier_assignments') as {
+    select: (cols: string) => {
+      eq: (col: string, val: string) => {
+        eq: (col: string, val: string) => Promise<{ data: { dossier_id: string }[] | null; error: { code?: string; message?: string } | null }>
+      }
+    }
+  })
+    .select('dossier_id')
+    .eq('profile_id', userId)
+    .eq('company_id', companyId)
+
+  if (error) {
+    // 42P01 = table absente — migration dossier_assignments pas encore appliquée
+    if (error.code === '42P01' || error.message?.includes('dossier_assignments')) {
+      return null
+    }
+    throw error
+  }
+
+  return (data ?? []).map(r => r.dossier_id)
 }

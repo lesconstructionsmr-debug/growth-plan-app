@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
+import { requireAuth, requireCompanyAdmin, apiError } from '@/lib/api/auth'
+import { canUseAgenceMode } from '@/lib/platform-admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,7 @@ export async function GET() {
       return NextResponse.json({
         email: user.email ?? null,
         vertical: 'construction',
+        agence_enabled: canUseAgenceMode(user.email),
         role: 'owner',
         full_name: null,
         name: 'Mon Entreprise',
@@ -29,12 +31,15 @@ export async function GET() {
       .eq('id', profile.company_id)
       .single()
 
+    const agenceEnabled = canUseAgenceMode(user.email)
+
     return NextResponse.json({
-      email:     user.email        ?? null,
-      name:      company?.name     ?? 'Mon Entreprise',
-      vertical:  company?.vertical ?? 'construction',
-      role:      profile.role      ?? 'owner',
-      full_name: profile.full_name ?? null,
+      email:           user.email        ?? null,
+      name:            company?.name     ?? 'Mon Entreprise',
+      vertical:        'construction',
+      agence_enabled:  agenceEnabled,
+      role:            profile.role      ?? 'owner',
+      full_name:       profile.full_name ?? null,
     })
   } catch (err) {
     return apiError(err, '[GET /api/me]')
@@ -43,7 +48,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { supabase, companyId } = await requireCompanyAdmin()
+    const { supabase, companyId, user } = await requireCompanyAdmin()
     const { vertical } = await req.json()
 
     if (!vertical || !['construction', 'agence', 'courtier'].includes(vertical)) {
@@ -51,6 +56,9 @@ export async function POST(req: NextRequest) {
     }
 
     const targetVertical = (vertical === 'courtier' || vertical === 'agence') ? 'agence' : 'construction'
+    if (targetVertical === 'agence' && !canUseAgenceMode(user.email)) {
+      return NextResponse.json({ error: 'Réservé à ton compte' }, { status: 403 })
+    }
 
     const { error } = await supabase
       .from('companies')

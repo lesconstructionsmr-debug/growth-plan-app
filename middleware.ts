@@ -1,6 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isPlatformAdmin } from '@/lib/platform-admin'
+import { canAccessControlCenter, canUseAgenceMode } from '@/lib/platform-admin'
 import { canAccessRoute } from '@/lib/auth/permissions'
 
 const PUBLIC_PATHS = [
@@ -89,31 +89,48 @@ export async function middleware(request: NextRequest) {
     return redirectResponse
   }
 
-  // Routes admin plateforme — réservées aux emails PLATFORM_ADMIN_EMAILS
+  // Centre de contrôle / admin plateforme — Max + PLATFORM_ADMIN_EMAILS
   if (pathname.startsWith('/admin')) {
-    if (!isPlatformAdmin(user.email)) {
+    if (!canAccessControlCenter(user.email)) {
       return NextResponse.redirect(new URL('/dashboard?error=admin_forbidden', request.url))
     }
   }
 
-  // RBAC Phase 2 — employés limités aux chantiers, calendrier et paramètres
+  // RBAC Phase 2 — collab limité selon companies.vertical
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, company_id')
     .eq('id', user.id)
     .maybeSingle()
 
   const role = profile?.role ?? 'owner'
 
-  if (!canAccessRoute(role, pathname)) {
-    const dest = new URL('/jobs', request.url)
+  let vertical: string | undefined
+  if (profile?.company_id) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('vertical')
+      .eq('id', profile.company_id)
+      .maybeSingle()
+    vertical = canUseAgenceMode(user.email) ? (company?.vertical ?? undefined) : 'construction'
+  }
+
+  const agencePaths = ['/dossiers', '/preteurs', '/commissions']
+  if (!canUseAgenceMode(user.email) && agencePaths.some(p => pathname === p || pathname.startsWith(`${p}/`))) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  const collabHome = (vertical === 'agence' || vertical === 'courtier') ? '/dossiers' : '/jobs'
+
+  if (!canAccessRoute(role, pathname, vertical)) {
+    const dest = new URL(collabHome, request.url)
     dest.searchParams.set('error', 'access_denied')
     return NextResponse.redirect(dest)
   }
 
-  // Employés : /dashboard → /jobs (canAccessRoute ci-dessus couvre déjà ce cas)
-  if (pathname === '/dashboard' && !canAccessRoute(role, '/dashboard')) {
-    return NextResponse.redirect(new URL('/jobs', request.url))
+  // Employés : /dashboard → accueil collab (canAccessRoute ci-dessus couvre déjà ce cas)
+  if (pathname === '/dashboard' && !canAccessRoute(role, '/dashboard', vertical)) {
+    return NextResponse.redirect(new URL(collabHome, request.url))
   }
 
   return response

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from './supabase-server'
-import { isPlatformAdmin } from '@/lib/platform-admin'
+import { isPlatformAdmin, canUseAgenceMode, canAccessControlCenter } from '@/lib/platform-admin'
 import { isCompanyAdmin } from '@/lib/auth/permissions'
 
-export { isPlatformAdmin }
+export { isPlatformAdmin, canUseAgenceMode, canAccessControlCenter }
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -40,7 +40,7 @@ export async function requireCompany() {
 
 export async function requirePlatformAdmin() {
   const { supabase, user } = await requireAuth()
-  if (!isPlatformAdmin(user.email)) {
+  if (!canAccessControlCenter(user.email)) {
     throw new ApiError(403, 'Accès réservé aux administrateurs de la plateforme')
   }
   return { supabase, user }
@@ -48,6 +48,22 @@ export async function requirePlatformAdmin() {
 
 export async function requireCompanyAdmin() {
   const ctx = await requireCompany()
+  if (!isCompanyAdmin(ctx.role)) {
+    throw new ApiError(403, 'Accès réservé aux propriétaires et administrateurs')
+  }
+  return ctx
+}
+
+export async function requireAgenceAccess() {
+  const ctx = await requireCompany()
+  if (!canUseAgenceMode(ctx.user.email)) {
+    throw new ApiError(403, 'Ces modules sont réservés à ton compte')
+  }
+  return ctx
+}
+
+export async function requireAgenceAdmin() {
+  const ctx = await requireAgenceAccess()
   if (!isCompanyAdmin(ctx.role)) {
     throw new ApiError(403, 'Accès réservé aux propriétaires et administrateurs')
   }

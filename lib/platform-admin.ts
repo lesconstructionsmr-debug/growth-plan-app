@@ -10,3 +10,17 @@ export function isPlatformAdmin(email: string | null | undefined): boolean {
   if (!email) return false
   return platformAdminEmails().has(email.toLowerCase())
 }
+
+const FOUNDER_EMAILS = new Set(['max@growth-plan.ca'])
+
+/** Centre de contrôle Plan Growth (tâches, leads d'adhésion, abonnés) — Max seulement. */
+export function canAccessControlCenter(email: string | null | undefined): boolean {
+  if (!email) return false
+  const e = email.toLowerCase()
+  return isPlatformAdmin(e) || FOUNDER_EMAILS.has(e)
+}
+
+/** @deprecated alias — même garde que le centre de contrôle */
+export function canUseAgenceMode(email: string | null | undefined): boolean {
+  return canAccessControlCenter(email)
+}

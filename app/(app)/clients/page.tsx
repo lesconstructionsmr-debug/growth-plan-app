@@ -39,6 +39,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<ClientRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isAgence, setIsAgence] = useState(false)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,6 +67,13 @@ export default function ClientsPage() {
     })))
     setLoading(false)
   }, [supabase])
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(() => setIsAgence(false))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => { loadClients() }, [loadClients])
 
@@ -102,7 +110,7 @@ export default function ClientsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--txt-1)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users size={22} color="var(--gold)" /> {t('Clients')}
+            <Users size={22} color="var(--gold)" /> {isAgence ? 'Emprunteurs' : t('Clients')}
           </h1>
           <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '2px' }}>
             Cliquez sur n'importe quel client pour ouvrir sa fiche détaillée
@@ -187,7 +195,7 @@ export default function ClientsPage() {
       ) : filtered.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 20px', gap: '10px', background: 'var(--bg-1)', borderRadius: '12px', border: '0.5px solid var(--line)' }}>
           <Users size={36} color="var(--txt-3)" strokeWidth={1.2} />
-          <p style={{ fontSize: '13px', color: 'var(--txt-3)', margin: 0 }}>Aucun client trouvé</p>
+          <p style={{ fontSize: '13px', color: 'var(--txt-3)', margin: 0 }}>{isAgence ? 'Aucun emprunteur' : 'Aucun client trouvé'}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

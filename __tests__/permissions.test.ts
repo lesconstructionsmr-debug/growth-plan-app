@@ -44,4 +44,21 @@ describe('permissions RBAC', () => {
     expect(isCompanyAdmin('collaborateur')).toBe(false)
     expect(isCompanyAdmin('employee')).toBe(false)
   })
+
+  it('collab courtier limité aux dossiers, clients, calendrier, parametres', () => {
+    expect(canAccessRoute('collaborateur', '/dossiers', 'agence')).toBe(true)
+    expect(canAccessRoute('collaborateur', '/clients', 'courtier')).toBe(true)
+    expect(canAccessRoute('collaborateur', '/calendrier', 'agence')).toBe(true)
+    expect(canAccessRoute('collaborateur', '/parametres', 'agence')).toBe(true)
+    expect(canAccessRoute('collaborateur', '/commissions', 'agence')).toBe(false)
+    expect(canAccessRoute('collaborateur', '/preteurs', 'agence')).toBe(false)
+    expect(canAccessRoute('collaborateur', '/dashboard', 'agence')).toBe(false)
+    expect(canAccessRoute('collaborateur', '/jobs', 'agence')).toBe(false)
+  })
+
+  it('collab construction inchangé (jobs, pas dossiers)', () => {
+    expect(canAccessRoute('collaborateur', '/jobs', 'construction')).toBe(true)
+    expect(canAccessRoute('collaborateur', '/dossiers', 'construction')).toBe(false)
+    expect(canAccessRoute('collaborateur', '/clients', 'construction')).toBe(false)
+  })
 })
