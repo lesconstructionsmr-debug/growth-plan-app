@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Receipt, Plus, Search, Loader2, X, Wallet, Check, Trash2, CheckSquare, Square, Edit2 } from 'lucide-react'
+import { Receipt, Plus, Search, Loader2, X, Wallet, Check, Trash2, CheckSquare, Square, Edit2, Camera } from 'lucide-react'
+import DepensesInboxPanel from './depenses-inbox-panel'
 
 const DEFAULT_CATEGORIES = [
   'Matériaux',
@@ -33,6 +34,7 @@ interface Depense {
   categorie: string | null
   date_depense: string
   job_id: string | null
+  source?: string | null
   jobs?: { titre: string } | null
 }
 
@@ -54,6 +56,7 @@ export default function DepensesPage() {
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [catFilter, setCatFilter] = useState<string | null>(null)
+  const [unassignedOnly, setUnassignedOnly] = useState(false)
   
   // Sélection multiple
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -62,6 +65,8 @@ export default function DepensesPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingDepense, setEditingDepense] = useState<Depense | null>(null)
   const [saving, setSaving]     = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [scanNote, setScanNote] = useState('')
   const [form, setForm] = useState({
     description: '', montant: '', categorie: 'Matériaux',
     date_depense: new Date().toISOString().split('T')[0], job_id: '',
@@ -78,21 +83,25 @@ export default function DepensesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [{ data: dep }, { data: jobsData }] = await Promise.all([
-      supabase
+    let depQuery = await supabase
+      .from('depenses')
+      .select('id, description, montant, categorie, date_depense, job_id, source, jobs(titre)')
+      .order('date_depense', { ascending: false })
+    if (depQuery.error) {
+      depQuery = await supabase
         .from('depenses')
         .select('id, description, montant, categorie, date_depense, job_id, jobs(titre)')
-        .order('date_depense', { ascending: false }),
-      supabase.from('jobs').select('id, titre').order('titre'),
-    ])
-    const loadedDepenses = (dep as unknown as Depense[]) || []
+        .order('date_depense', { ascending: false })
+    }
+    const { data: jobsData } = await supabase.from('jobs').select('id, titre').order('titre')
+    const loadedDepenses = (depQuery.data as unknown as Depense[]) || []
     setDepenses(loadedDepenses)
     setJobs(jobsData || [])
 
     const customCats = Array.from(new Set(loadedDepenses.map(d => d.categorie).filter(Boolean) as string[]))
     setCategoriesList(Array.from(new Set([...DEFAULT_CATEGORIES, ...customCats])))
     setLoading(false)
-  }, [])
+  }, [supabase])
 
   useEffect(() => { load() }, [load])
 
@@ -113,6 +122,16 @@ export default function DepensesPage() {
     if (selectedIds.length === 0) return
     setDepenses(prev => prev.map(d => selectedIds.includes(d.id) ? { ...d, categorie: newCat } : d))
     await supabase.from('depenses').update({ categorie: newCat }).in('id', selectedIds)
+    setSelectedIds([])
+  }
+
+  async function handleBatchJobChange(jobId: string) {
+    if (selectedIds.length === 0) return
+    const job = jobs.find(j => j.id === jobId) || null
+    setDepenses(prev => prev.map(d => selectedIds.includes(d.id)
+      ? { ...d, job_id: jobId || null, jobs: job ? { titre: job.titre } : null }
+      : d))
+    await supabase.from('depenses').update({ job_id: jobId || null }).in('id', selectedIds)
     setSelectedIds([])
   }
 
@@ -139,6 +158,7 @@ export default function DepensesPage() {
   // Modal Handlers
   function openCreate() {
     setEditingDepense(null)
+    setScanNote('')
     setForm({
       description: '',
       montant: '',
@@ -147,6 +167,38 @@ export default function DepensesPage() {
       job_id: '',
     })
     setShowModal(true)
+  }
+
+  async function handleScanFile(file: File) {
+    setScanning(true)
+    setScanNote('')
+    try {
+      const { b64, mime } = await compressImage(file)
+      const res = await fetch('/api/depenses/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: b64, mime }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Scan impossible')
+      setEditingDepense(null)
+      if (data.categorie && !categoriesList.includes(data.categorie)) {
+        setCategoriesList(prev => [...prev, data.categorie])
+      }
+      setForm({
+        description: data.description || '',
+        montant: data.montant ? String(data.montant) : '',
+        categorie: data.categorie && categoriesList.includes(data.categorie) ? data.categorie : 'Autre',
+        date_depense: data.date_depense || new Date().toISOString().split('T')[0],
+        job_id: '',
+      })
+      setScanNote('Vérifie les chiffres, choisis le chantier, puis enregistre. Rien n\'est envoyé au fournisseur.')
+      setShowModal(true)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Scan impossible')
+    } finally {
+      setScanning(false)
+    }
   }
 
   function openEdit(d: Depense) {
@@ -179,14 +231,20 @@ export default function DepensesPage() {
       const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
       if (!profile?.company_id) { setSaving(false); return }
 
-      await supabase.from('depenses').insert({
+      const insert: Record<string, unknown> = {
         company_id:   profile.company_id,
         description:  form.description,
         montant:      parseFloat(form.montant),
         categorie:    form.categorie,
         date_depense: form.date_depense,
         job_id:       form.job_id || null,
-      })
+      }
+      if (scanNote) insert.source = 'Scan'
+      const { error: insErr } = await supabase.from('depenses').insert(insert)
+      if (insErr && (insErr.message?.includes('source') || insErr.code === '42703')) {
+        delete insert.source
+        await supabase.from('depenses').insert(insert)
+      }
     }
 
     setShowModal(false)
@@ -216,7 +274,8 @@ export default function DepensesPage() {
   const filtered = depenses.filter(d => {
     const matchCat = catFilter ? d.categorie === catFilter : true
     const matchSearch = search ? d.description.toLowerCase().includes(search.toLowerCase()) : true
-    return matchCat && matchSearch
+    const matchJob = unassignedOnly ? !d.job_id : true
+    return matchCat && matchSearch && matchJob
   })
 
   // Statistiques
@@ -228,6 +287,7 @@ export default function DepensesPage() {
     total: depenses.filter(d => d.categorie === c).reduce((sum, d) => sum + Number(d.montant), 0),
   })).filter(x => x.total > 0)
 
+  const unassignedCount = depenses.filter(d => !d.job_id).length
   const allSelected = filtered.length > 0 && selectedIds.length === filtered.length
 
   return (
@@ -243,20 +303,43 @@ export default function DepensesPage() {
             Modifiez directement le nom, le montant ou la catégorie de n'importe quel item de la liste
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          style={{
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <label style={{
             display: 'flex', alignItems: 'center', gap: '6px',
-            background: 'var(--gold)', color: '#0A0A0A',
-            border: 'none', borderRadius: '8px', padding: '9px 16px',
-            fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          <Plus size={16} /> Nouvelle dépense
-        </button>
+            background: 'var(--bg-1)', color: 'var(--txt-1)',
+            border: '0.5px solid var(--line)', borderRadius: '8px', padding: '9px 14px',
+            fontSize: '13px', fontWeight: 600, cursor: scanning ? 'default' : 'pointer',
+          }}>
+            {scanning ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+            {scanning ? 'Lecture…' : 'Scanner une facture'}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={scanning}
+              style={{ display: 'none' }}
+              onChange={e => {
+                const f = e.target.files?.[0]
+                e.target.value = ''
+                if (f) handleScanFile(f)
+              }}
+            />
+          </label>
+          <button
+            onClick={openCreate}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              background: 'var(--gold)', color: '#0A0A0A',
+              border: 'none', borderRadius: '8px', padding: '9px 16px',
+              fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            <Plus size={16} /> Nouvelle dépense
+          </button>
+        </div>
       </div>
 
-      {/* KPIs & Filtres */}
+      <DepensesInboxPanel />
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '16px' }}>
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total des Dépenses</div>
@@ -325,6 +408,17 @@ export default function DepensesPage() {
                 {categoriesList.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--txt-2)' }}>Rattacher au chantier :</span>
+              <select
+                onChange={e => e.target.value && handleBatchJobChange(e.target.value)}
+                defaultValue=""
+                style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', color: 'var(--txt-1)', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', outline: 'none' }}
+              >
+                <option value="" disabled>— Choisir un chantier —</option>
+                {jobs.map(j => <option key={j.id} value={j.id}>{j.titre}</option>)}
+              </select>
+            </div>
             <button
               onClick={handleBatchDelete}
               style={{ background: 'var(--red)20', border: '0.5px solid var(--red)', color: 'var(--red)', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -336,19 +430,34 @@ export default function DepensesPage() {
       )}
 
       {/* Barre de recherche */}
-      <div style={{ position: 'relative' }}>
-        <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--txt-3)' }} />
-        <input
-          type="text"
-          placeholder="Rechercher une dépense par description..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--txt-3)' }} />
+          <input
+            type="text"
+            placeholder="Rechercher une dépense par description..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              background: 'var(--bg-2)', border: '0.5px solid var(--line)',
+              borderRadius: '8px', padding: '9px 12px 9px 34px',
+              fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setUnassignedOnly(v => !v)}
           style={{
-            background: 'var(--bg-2)', border: '0.5px solid var(--line)',
-            borderRadius: '8px', padding: '9px 12px 9px 34px',
-            fontSize: '12px', color: 'var(--txt-1)', outline: 'none', width: '100%', boxSizing: 'border-box',
+            background: unassignedOnly ? 'var(--gold)20' : 'var(--bg-2)',
+            border: unassignedOnly ? '0.5px solid var(--gold)' : '0.5px solid var(--line)',
+            color: unassignedOnly ? 'var(--gold-2)' : 'var(--txt-2)',
+            borderRadius: '8px', padding: '9px 12px', fontSize: '12px', fontWeight: 600,
+            cursor: 'pointer', whiteSpace: 'nowrap',
           }}
-        />
+        >
+          À rattacher{unassignedCount > 0 ? ` (${unassignedCount})` : ''}
+        </button>
       </div>
 
       {/* TABLE DES DÉPENSES AVEC ÉDITION DIRECTE SUR CHAQUE CELLULE */}
@@ -420,7 +529,19 @@ export default function DepensesPage() {
                     onFocus={e => (e.target.style.background = 'var(--bg-2)', e.target.style.borderColor = 'var(--gold)')}
                     onBlurCapture={e => (e.target.style.background = 'transparent', e.target.style.borderColor = 'transparent')}
                   />
-                  {d.jobs?.titre && <div style={{ fontSize: '11px', color: 'var(--txt-3)', paddingLeft: '6px' }}>🔨 {d.jobs.titre}</div>}
+                  <div style={{ display: 'flex', gap: '8px', paddingLeft: '6px', flexWrap: 'wrap' }}>
+                    {d.jobs?.titre ? (
+                      <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>{d.jobs.titre}</span>
+                    ) : (
+                      <span style={{ fontSize: '11px', color: 'var(--gold-2)' }}>À rattacher</span>
+                    )}
+                    {d.source === 'Courriel' && (
+                      <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Courriel</span>
+                    )}
+                    {d.source === 'Scan' && (
+                      <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Scan</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* 2. CATÉGORIE EN DROPDOWN DIRECT */}
@@ -509,10 +630,16 @@ export default function DepensesPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--txt-1)', margin: 0 }}>
-                {editingDepense ? 'Modifier la dépense' : 'Nouvelle dépense'}
+                {editingDepense ? 'Modifier la dépense' : scanNote ? 'Facture scannée' : 'Nouvelle dépense'}
               </h2>
               <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}><X size={18} /></button>
             </div>
+
+            {scanNote && (
+              <div style={{ fontSize: '12px', color: 'var(--txt-2)', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', borderRadius: '8px', padding: '10px 12px', lineHeight: 1.5 }}>
+                {scanNote}
+              </div>
+            )}
 
             <div>
               <label style={labelSt}>Description *</label>
@@ -630,4 +757,35 @@ export default function DepensesPage() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
+}
+
+function compressImage(file: File): Promise<{ b64: string; mime: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const max = 1280
+      let w = img.width
+      let h = img.height
+      if (w > max || h > max) {
+        const s = max / Math.max(w, h)
+        w = Math.round(w * s)
+        h = Math.round(h * s)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('Image illisible')); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.72)
+      resolve({ b64: dataUrl.replace(/^data:[^;]+;base64,/, ''), mime: 'image/jpeg' })
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Photo illisible'))
+    }
+    img.src = url
+  })
 }
