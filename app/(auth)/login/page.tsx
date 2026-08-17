@@ -33,6 +33,7 @@ function LoginForm() {
   const [showPw, setShowPw] = useState(false)
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
+  const next = searchParams.get('next')
 
   return (
     <div style={{
@@ -64,6 +65,7 @@ function LoginForm() {
           borderTop: '2px solid var(--gold-3)', borderRadius: '12px', padding: '1.75rem',
         }}>
           <form action={signIn}>
+            {next && <input type="hidden" name="next" value={next} />}
             <div style={{ marginBottom: '14px' }}>
               <label htmlFor="login-email" style={{ display: 'block', fontSize: '11px', color: 'var(--txt-2)', marginBottom: '6px' }}>
                 Adresse courriel

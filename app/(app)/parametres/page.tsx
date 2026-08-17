@@ -6,7 +6,7 @@ import {
   Settings, Building2, Hash, CreditCard, FileText, Palette,
   Upload, Save, Loader2, CheckCircle2, Shield, Trash2, Download, Mail, Lock,
   Users, UserPlus, Crown, User as UserIcon, XCircle, Send, Home, HardHat, Landmark, Check,
-  Plug, Megaphone,
+  Plug, Megaphone, Copy,
 } from 'lucide-react'
 import WebCrmPanel from './web-crm-panel'
 import AdsCrmPanel from './ads-crm-panel'
@@ -79,6 +79,7 @@ interface TeamMember {
   role: 'owner' | 'admin' | 'collaborateur'
   accepted: boolean
   created_at: string
+  token?: string
 }
 
 function TeamPanel({ canManage }: { canManage: boolean }) {
@@ -89,6 +90,8 @@ function TeamPanel({ canManage }: { canManage: boolean }) {
   const [inviting,  setInviting]  = useState(false)
   const [invited,   setInvited]   = useState(false)
   const [error,     setError]     = useState('')
+  const [joinUrl,   setJoinUrl]   = useState('')
+  const [copied,    setCopied]    = useState('')
 
   useEffect(() => {
     fetch('/api/invitations')
@@ -109,13 +112,31 @@ function TeamPanel({ canManage }: { canManage: boolean }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erreur')
       setMembers(m => [...m, data])
-      setEmail(''); setInvited(true)
-      setTimeout(() => setInvited(false), 3000)
+      setEmail('')
+      if (data.join_url) setJoinUrl(data.join_url)
+      if (data.email_sent === false) {
+        setError('Le courriel n’est pas parti. Copie le lien ci-dessous et envoie-le à la personne.')
+      } else {
+        setInvited(true)
+        setTimeout(() => setInvited(false), 3000)
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur')
     } finally {
       setInviting(false)
     }
+  }
+
+  function invitationLink(token?: string) {
+    if (!token || typeof window === 'undefined') return ''
+    return `${window.location.origin}/join?token=${token}`
+  }
+
+  async function copyLink(url: string, id: string) {
+    if (!url) return
+    await navigator.clipboard.writeText(url)
+    setCopied(id)
+    setTimeout(() => setCopied(''), 2000)
   }
 
   async function revoke(id: string) {
@@ -153,12 +174,22 @@ function TeamPanel({ canManage }: { canManage: boolean }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
               <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '1px' }}>
-                {m.accepted ? '✓ Compte actif' : '⏳ Invitation envoyée'}
+                {m.accepted ? '✓ Compte actif' : '⏳ En attente — copie le lien si le courriel n’arrive pas'}
               </div>
             </div>
             <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', color: roleColor(m.role), background: roleBg(m.role), flexShrink: 0 }}>
               {roleLabel(m.role)}
             </span>
+            {canManage && !m.accepted && m.token && (
+              <button
+                type="button"
+                onClick={() => copyLink(invitationLink(m.token), m.id)}
+                title="Copier le lien d'invitation"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied === m.id ? 'var(--green)' : 'var(--txt-3)', padding: '2px' }}
+              >
+                {copied === m.id ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+              </button>
+            )}
             {canManage && m.role !== 'owner' && (
               <button onClick={() => revoke(m.id)} title="Révoquer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)', padding: '2px' }}>
                 <XCircle size={14} />
@@ -203,6 +234,24 @@ function TeamPanel({ canManage }: { canManage: boolean }) {
             </button>
           </div>
           {error && <div style={{ fontSize: '11px', color: 'var(--red)', background: 'var(--red)12', border: '0.5px solid var(--red)', borderRadius: '7px', padding: '8px 12px' }}>{error}</div>}
+          {joinUrl && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                readOnly
+                value={joinUrl}
+                onFocus={e => e.target.select()}
+                style={{ flex: 1, boxSizing: 'border-box', background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '8px 10px', fontSize: '11px', color: 'var(--txt-2)', fontFamily: 'ui-monospace, monospace' }}
+              />
+              <button
+                type="button"
+                onClick={() => copyLink(joinUrl, 'last')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {copied === 'last' ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+                {copied === 'last' ? 'Copié' : 'Copier le lien'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
       ) : (

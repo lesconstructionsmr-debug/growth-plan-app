@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Users, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 function JoinContent() {
   const searchParams = useSearchParams()
@@ -12,6 +13,8 @@ function JoinContent() {
   const [status, setStatus] = useState<'loading' | 'valid' | 'invalid' | 'accepted'>('loading')
   const [info,   setInfo]   = useState<{ email: string; company: string; role: string } | null>(null)
   const [joining, setJoining] = useState(false)
+  const [password, setPassword] = useState('')
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     if (!token) { setStatus('invalid'); return }
@@ -26,6 +29,7 @@ function JoinContent() {
 
   async function accept() {
     setJoining(true)
+    setFormError('')
     const res = await fetch('/api/join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -34,10 +38,53 @@ function JoinContent() {
     if (res.ok) {
       setStatus('accepted')
       setTimeout(() => router.push('/dashboard'), 2000)
-    } else {
-      setJoining(false)
-      alert('Erreur lors de l\'acceptation. Veuillez réessayer.')
+      return
     }
+    if (res.status === 401) {
+      if (!password || password.length < 8) {
+        setJoining(false)
+        setFormError('Choisis un mot de passe (8 caractères minimum), ou connecte-toi si tu as déjà un compte.')
+        return
+      }
+      if (!info?.email) {
+        setJoining(false)
+        setFormError('Invitation incomplète.')
+        return
+      }
+      const supabase = createClient()
+      const { data: signed, error: signErr } = await supabase.auth.signUp({
+        email: info.email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      })
+      if (signErr) {
+        setJoining(false)
+        setFormError(signErr.message)
+        return
+      }
+      if (signed.session) {
+        const retry = await fetch('/api/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        })
+        if (retry.ok || retry.status === 409 || retry.status === 404) {
+          setStatus('accepted')
+          setTimeout(() => router.push('/dashboard'), 1500)
+          return
+        }
+        const retryData = await retry.json().catch(() => ({}))
+        setJoining(false)
+        setFormError(retryData.error || 'Compte créé. Reconnecte-toi pour rejoindre l’équipe.')
+        return
+      }
+      setJoining(false)
+      setFormError('Compte créé. Confirme le courriel, puis reviens sur ce lien.')
+      return
+    }
+    const data = await res.json().catch(() => ({}))
+    setJoining(false)
+    setFormError(data.error || 'Erreur lors de l\'acceptation. Veuillez réessayer.')
   }
 
   return (
@@ -72,18 +119,34 @@ function JoinContent() {
             <p style={{ fontSize: '13px', color: 'var(--txt-2)', lineHeight: 1.6, margin: '0 0 20px' }}>
               Rejoignez <strong>{info.company}</strong> sur Plan Growth en tant que <strong>{info.role}</strong>.
             </p>
-            <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '12px 16px', marginBottom: '20px', fontSize: '12px', color: 'var(--txt-3)' }}>
+            <div style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '12px 16px', marginBottom: '16px', fontSize: '12px', color: 'var(--txt-3)' }}>
               {info.email}
             </div>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Mot de passe (si nouveau compte)"
+              autoComplete="new-password"
+              style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg-2)', border: '0.5px solid var(--line)', borderRadius: '9px', padding: '11px 12px', fontSize: '13px', color: 'var(--txt-1)', marginBottom: '12px', outline: 'none' }}
+            />
+            {formError && (
+              <div style={{ fontSize: '12px', color: 'var(--red)', marginBottom: '12px', lineHeight: 1.5 }}>{formError}</div>
+            )}
             <button
               onClick={accept}
               disabled={joining}
               style={{ width: '100%', padding: '12px', background: 'var(--gold)', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: 700, color: '#0A0A0A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              {joining ? <><Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> Connexion…</> : 'Accepter l\'invitation'}
+              {joining ? <><Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> Connexion…</> : 'Rejoindre l\'équipe'}
             </button>
-            <p style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '12px' }}>
-              Vous aurez accès à tous les clients, devis et factures de la compagnie.
+            <p style={{ fontSize: '12px', marginTop: '12px' }}>
+              <a href={`/login?next=${encodeURIComponent(`/join?token=${token}`)}`} style={{ color: 'var(--gold-2)', textDecoration: 'none' }}>
+                J’ai déjà un mot de passe — me connecter
+              </a>
+            </p>
+            <p style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '8px' }}>
+              Tu n’auras accès qu’à cette équipe — pas à une nouvelle compagnie.
             </p>
           </>
         )}

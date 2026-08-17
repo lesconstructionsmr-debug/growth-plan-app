@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
+import { sendResendEmail } from '@/lib/email/signup-confirmation'
+import { escapeHtml } from '@/lib/email/links'
+import { getSiteUrl } from '@/lib/auth/site-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,40 +52,36 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
-    // Envoyer email via Resend
-    if (process.env.RESEND_API_KEY) {
-      // data.token = colonne token (gen_random_bytes) — PAS data.id (S2.1)
-      const joinUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://app.growth-plan.ca'}/join?token=${data.token}`
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM ?? 'noreply@growth-plan.ca',
-          to: email.trim(),
-          subject: 'Invitation — Plan Growth ERP',
-          html: `
-            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;">
-              <h2 style="margin:0 0 16px;font-size:20px;color:#0A0A0A;">Vous avez été invité à rejoindre Plan Growth</h2>
-              <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 24px;">
-                Vous avez été invité en tant que <strong>${role ?? 'collaborateur'}</strong>.
-                Cliquez sur le bouton ci-dessous pour créer votre compte et accéder à la plateforme.
-              </p>
-              <a href="${joinUrl}" style="display:inline-block;background:#D4960C;color:#0A0A0A;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">
-                Accepter l'invitation →
-              </a>
-              <p style="font-size:12px;color:#888;margin-top:24px;line-height:1.5;">
-                Ce lien est personnel et ne doit pas être partagé.
-              </p>
-            </div>
-          `,
-        }),
-      }).catch(err => console.error('[invitations] Erreur envoi email:', err))
-    }
+    const joinUrl = `${getSiteUrl()}/join?token=${data.token}`
+    const roleLabel = role === 'admin' ? 'administrateur' : 'collaborateur'
+    const sent = await sendResendEmail({
+      to: email.trim().toLowerCase(),
+      subject: 'Invitation — Plan Growth',
+      html: `
+        <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff">
+          <p style="margin:0 0 8px;font-size:12px;letter-spacing:0.08em;color:#B8922A;font-weight:700">PLAN GROWTH</p>
+          <h1 style="margin:0 0 16px;font-size:22px;color:#0A0A0A">Vous êtes invité dans une équipe</h1>
+          <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 24px">
+            On vous invite en tant que <strong>${escapeHtml(roleLabel)}</strong>.
+            Cliquez le bouton, puis connectez-vous avec <strong>${escapeHtml(email.trim().toLowerCase())}</strong>.
+          </p>
+          <a href="${joinUrl}" style="display:inline-block;background:#D4960C;color:#0A0A0A;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">
+            Rejoindre l'équipe
+          </a>
+          <p style="font-size:12px;color:#888;margin-top:24px;line-height:1.5">
+            Si le bouton ne fonctionne pas, copiez ce lien :<br/>${escapeHtml(joinUrl)}
+          </p>
+        </div>
+      `,
+    })
+    if (!sent.ok) console.error('[invitations] courriel', sent.error)
 
-    return NextResponse.json(data, { status: 201 })
+    return NextResponse.json({
+      ...data,
+      join_url: joinUrl,
+      email_sent: sent.ok,
+      email_error: sent.ok ? null : sent.error,
+    }, { status: 201 })
   } catch (err) {
     return apiError(err, '[POST /api/invitations]')
   }

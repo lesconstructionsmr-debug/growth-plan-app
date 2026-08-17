@@ -80,15 +80,21 @@ export async function signIn(formData: FormData) {
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
+  const next = String(formData.get('next') || '')
+  const nextQs = next.startsWith('/') && !next.startsWith('//')
+    ? `&next=${encodeURIComponent(next)}`
+    : ''
+
   if (error) {
     let msg = 'Email ou mot de passe incorrect.'
     if (error.message.toLowerCase().includes('email not confirmed')) {
       msg = 'Courriel non confirmé — vérifiez votre boîte de réception.'
     }
-    redirect(`/login?error=${encodeURIComponent(msg)}`)
+    redirect(`/login?error=${encodeURIComponent(msg)}${nextQs}`)
   }
 
-  redirect('/dashboard')
+  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
+  redirect(safeNext)
 }
 
 export async function resendConfirmation(email: string) {
