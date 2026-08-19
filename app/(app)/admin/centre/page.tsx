@@ -160,8 +160,8 @@ export default function ControlCenterPage() {
 
 const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (showSpinner = true) => {
+    if (showSpinner) setLoading(true)
     setError('')
     try {
       const [s, t, l] = await Promise.all([
@@ -194,11 +194,11 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
         abonnesActifs: 0
       })
     } finally {
-      setLoading(false)
+      if (showSpinner) setLoading(false)
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(true) }, [load])
 
   function flashSuccess(msg: string) {
     setSuccessMsg(msg)
@@ -221,20 +221,31 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
     setShowTask(false)
     setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '' })
     flashSuccess('Tâche créée avec succès !')
-    await load()
+    await load(false)
   }
 
   async function patchTask(id: string, patch: Partial<Task>) {
-    await fetch('/api/admin/tasks', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...patch }),
-    })
-    await load()
+    // ⚡ Mise à jour optimiste instantanée (0 ms)
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t))
+    try {
+      await fetch('/api/admin/tasks', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...patch }),
+      })
+      await load(false)
+    } catch (e) {
+      await load(false)
+    }
   }
 
   async function deleteTask(id: string) {
-    await fetch(`/api/admin/tasks?id=${id}`, { method: 'DELETE' })
-    await load()
+    setTasks(prev => prev.filter(t => t.id !== id))
+    try {
+      await fetch(`/api/admin/tasks?id=${id}`, { method: 'DELETE' })
+      await load(false)
+    } catch (e) {
+      await load(false)
+    }
   }
 
   async function injectRoutine(routineId: string) {
@@ -258,7 +269,7 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
       if (!r.ok) throw new Error('Erreur lors de l\'injection de la routine')
       setShowRoutine(false)
       flashSuccess(`Routine "${template.nom}" injectée avec succès (${template.tasks.length} tâches) !`)
-      await load()
+      await load(false)
       setOnglet('taches')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible d\'injecter la routine')
@@ -286,16 +297,22 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
       besoin: 'les_deux', taille_equipe: '2-5', notes: '',
     })
     flashSuccess('Prospect adhésion ajouté au pipeline !')
-    await load()
+    await load(false)
     setOnglet('leads')
   }
 
   async function patchLead(id: string, patch: Partial<Lead>) {
-    await fetch('/api/admin/saas-leads', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...patch }),
-    })
-    await load()
+    // ⚡ Mise à jour optimiste instantanée du statut (0 ms de délai visuel, aucun écran de chargement)
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, ...patch } : l))
+    try {
+      await fetch('/api/admin/saas-leads', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...patch }),
+      })
+      await load(false)
+    } catch (e) {
+      await load(false)
+    }
   }
 
   function openFollowUpTaskForLead(l: Lead) {
