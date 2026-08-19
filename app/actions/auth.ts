@@ -36,6 +36,9 @@ export async function signUp(formData: FormData) {
   const ville       = formData.get('ville') as string
   const vertical    = formData.get('vertical') as string
   const teamSize    = formData.get('team_size') as string
+  const plan        = (formData.get('plan') as string) || 'growth'
+  const trialDays   = parseInt((formData.get('essai') as string) || '14', 10) || 14
+  const ref         = (formData.get('ref') as string) || ''
 
   const supabase = makeSupabase()
 
@@ -43,7 +46,17 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
-      data: { full_name: fullName, company_name: companyName, telephone, ville, vertical, team_size: teamSize },
+      data: {
+        full_name: fullName,
+        company_name: companyName,
+        telephone,
+        ville,
+        vertical,
+        team_size: teamSize,
+        plan,
+        trial_days: trialDays,
+        ref,
+      },
       emailRedirectTo: getAuthCallbackUrl(),
     },
   })
@@ -58,18 +71,18 @@ export async function signUp(formData: FormData) {
     )}`)
   }
 
-  // Confirm email désactivé côté Supabase → session immédiate
+  // Si session créée immédiatement
   if (data.session) {
-    redirect('/dashboard')
+    redirect(`/dashboard?abonnement=essai_actif&trial=${trialDays}&plan=${encodeURIComponent(plan)}`)
   }
 
   const sent = await sendSignupConfirmationEmail(email)
   if (!sent.ok) {
     console.error('[signUp] confirmation email', sent.error)
-    redirect(`/onboarding/confirmation?email=${encodeURIComponent(email)}&sent=0`)
+    redirect(`/onboarding/confirmation?email=${encodeURIComponent(email)}&sent=0&plan=${encodeURIComponent(plan)}&trial=${trialDays}`)
   }
 
-  redirect(`/onboarding/confirmation?email=${encodeURIComponent(email)}`)
+  redirect(`/onboarding/confirmation?email=${encodeURIComponent(email)}&plan=${encodeURIComponent(plan)}&trial=${trialDays}`)
 }
 
 export async function signIn(formData: FormData) {

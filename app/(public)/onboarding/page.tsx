@@ -174,18 +174,21 @@ function StepCompany({ vertical, onNext, onBack }: {
 
 // ─── Étape 3 : Création de compte (composant isolé = pas de perte de focus) ──
 
-function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loading, error }: {
+function StepAccount({ vertical, teamSize, companyData, initialData, plan, trialDays, onBack, onSubmit, loading, error }: {
   vertical: Vertical
   teamSize: TeamSize
   companyData: CompanyData
+  initialData?: { prenom?: string; nom?: string; email?: string }
+  plan?: string
+  trialDays?: string
   onBack: () => void
   onSubmit: (data: AccountData) => void
   loading: boolean
   error: string
 }) {
-  const [prenom, setPrenom] = useState('')
-  const [nom, setNom] = useState('')
-  const [email, setEmail] = useState('')
+  const [prenom, setPrenom] = useState(initialData?.prenom || '')
+  const [nom, setNom] = useState(initialData?.nom || '')
+  const [email, setEmail] = useState(initialData?.email || '')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
 
@@ -193,6 +196,8 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
 
   const teamLabel = TEAM_SIZES.find(t => t.id === teamSize)?.label ?? '—'
   const verticalLabel = VERTICALS.find(v => v.id === vertical)?.label ?? '—'
+  const planLabel = plan === 'pro' ? 'Plan Growth Pro' : plan === 'enterprise' ? 'Plan Enterprise' : 'Plan Growth Starter'
+  const essaiLabel = `${trialDays || '14'} jours d'essai gratuit inclus`
 
   const handleAccountDraft = () => {
     if (email.trim() || prenom.trim() || nom.trim()) {
@@ -274,13 +279,14 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
         borderRadius: '10px', padding: '12px 14px',
       }}>
         <p style={{ fontSize: '11px', color: 'var(--txt-3)', fontWeight: 600, marginBottom: '8px' }}>
-          RÉSUMÉ DE VOTRE CONFIGURATION
+          RÉSUMÉ DE VOTRE CONFIGURATION & ABONNEMENT
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <RecapRow label="Formule" value={planLabel} highlight />
           <RecapRow label="Secteur" value={verticalLabel} />
           <RecapRow label="Équipe" value={teamLabel} />
           <RecapRow label="Entreprise" value={companyData.companyName || '—'} />
-          <RecapRow label="Essai gratuit" value="14 jours inclus" highlight />
+          <RecapRow label="Période d'essai" value={essaiLabel} highlight />
         </div>
       </div>
 
@@ -304,7 +310,7 @@ function StepAccount({ vertical, teamSize, companyData, onBack, onSubmit, loadin
         onBack={onBack}
         onNext={() => onSubmit({ prenom, nom, email, password })}
         canNext={!!canSubmit}
-        nextLabel={loading ? 'Création du compte...' : 'Créer mon compte — Essai 14 jours gratuit'}
+        nextLabel={loading ? 'Création du compte...' : `Créer mon compte — ${essaiLabel}`}
         loading={loading}
       />
     </div>
@@ -318,14 +324,29 @@ function OnboardingContent() {
   const [vertical, setVertical] = useState<Vertical | null>(null)
   const [teamSize, setTeamSize] = useState<TeamSize | null>(null)
   const [companyData, setCompanyData] = useState<CompanyData>({ companyName: '', telephone: '', ville: '' })
+  const [initialUserData, setInitialUserData] = useState<{ prenom?: string; nom?: string; email?: string }>({})
   const [isPending, startTransition] = useTransition()
   const searchParams = useSearchParams()
   const signupError = searchParams.get('error')
+
+  const qPlan = searchParams.get('plan') || 'growth'
+  const qEssai = searchParams.get('essai') || '14'
+  const qRef = searchParams.get('ref') || ''
 
   useEffect(() => {
     const qCompany = searchParams.get('company') || searchParams.get('entreprise')
     if (qCompany) {
       setCompanyData(prev => ({ ...prev, companyName: qCompany }))
+    }
+    const qEmail = searchParams.get('email')
+    const qNom = searchParams.get('nom')
+    if (qEmail || qNom) {
+      const parts = (qNom || '').trim().split(' ')
+      setInitialUserData({
+        email: qEmail || '',
+        prenom: parts[0] || '',
+        nom: parts.slice(1).join(' ') || '',
+      })
     }
   }, [searchParams])
 
@@ -343,6 +364,9 @@ function OnboardingContent() {
     formData.append('ville', companyData.ville)
     formData.append('vertical', vertical!)
     formData.append('team_size', teamSize!)
+    formData.append('plan', qPlan)
+    formData.append('essai', qEssai)
+    formData.append('ref', qRef)
     startTransition(() => { signUp(formData) })
   }
 
@@ -502,6 +526,9 @@ function OnboardingContent() {
             vertical={vertical!}
             teamSize={teamSize!}
             companyData={companyData}
+            initialData={initialUserData}
+            plan={qPlan}
+            trialDays={qEssai}
             onBack={() => setStep(2)}
             onSubmit={handleSubmit}
             loading={isPending}
