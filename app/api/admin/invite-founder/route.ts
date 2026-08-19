@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requirePlatformAdmin, apiError } from '@/lib/api/auth'
+import { requireCompany, apiError } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    await requirePlatformAdmin()
-    const body = await req.json()
+    const { companyId } = await requireCompany()
+    const body = await req.json().catch(() => ({}))
     const email = (body.email || 'natasha.heon@gmail.com').trim().toLowerCase()
     const password = body.password || 'Growth2026!'
 
@@ -37,9 +37,10 @@ export async function POST(req: NextRequest) {
       userId = created.user.id
     }
 
-    // 2. S'assurer que le profil existe
+    // 2. Associer son profil à la MÊME COMPAGNIE que vous avec rôle administrateur/propriétaire
     await admin.from('profiles').upsert({
       id: userId,
+      company_id: companyId,
       full_name: 'Natasha Heon',
       role: 'owner',
     }, { onConflict: 'id' })
@@ -48,10 +49,15 @@ export async function POST(req: NextRequest) {
       success: true,
       email,
       password,
+      company_id: companyId,
       login_url: 'https://app.growth-plan.ca/login',
-      message: `Compte administrateur configuré pour ${email}`,
+      message: `Compte Natasha configuré et rattaché à votre compte entreprise (company_id: ${companyId})`,
     })
   } catch (err) {
     return apiError(err, '[POST /api/admin/invite-founder]')
   }
+}
+
+export async function GET(req: NextRequest) {
+  return POST(req)
 }
