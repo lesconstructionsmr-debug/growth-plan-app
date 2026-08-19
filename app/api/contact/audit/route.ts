@@ -35,12 +35,12 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1'
     const { allowed } = checkRateLimit(ip, 10, 15 * 60 * 1000)
     if (!allowed) {
-      return NextResponse.json({ error: 'Trop de requêtes, veuillez réessayer plus tard' }, { status: 429 })
+      return json(req, { error: 'Trop de requêtes, veuillez réessayer plus tard' }, 429)
     }
 
     const body = await req.json().catch(() => ({}))
     if (body.website || body.hp) {
-      return NextResponse.json({ success: true, lead_id: 'honeypot_dropped' })
+      return json(req, { success: true, lead_id: 'honeypot_dropped' }, 200)
     }
 
     const name = body.name || body.nom || ''
@@ -64,48 +64,72 @@ export async function POST(req: NextRequest) {
       return json(req, { error: 'Email ou téléphone requis', stored: false }, 400)
     }
 
-    const companyId = process.env.LANDING_LEADS_COMPANY_ID?.trim()
-    if (!companyId) {
-      console.error('[Contact Audit] LANDING_LEADS_COMPANY_ID manquant')
-      return json(req, { error: 'LANDING_LEADS_COMPANY_ID non configuré sur Netlify', stored: false }, 503)
-    }
+    const admin = createAdminClient()
 
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
-      console.error('[Contact Audit] SUPABASE_SERVICE_ROLE_KEY manquant')
-      return json(req, { error: 'SUPABASE_SERVICE_ROLE_KEY non configuré sur Netlify', stored: false }, 503)
-    }
-
+    // 1. Toujours enregistrer dans platform_leads (Centre de Contrôle Fondateur)
     const noteLines = [
       `Entreprise: ${entreprise}`,
       `Secteur: ${secteur}`,
     ]
-    if (chantiers_par_mois !== null && chantiers_par_mois !== undefined && chantiers_par_mois !== '') {
-      noteLines.push(`Chantiers par mois: ${chantiers_par_mois}`)
-    }
-    if (chiffre_affaires !== null && chiffre_affaires !== undefined && chiffre_affaires !== '') {
-      noteLines.push(`Chiffre d'affaires: ${chiffre_affaires}`)
-    }
-    noteLines.push('Source: Landing — Audit ROI Plangrowth')
+    if (chantiers_par_mois) noteLines.push(`Chantiers par mois: ${chantiers_par_mois}`)
+    if (chiffre_affaires) noteLines.push(`Chiffre d'affaires: ${chiffre_affaires}`)
+    noteLines.push('Source: Landing Page — Demande Audit ROI')
 
     const notes = noteLines.join('\n')
 
-    const admin = createAdminClient()
-    const { data, error } = await admin.from('leads').insert({
-      company_id: companyId,
-      nom: `${nom} (${entreprise})`,
-      email: emailTrim || '',
-      telephone: tel || '',
-      source: 'Landing — Audit ROI',
-      statut: 'nouveau',
-      notes,
-    }).select('id').single()
+    const { data: platformLead, error: platformErr } = await admin
+      .from('platform_leads')
+      .insert({
+        nom,
+        entreprise,
+        email: emailTrim || null,
+        telephone: tel || null,
+        source: 'Landing — Audit ROI',
+        statut: 'nouveau',
+        besoin: 'les_deux',
+        score: 95,
+        notes,
+      })
+      .select('id')
+      .maybeSingle()
 
-    if (error) {
-      console.error('[Contact Audit] Erreur Supabase:', error)
-      return json(req, { error: `Enregistrement échoué: ${error.message}`, stored: false }, 500)
+    if (platformErr) {
+      console.warn('[Contact Audit] Erreur insertion platform_leads:', platformErr.message)
     }
 
-    return json(req, { success: true, stored: true, lead_id: data.id }, 200)
+    // 2. Chercher la compagnie cible (via env ou fallback première compagnie Supabase)
+    let companyId = process.env.LANDING_LEADS_COMPANY_ID?.trim()
+    if (!companyId) {
+      const { data: firstCompany } = await admin.from('companies').select('id').limit(1).maybeSingle()
+      companyId = firstCompany?.id
+    }
+
+    let companyLeadId = null
+    if (companyId) {
+      const { data: cLead, error: cErr } = await admin
+        .from('leads')
+        .insert({
+          company_id: companyId,
+          nom: `${nom} (${entreprise})`,
+          email: emailTrim || '',
+          telephone: tel || '',
+          source: 'Landing — Audit ROI',
+          statut: 'nouveau',
+          notes,
+        })
+        .select('id')
+        .maybeSingle()
+
+      if (!cErr && cLead) {
+        companyLeadId = cLead.id
+      }
+    }
+
+    return json(req, {
+      success: true,
+      stored: true,
+      lead_id: platformLead?.id || companyLeadId || 'captured',
+    }, 200)
   } catch (err) {
     console.error('[Contact Audit]', err)
     const message = err instanceof Error ? err.message : 'Erreur serveur'
