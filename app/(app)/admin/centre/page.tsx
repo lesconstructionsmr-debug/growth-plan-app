@@ -342,7 +342,7 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = [
   }
 
   function generateExpressTrialUrl() {
-    const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/adhesion` : 'https://app.growth-plan.ca/adhesion'
+    const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/onboarding` : 'https://app.growth-plan.ca/onboarding'
     const params = new URLSearchParams()
     params.set('plan', trialPlan)
     params.set('essai', String(trialDays))

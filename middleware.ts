@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   '/tarifs',
   '/join',
   '/onboarding',
+  '/adhesion',
 ]
 
 const PUBLIC_API_PREFIXES = [

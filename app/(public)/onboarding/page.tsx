@@ -322,6 +322,13 @@ function OnboardingContent() {
   const searchParams = useSearchParams()
   const signupError = searchParams.get('error')
 
+  useEffect(() => {
+    const qCompany = searchParams.get('company') || searchParams.get('entreprise')
+    if (qCompany) {
+      setCompanyData(prev => ({ ...prev, companyName: qCompany }))
+    }
+  }, [searchParams])
+
   const canNextStep01 =
     (step === 0 && !!vertical) ||
     (step === 1 && !!teamSize)
