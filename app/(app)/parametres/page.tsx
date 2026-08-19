@@ -952,7 +952,7 @@ export default function ParametresPage() {
                       const saisie = prompt('Tapez "SUPPRIMER" pour confirmer la suppression définitive de votre compte :')
                       if (saisie !== 'SUPPRIMER') { alert('Suppression annulée.'); return }
                       try {
-                        const res = await fetch('/api/admin/purge-tenant', {
+                        const res = await fetch('/api/account/delete', {
                           method: 'DELETE',
                           headers: { 'X-Confirm-Purge': 'DELETE-MY-ACCOUNT' }
                         })
