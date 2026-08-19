@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/layout/sidebar'
 import SubscriptionBanner from '@/components/subscription-banner'
 import { normalizeRole } from '@/lib/auth/permissions'
+import { canAccessControlCenter } from '@/lib/platform-admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,11 +18,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) redirect('/login')
 
-      const { data: profile } = await supabase
+      let { data: profile } = await supabase
         .from('profiles')
         .select('company_id, role')
         .eq('id', user.id)
-        .single() as { data: { company_id: string; role: string | null } | null }
+        .maybeSingle() as { data: { company_id: string; role: string | null } | null }
+
+      // 🛡️ Auto-rattachement des administrateurs plateforme (ex: Natasha) à la compagnie principale s'ils sont sans compagnie
+      if (canAccessControlCenter(user.email) && !profile?.company_id) {
+        const { data: firstComp } = await supabase
+          .from('companies')
+          .select('id')
+          .limit(1)
+          .maybeSingle() as { data: { id: string } | null }
+
+        if (firstComp?.id) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase.from('profiles') as any).upsert({
+            id: user.id,
+            company_id: firstComp.id,
+            role: 'owner',
+            full_name: user.user_metadata?.full_name ?? 'Natasha Heon',
+          })
+          profile = { company_id: firstComp.id, role: 'owner' }
+        }
+      }
 
       userRole = normalizeRole(profile?.role)
 
@@ -30,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .from('subscriptions')
           .select('status, trial_end')
           .eq('company_id', profile.company_id)
-          .single() as { data: { status: string; trial_end: string | null } | null }
+          .maybeSingle() as { data: { status: string; trial_end: string | null } | null }
 
         if (sub) {
           subStatus = sub.status as typeof subStatus
