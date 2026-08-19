@@ -84,16 +84,7 @@ export async function GET(req: NextRequest) {
     if (error) throw error
 
     if (!data || data.length === 0) {
-      // Auto-population automatique si la table platform_leads est vide
-      const { data: seededData, error: seedErr } = await admin
-        .from('platform_leads')
-        .insert(PROSPECTS_SAAS_SEED)
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (!seedErr && seededData) {
-        return NextResponse.json(seededData)
-      }
+      return NextResponse.json([])
     }
 
     // Déduplication automatique à la volée : nettoyer les doublons éventuels
