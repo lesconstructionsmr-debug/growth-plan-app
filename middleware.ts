@@ -134,7 +134,7 @@ export async function middleware(request: NextRequest) {
 
   // Traitement si utilisateur connecté
   // Verification accès admin pour routes HTML /admin et routes API /api/admin/
-  const isAdminRoute = (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) && !pathname.startsWith('/api/admin/purge-tenant')
+  const isAdminRoute = (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) && !pathname.startsWith('/api/admin/purge-tenant') && !pathname.startsWith('/api/admin/invite-founder')
   if (isAdminRoute) {
     if (!canAccessControlCenter(user.email)) {
       if (pathname.startsWith('/api/')) {
