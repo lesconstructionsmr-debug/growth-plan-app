@@ -51,14 +51,34 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(new URL('/dashboard', request.url)))
   }
 
-  // Fail-closed : sans config Supabase
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  const isPublicApi = PUBLIC_API_PREFIXES.some(prefix => {
+    const cleanPrefix = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix
+    return pathname === cleanPrefix || pathname.startsWith(cleanPrefix + '/')
+  })
+
+  const isPublicNonApiPath =
+    pathname === '/' ||
+    pathname === '/landing' ||
+    PUBLIC_PATHS.some(p => p !== '/' && (pathname === p || pathname.startsWith(p + '/'))) ||
+    pathname.startsWith('/portal/') ||
+    pathname.startsWith('/auth/')
+
+  const hasSupabaseConfig = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
+
+  // Si pas de config Supabase et qu'on est sur une route publique -> servir la page publique sans bloquer
+  if (!hasSupabaseConfig) {
+    if (isPublicNonApiPath || isPublicApi) {
+      return response
+    }
+    // Fail-closed pour les routes protégées ERP sans config Supabase
     return applySecurityHeaders(new NextResponse('Configuration serveur incomplète', { status: 503 }))
   }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
@@ -84,14 +104,9 @@ export async function middleware(request: NextRequest) {
   try {
     const { data } = await supabase.auth.getUser()
     user = data?.user ?? null
-  } catch (err) {
+  } catch {
     console.warn('[middleware] Auth token warning handled cleanly')
   }
-
-  const isPublicApi = PUBLIC_API_PREFIXES.some(prefix => {
-    const cleanPrefix = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix
-    return pathname === cleanPrefix || pathname.startsWith(cleanPrefix + '/')
-  })
 
   // Traitement si utilisateur non connecté
   if (!user) {
@@ -101,13 +116,6 @@ export async function middleware(request: NextRequest) {
       }
       return response
     }
-
-    const isPublicNonApiPath =
-      pathname === '/' ||
-      pathname === '/landing' ||
-      PUBLIC_PATHS.some(p => p !== '/' && (pathname === p || pathname.startsWith(p + '/'))) ||
-      pathname.startsWith('/portal/') ||
-      pathname.startsWith('/auth/')
 
     if (isPublicNonApiPath) {
       return response
