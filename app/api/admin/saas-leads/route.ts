@@ -179,7 +179,7 @@ const PROSPECTS_SAAS_SEED = [
     notes: 'Adresse: 3310 100e Avenue, bureau 360, Laval, QC H7T 0J7. Note Google: 4,1 (7 avis). Site: constructionshub.com. Commercial & multirésidentiel.'
   },
 
-  // ── SPÉCIALISTES PEINTURE ──────────────────────────────────────────────────
+  // ── 8 SPÉCIALISTES PEINTURE ────────────────────────────────────────────────
   {
     nom: 'Direction - Peinture Lefebvre',
     entreprise: 'Peinture Lefebvre inc.',
@@ -252,8 +252,32 @@ const PROSPECTS_SAAS_SEED = [
     score: 80,
     notes: 'RBQ: 5765-1100-03. Restauration patrimoniale, peinture écologique sans COV.'
   },
+  {
+    nom: 'Direction - Les Peintres du Québec',
+    entreprise: 'Les Peintres du Québec inc.',
+    email: 'contact@lespeintresduquebec.ca',
+    telephone: '418-650-9922',
+    source: 'Prospection Peinture (Québec/Sainte-Foy)',
+    statut: 'qualifie',
+    besoin: 'les_deux',
+    taille_equipe: '16+',
+    score: 92,
+    notes: 'RBQ: 5822-4410-06. Peinture institutionnelle (écoles, hôpitaux) & bureaux.'
+  },
+  {
+    nom: 'Direction - Peinture Pro-Rive-Nord',
+    entreprise: 'Peinture Pro-Rive-Nord inc.',
+    email: 'info@peintureprorivenord.ca',
+    telephone: '450-435-8899',
+    source: 'Prospection Peinture (Blainville)',
+    statut: 'nouveau',
+    besoin: 'structure_numerique',
+    taille_equipe: '6-15',
+    score: 84,
+    notes: 'RBQ: 5790-2211-07. Peinture maisons neuves & tirage de joints complet.'
+  },
 
-  // ── SPÉCIALISTES TOITURE ──────────────────────────────────────────────────
+  // ── 7 SPÉCIALISTES TOITURE ────────────────────────────────────────────────
   {
     nom: 'Direction - Toitex',
     entreprise: 'Toitex inc.',
@@ -303,6 +327,18 @@ const PROSPECTS_SAAS_SEED = [
     notes: 'RBQ: 5790-1122-03. Isolation de toiture, ventilation de toit, toits en pente.'
   },
   {
+    nom: 'Direction - Toitures Niko',
+    entreprise: 'Toitures Niko inc.',
+    email: 'info@toituresniko.com',
+    telephone: '514-644-7700',
+    source: 'Prospection Toiture (Montréal/Anjou)',
+    statut: 'nouveau',
+    besoin: 'structure_numerique',
+    taille_equipe: '6-15',
+    score: 82,
+    notes: 'RBQ: 5689-3311-09. Inspection de toiture, colmatage fuites d\'eau & remplacement plieuse.'
+  },
+  {
     nom: 'Direction - Couvreurs Duro-Toit',
     entreprise: 'Couvreurs Duro-Toit inc.',
     email: 'info@durotoit.ca',
@@ -314,8 +350,20 @@ const PROSPECTS_SAAS_SEED = [
     score: 97,
     notes: 'RBQ: 5618-9920-01. Toiture écologique, toits verts, étanchéité complexe.'
   },
+  {
+    nom: 'Direction - Couvreur René Perron',
+    entreprise: 'Couvreur René Perron inc.',
+    email: 'info@perroncouvreurs.ca',
+    telephone: '514-388-5771',
+    source: 'Prospection Toiture (Laval/MTL)',
+    statut: 'essai',
+    besoin: 'les_deux',
+    taille_equipe: '16+',
+    score: 96,
+    notes: 'RBQ: 5701-2244-05. Toitures institutionnelles (écoles/arénas), cuivre/zinc & ferblanterie.'
+  },
 
-  // ── SPÉCIALISTES CÉRAMIQUE & CUISINE ──────────────────────────────────────
+  // ── 8 SPÉCIALISTES CÉRAMIQUE & CARRELAGE ──────────────────────────────────
   {
     nom: 'Direction - AGD Céramique',
     entreprise: 'AGD Céramique inc.',
@@ -340,6 +388,80 @@ const PROSPECTS_SAAS_SEED = [
     score: 89,
     notes: 'RBQ: 5840-7180-01. Planchers chauffants, membrane Schluter, carrelage complet.'
   },
+  {
+    nom: 'Direction - Céramique Beauchemin',
+    entreprise: 'Céramique Beauchemin inc.',
+    email: 'info@ceramiquebeauchemin.ca',
+    telephone: '450-444-6999',
+    source: 'Prospection Céramique (Brossard)',
+    statut: 'nouveau',
+    besoin: 'structure_numerique',
+    taille_equipe: '2-5',
+    score: 84,
+    notes: 'RBQ: 5845-3150-01. Planchers & murs de céramique résidentiels.'
+  },
+  {
+    nom: 'Direction - Carrelage Nord Sud',
+    entreprise: 'Carrelage Nord Sud inc.',
+    email: 'contact@carrelagenordsud.ca',
+    telephone: '450-430-5511',
+    source: 'Prospection Céramique (Laval)',
+    statut: 'contacte',
+    besoin: 'optimisation',
+    taille_equipe: '6-15',
+    score: 87,
+    notes: 'RBQ: 5705-3589-01. Auto-nivellement béton, porcelaine lourde & joints époxy.'
+  },
+  {
+    nom: 'Direction - Cera Art',
+    entreprise: 'Cera Art inc.',
+    email: 'info@ceraart.ca',
+    telephone: '514-825-3300',
+    source: 'Prospection Céramique (Montréal)',
+    statut: 'qualifie',
+    besoin: 'les_deux',
+    taille_equipe: '2-5',
+    score: 91,
+    notes: 'RBQ: 5827-6353-01. Carrelage artistique, motifs personnalisés, habillage foyers.'
+  },
+  {
+    nom: 'Direction - Mon Carreleur',
+    entreprise: 'Mon Carreleur inc.',
+    email: 'contact@moncarreleur.ca',
+    telephone: '514-554-1188',
+    source: 'Prospection Céramique (Longueuil)',
+    statut: 'nouveau',
+    besoin: 'structure_numerique',
+    taille_equipe: '2-5',
+    score: 83,
+    notes: 'RBQ: 5823-5391-01. Douches italiennes sur mesure, bases en ciment & métro.'
+  },
+  {
+    nom: 'Direction - Rénovation Montana (Carrelage)',
+    entreprise: 'Rénovation Montana inc.',
+    email: 'info@renomontana.ca',
+    telephone: '514-992-6633',
+    source: 'Prospection Céramique (Laval/MTL)',
+    statut: 'contacte',
+    besoin: 'optimisation',
+    taille_equipe: '6-15',
+    score: 85,
+    notes: 'RBQ: 5789-4411-08. Préparation sous-planchers, isolation acoustique & carrelage.'
+  },
+  {
+    nom: 'Direction - Carrelage Élite Montréal',
+    entreprise: 'Carrelage Élite Montréal inc.',
+    email: 'info@carrelageelitemtl.ca',
+    telephone: '514-889-4422',
+    source: 'Prospection Céramique (Montréal)',
+    statut: 'qualifie',
+    besoin: 'les_deux',
+    taille_equipe: '6-15',
+    score: 90,
+    notes: 'RBQ: 5890-1122-04. Carreaux grand format & découpe jet d\'eau.'
+  },
+
+  // ── 7 SPÉCIALISTES CUISINE & ARMOIRES ──────────────────────────────────────
   {
     nom: 'Direction - Nael Construction',
     entreprise: 'Nael Construction inc.',
@@ -389,6 +511,30 @@ const PROSPECTS_SAAS_SEED = [
     notes: 'RBQ: 5801-9922-03. Remise à neuf moderne de cuisines, concept ouvert & murs porteurs.'
   },
   {
+    nom: 'Direction - Struction Construction',
+    entreprise: 'Struction Construction inc.',
+    email: 'info@structioconstruction.ca',
+    telephone: '450-977-4687',
+    source: 'Prospection Cuisine (Laval/Rive-Nord)',
+    statut: 'contacte',
+    besoin: 'optimisation',
+    taille_equipe: '6-15',
+    score: 86,
+    notes: 'RBQ: 5826-7972-01. Gestion globale chantier cuisine, armoires & raccordements.'
+  },
+  {
+    nom: 'Direction - Charles Brodeur Rénovation',
+    entreprise: 'Charles Brodeur Rénovation inc.',
+    email: 'info@charlesbrodeur.com',
+    telephone: '450-467-1122',
+    source: 'Prospection Cuisine (Belœil)',
+    statut: 'qualifie',
+    besoin: 'les_deux',
+    taille_equipe: '6-15',
+    score: 91,
+    notes: 'RBQ: 8361-1087-01. Rajeunissement de cuisines ancestrales & contemporaines, caissons sur mesure.'
+  },
+  {
     nom: 'Direction - Réno M3',
     entreprise: 'Réno M3 inc.',
     email: 'admin@renom3.com',
@@ -417,6 +563,9 @@ export async function GET(req: NextRequest) {
       const { data: seededData, error: seedErr } = await admin
         .from('platform_leads')
         .insert(PROSPECTS_SAAS_SEED)
+        .select('*')
+        .order('created_at', { ascending: false })
+
       if (seedErr) throw seedErr
       return NextResponse.json(seededData ?? [])
     }
@@ -440,9 +589,10 @@ export async function GET(req: NextRequest) {
     ])
 
     const hasFakeData = data && data.some((item: any) => item.email && FAKE_DEMO_EMAILS.has(item.email.toLowerCase()))
+    const isExactCountMissing = data && data.length < 43
 
-    if (forceSeed || !data || data.length === 0 || hasFakeData) {
-      // Vider complètement la table pour supprimer définitivement les fiches fictives
+    if (forceSeed || !data || data.length === 0 || hasFakeData || isExactCountMissing) {
+      // Vider complètement la table pour supprimer définitivement les fiches fictives ou incomplètes
       await admin.from('platform_leads').delete().not('id', 'is', null)
 
       const { data: seededData, error: seedErr } = await admin
