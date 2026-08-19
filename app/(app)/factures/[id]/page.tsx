@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   ArrowLeft, Send, CheckCircle2, Download,
   Plus, Eye, X, CreditCard, Bell,
@@ -117,10 +117,7 @@ export default function FactureDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase
       .from('factures')
       .select('id, numero, titre, statut, montant_ht, tps, tvq, montant_ttc, date_emission, date_echeance, notes, lignes, clients(nom, email), devis(numero)')
@@ -195,10 +192,7 @@ export default function FactureDetailPage() {
     const newStatut: StatutFacture = solde <= 0 ? 'payee' : 'partielle'
 
     // Mettre à jour dans Supabase
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     await supabase.from('factures').update({
       statut: newStatut,
       date_paiement: newStatut === 'payee' ? new Date().toISOString().split('T')[0] : null,

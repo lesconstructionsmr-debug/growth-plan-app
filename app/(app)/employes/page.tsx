@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   HardHat, Plus, Search, Loader2, X,
   CheckCircle2, XCircle, Mail, DollarSign,
@@ -34,10 +34,7 @@ export default function EmployesPage() {
   const [poste, setPoste] = useState('')
   const [tauxHoraire, setTauxHoraire] = useState('')
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const loadEmployes = useCallback(async () => {
     setLoading(true)

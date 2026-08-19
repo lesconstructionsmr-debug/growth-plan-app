@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   TrendingUp, Users, Target, Clock, BarChart3,
   Award, PlusCircle, CheckSquare, Square
 } from 'lucide-react'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts'
+
+const SalesChart = dynamic(() => import('./sales-chart'), { ssr: false })
 
 interface TaskItem {
   id: string
@@ -70,14 +70,7 @@ export default function VentesDashboardPage() {
   const [chartData, setChartData] = useState<ChartRow[]>([])
   const [chartRangeLabel, setChartRangeLabel] = useState('')
 
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  )
+  const supabase = getBrowserClient()
 
   useEffect(() => {
     async function loadData() {
@@ -362,17 +355,7 @@ export default function VentesDashboardPage() {
           </div>
 
           <div style={{ flex: 1, minHeight: '220px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
-                <XAxis dataKey="year" stroke="var(--txt-3)" fontSize={10} tickLine={false} />
-                <YAxis stroke="var(--txt-3)" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ background: '#1A1C23', borderColor: 'var(--line)', borderRadius: '8px', fontSize: '11px', color: '#fff' }} />
-                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                <Bar dataKey="Soumissions envoyées" fill="#D4AF37" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Ventes" fill="#6366F1" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <SalesChart data={chartData} />
           </div>
         </div>
 

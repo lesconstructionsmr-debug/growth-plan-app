@@ -43,37 +43,29 @@ function buildMessage(payload: NotificationPayload): string {
   }
 }
 
-// ── Envoi vers service de chat externe ─────────────────────────
+// ── Envoi vers service de chat / notification ──────────────────
 async function sendToChatService(payload: NotificationPayload): Promise<void> {
   const message = buildMessage(payload)
 
-  // ── CRISP (décommenter + ajouter NEXT_PUBLIC_CRISP_WEBSITE_ID dans .env.local) ──
-  // if (typeof window !== 'undefined' && (window as any).$crisp) {
-  //   (window as any).$crisp.push(['do', 'chat:open'])
-  //   (window as any).$crisp.push(['do', 'message:send', ['text', message]])
-  // }
-
-  // ── INTERCOM (décommenter + configurer Intercom dans layout.tsx) ──
-  // if (typeof window !== 'undefined' && (window as any).Intercom) {
-  //   (window as any).Intercom('showNewMessage', message)
-  // }
-
-  // ── EMAIL API (via Resend / SendGrid / Nodemailer) ─────────────
-  // await fetch('/api/notifications/send', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ payload, message }),
-  // })
-
-  // ── Mode développement : log dans la console ───────────────────
-  console.log('[NotificationWidget] Message auto envoyé:', {
-    to: payload.client_email,
-    type: payload.type,
-    message,
+  const res = await fetch('/api/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipient: payload.client_email,
+      email: payload.client_email,
+      name: payload.client_nom,
+      type: payload.type,
+      numero: payload.numero,
+      titre: payload.titre,
+      message,
+      contenu: message,
+    }),
   })
 
-  // Simuler un délai réseau
-  await new Promise(r => setTimeout(r, 600))
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || `Erreur d'envoi de la notification (${res.status})`)
+  }
 }
 
 // ── Composant principal ─────────────────────────────────────────

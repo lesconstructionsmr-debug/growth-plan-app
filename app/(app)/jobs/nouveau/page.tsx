@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import { ArrowLeft, Building2, Save, MapPin, Calendar, Loader2 } from 'lucide-react'
 import AddressAutocomplete from '@/components/address-autocomplete'
 
@@ -33,10 +33,7 @@ export default function NouveauJobPage() {
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase.from('clients').select('id, nom').order('nom').then(({ data }) => {
       setClients(data ?? [])
     })

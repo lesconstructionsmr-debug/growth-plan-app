@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   TrendingUp, Plus, MessageCircle, FileText,
   Building2, User, Phone, Mail, Calendar,
@@ -57,10 +57,7 @@ export default function LeadsPage() {
   const [telephone, setTelephone] = useState('')
   const [valeurEstimee, setValeurEstimee] = useState('')
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const loadLeads = useCallback(async () => {
     setLoading(true)
@@ -188,7 +185,7 @@ export default function LeadsPage() {
   const allSelected = filtered.length > 0 && selectedIds.length === filtered.length
 
   return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1150px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -251,15 +248,16 @@ export default function LeadsPage() {
       </div>
 
       {/* TABLEAU AVEC ÉDITION EN LIGNE DIRECTE */}
-      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 180px 140px 130px 130px 60px', padding: '10px 18px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)' }}>
+      <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflowX: 'auto', width: '100%' }}>
+        <div style={{ minWidth: '760px' }}>
+        <div className="leads-grid" style={{ display: 'grid', gridTemplateColumns: '40px minmax(0, 1.4fr) minmax(0, 1.3fr) minmax(110px, 0.8fr) 110px 130px 72px', padding: '10px 16px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg-2)', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <button onClick={() => setSelectedIds(allSelected ? [] : filtered.map(l => l.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: allSelected ? 'var(--gold)' : 'var(--txt-3)' }}>
               {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
             </button>
           </div>
-          {['NOM / PROSPECT (ÉDITABLE)', 'COURRIEL (ÉDITABLE)', 'TÉLÉPHONE (ÉDITABLE)', 'VALEUR EST. ($ ÉDITABLE)', 'STATUT (ÉDITABLE)', 'ACTIONS'].map((h, i) => (
-            <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em', textAlign: h.includes('VALEUR') ? 'right' : 'left' }}>{h}</div>
+          {['Nom', 'Courriel', 'Téléphone', 'Valeur', 'Statut', ''].map((h, i) => (
+            <div key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--txt-3)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, textAlign: h === 'Valeur' ? 'right' : 'left' }}>{h}</div>
           ))}
         </div>
 
@@ -282,9 +280,9 @@ export default function LeadsPage() {
               <div
                 key={l.id}
                 style={{
-                  display: 'grid', gridTemplateColumns: '40px 1fr 180px 140px 130px 130px 60px',
-                  padding: '10px 18px', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
-                  alignItems: 'center', background: isSelected ? 'var(--ga)' : 'transparent',
+                  display: 'grid', gridTemplateColumns: '40px minmax(0, 1.4fr) minmax(0, 1.3fr) minmax(110px, 0.8fr) 110px 130px 72px',
+                  padding: '10px 16px', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
+                  alignItems: 'center', background: isSelected ? 'var(--ga)' : 'transparent', minWidth: 0,
                 }}
               >
                 {/* Checkbox */}
@@ -295,7 +293,7 @@ export default function LeadsPage() {
                 </div>
 
                 {/* 1. NOM EN SAISIE DIRECTE */}
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <input
                     type="text"
                     defaultValue={l.nom}
@@ -312,7 +310,7 @@ export default function LeadsPage() {
                 </div>
 
                 {/* 2. COURRIEL EN SAISIE DIRECTE */}
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <input
                     type="email"
                     defaultValue={l.email || ''}
@@ -330,7 +328,7 @@ export default function LeadsPage() {
                 </div>
 
                 {/* 3. TÉLÉPHONE EN SAISIE DIRECTE */}
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <input
                     type="text"
                     defaultValue={l.telephone || ''}
@@ -367,11 +365,12 @@ export default function LeadsPage() {
                 </div>
 
                 {/* 5. STATUT EN DROPDOWN DIRECT */}
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <select
                     value={l.statut}
                     onChange={e => updateInlineField(l.id, 'statut', e.target.value)}
                     style={{
+                      width: '100%', maxWidth: '100%', boxSizing: 'border-box',
                       appearance: 'none', WebkitAppearance: 'none',
                       background: `${stCfg.color}18`, color: stCfg.color,
                       border: `1px solid ${stCfg.color}40`,
@@ -409,6 +408,7 @@ export default function LeadsPage() {
             )
           })
         )}
+        </div>
       </div>
 
       {/* MODAL AJOUT / ÉDITION COMPLÈTE */}

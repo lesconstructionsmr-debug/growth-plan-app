@@ -5,8 +5,29 @@ const buckets = new Map<string, { count: number; resetAt: number }>()
 
 export function checkRateLimit(
   key: string,
-  { maxRequests, windowMs }: { maxRequests: number; windowMs: number }
+  opts: { maxRequests: number; windowMs: number }
+): { allowed: boolean; retryAfterSec: number }
+export function checkRateLimit(
+  key: string,
+  maxRequests: number,
+  windowMs: number
+): { allowed: boolean; retryAfterSec: number }
+export function checkRateLimit(
+  key: string,
+  optsOrMaxRequests: number | { maxRequests: number; windowMs: number },
+  windowMsArg?: number
 ): { allowed: boolean; retryAfterSec: number } {
+  let maxRequests: number
+  let windowMs: number
+
+  if (typeof optsOrMaxRequests === 'number') {
+    maxRequests = optsOrMaxRequests
+    windowMs = windowMsArg ?? 60000
+  } else {
+    maxRequests = optsOrMaxRequests.maxRequests
+    windowMs = optsOrMaxRequests.windowMs
+  }
+
   const now = Date.now()
   const bucket = buckets.get(key)
 

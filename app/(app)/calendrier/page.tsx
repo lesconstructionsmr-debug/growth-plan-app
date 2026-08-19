@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import { Calendar, ChevronLeft, ChevronRight, Plus, MapPin, Clock, Loader2, User } from 'lucide-react'
 import { normalizeStatut } from '@/lib/status'
 
@@ -40,10 +40,7 @@ export default function CalendrierPage() {
   const [selected, setSelected]   = useState<Evt[] | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const load = useCallback(async () => {
     setLoading(true)

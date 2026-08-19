@@ -53,17 +53,17 @@ export async function POST(req: NextRequest) {
         company_id:            companyId,
         client_id:             body.client_id,
         numero,
-        titre:                 body.titre,
-        description:           body.description ?? null,
+        titre:                 body.titre.trim(),
+        description:           body.description?.trim() || null,
         statut:                body.statut ?? 'en_attente',
-        adresse_chantier:      body.adresse ?? null,
-        ville_chantier:        body.ville ?? null,
-        code_postal_chantier:  body.code_postal ?? null,
+        adresse_chantier:      body.adresse?.trim() || null,
+        ville_chantier:        body.ville?.trim() || null,
+        code_postal_chantier:  body.code_postal?.trim() || null,
         rayon_pointage_metres: body.rayon_pointage_metres ?? 200,
         date_debut:            body.date_debut ?? null,
         date_fin_prevue:       body.date_fin_prevue ?? null,
         budget:                body.budget ?? null,
-        couleur:               body.couleur ?? '#C9A84C',
+        couleur:               body.couleur?.trim() || '#C9A84C',
       })
       .select()
       .single()

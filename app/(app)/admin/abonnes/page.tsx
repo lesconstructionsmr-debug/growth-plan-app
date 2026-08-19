@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   Crown, TrendingUp, Users, DollarSign, AlertCircle,
-  CheckCircle2, Clock, XCircle, Search, ExternalLink,
+  CheckCircle2, Clock, XCircle, Search, ExternalLink, Loader2,
 } from 'lucide-react'
 
 type StatutAbo = 'active' | 'trialing' | 'past_due' | 'canceled'
@@ -20,7 +20,8 @@ interface Abonne {
   stripe_customer_id: string
 }
 
-// Données mock — en prod: fetch depuis Stripe + Supabase
+// Données mock — désactivées au profit du fetch API
+/*
 const MOCK_ABONNES: Abonne[] = [
   { id:'1', nom:'Construction Bolduc inc.',    email:'bolduc@constructionbolduc.ca',  plan:'annuel',  statut:'active',   debut:'2026-03-15', prochain_paiement:'2027-03-15', montant:2000, stripe_customer_id:'cus_abc001' },
   { id:'2', nom:'Réno Experts Saguenay',       email:'info@renoexperts.ca',           plan:'mensuel', statut:'active',   debut:'2026-05-01', prochain_paiement:'2026-07-01', montant:175,  stripe_customer_id:'cus_abc002' },
@@ -29,6 +30,7 @@ const MOCK_ABONNES: Abonne[] = [
   { id:'5', nom:'Rénovations Lapointe',        email:'lapointe.reno@gmail.com',       plan:'annuel',  statut:'active',   debut:'2026-01-10', prochain_paiement:'2027-01-10', montant:2000, stripe_customer_id:'cus_abc005' },
   { id:'6', nom:'Chantiers Beaulieu inc.',     email:'info@chantiersbeaulieu.ca',     plan:'mensuel', statut:'canceled', debut:'2026-02-01', prochain_paiement:null,          montant:175,  stripe_customer_id:'cus_abc006' },
 ]
+*/
 
 const STATUT_CFG: Record<StatutAbo, { label: string; color: string; bg: string; icon: React.ElementType }> = {
   active:   { label: 'Actif',        color: 'var(--green)',  bg: 'var(--green)18',  icon: CheckCircle2 },
@@ -42,7 +44,8 @@ const fmt = (n: number) => n.toLocaleString('fr-CA', { style: 'currency', curren
 export default function AdminAbonnesPage() {
   const [search, setSearch] = useState('')
   const [filtre, setFiltre] = useState<StatutAbo | 'tous'>('tous')
-  const [abonnes, setAbonnes] = useState<Abonne[]>(MOCK_ABONNES)
+  const [abonnes, setAbonnes] = useState<Abonne[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/admin/abonnes')
@@ -51,9 +54,14 @@ export default function AdminAbonnesPage() {
         return r.json()
       })
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) setAbonnes(data)
+        if (Array.isArray(data)) setAbonnes(data)
       })
-      .catch(() => { /* garde les mocks si non-admin ou API indisponible */ })
+      .catch(() => {
+        setAbonnes([])
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [])
 
   const actifs    = abonnes.filter(a => a.statut === 'active')
@@ -162,57 +170,61 @@ export default function AdminAbonnesPage() {
           ))}
         </div>
 
-        {filtered.length === 0 && (
-          <div style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--txt-3)' }}>
-            Aucun résultat
+        {loading ? (
+          <div style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--txt-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <Loader2 size={16} className="animate-spin" /> Chargement des abonnés…
           </div>
-        )}
-
-        {filtered.map((a, i) => {
-          const cfg = STATUT_CFG[a.statut]
-          const Icon = cfg.icon
-          return (
-            <div key={a.id} style={{
-              display: 'grid', gridTemplateColumns: '2fr 1.5fr 100px 110px 130px 100px',
-              padding: '12px 18px', alignItems: 'center',
-              borderBottom: i < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
-              background: a.statut === 'past_due' ? 'var(--red)05' : 'transparent',
-            }}>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>{a.nom}</div>
-                <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '2px' }}>
-                  Depuis {new Date(a.debut).toLocaleDateString('fr-CA', { month: 'short', year: 'numeric' })}
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--txt-3)' }}>
+            Aucun abonné trouvé
+          </div>
+        ) : (
+          filtered.map((a, i) => {
+            const cfg = STATUT_CFG[a.statut]
+            const Icon = cfg.icon
+            return (
+              <div key={a.id} style={{
+                display: 'grid', gridTemplateColumns: '2fr 1.5fr 100px 110px 130px 100px',
+                padding: '12px 18px', alignItems: 'center',
+                borderBottom: i < filtered.length - 1 ? '0.5px solid var(--line)' : 'none',
+                background: a.statut === 'past_due' ? 'var(--red)05' : 'transparent',
+              }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>{a.nom}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '2px' }}>
+                    Depuis {new Date(a.debut).toLocaleDateString('fr-CA', { month: 'short', year: 'numeric' })}
+                  </div>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>{a.email}</div>
+                <div>
+                  <span style={{
+                    fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px',
+                    background: a.plan === 'annuel' ? 'var(--gold)20' : 'var(--blue)15',
+                    color: a.plan === 'annuel' ? 'var(--gold-2)' : 'var(--blue)',
+                  }}>
+                    {a.plan === 'annuel' ? 'Annuel' : 'Mensuel'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>
+                  {fmt(a.plan === 'annuel' ? a.montant : a.montant)}
+                  <span style={{ fontSize: '10px', color: 'var(--txt-3)', fontWeight: 400 }}>
+                    {a.plan === 'annuel' ? '/an' : '/mois'}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 600, padding: '3px 8px', borderRadius: '5px', background: cfg.bg, color: cfg.color }}>
+                    <Icon size={10} /> {cfg.label}
+                  </span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>
+                  {a.prochain_paiement
+                    ? new Date(a.prochain_paiement).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
+                    : '—'}
                 </div>
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>{a.email}</div>
-              <div>
-                <span style={{
-                  fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '5px',
-                  background: a.plan === 'annuel' ? 'var(--gold)20' : 'var(--blue)15',
-                  color: a.plan === 'annuel' ? 'var(--gold-2)' : 'var(--blue)',
-                }}>
-                  {a.plan === 'annuel' ? 'Annuel' : 'Mensuel'}
-                </span>
-              </div>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>
-                {fmt(a.plan === 'annuel' ? a.montant : a.montant)}
-                <span style={{ fontSize: '10px', color: 'var(--txt-3)', fontWeight: 400 }}>
-                  {a.plan === 'annuel' ? '/an' : '/mois'}
-                </span>
-              </div>
-              <div>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 600, padding: '3px 8px', borderRadius: '5px', background: cfg.bg, color: cfg.color }}>
-                  <Icon size={10} /> {cfg.label}
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>
-                {a.prochain_paiement
-                  ? new Date(a.prochain_paiement).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
-                  : '—'}
-              </div>
-            </div>
-          )
-        })}
+            )
+          })
+        )}
       </div>
 
       {/* Lien Stripe */}
@@ -227,3 +239,4 @@ export default function AdminAbonnesPage() {
     </div>
   )
 }
+

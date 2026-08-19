@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import { ArrowLeft, Download, Printer } from 'lucide-react'
 
 const fmt = (n: number) =>
@@ -39,10 +39,7 @@ export default function FacturePreviewPage() {
 
   useEffect(() => {
     if (!id) return
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase
       .from('factures')
       .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, date_echeance, notes, clients(nom, email, adresse, ville), companies(name, email, telephone, adresse, ville, tps_no, tvq_no, rbq_no, neq)')

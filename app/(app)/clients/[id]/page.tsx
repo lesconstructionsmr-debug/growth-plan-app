@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   ArrowLeft, Building2, User, Phone, Mail,
   MapPin, FileText, Receipt, Building,
@@ -317,10 +317,7 @@ export default function ClientDetailPage() {
   const [facturesList, setFacturesList] = useState<any[]>([])
   const [jobsList, setJobsList] = useState<any[]>([])
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const loadClientData = useCallback(async () => {
     if (!id) return

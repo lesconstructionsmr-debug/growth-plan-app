@@ -98,6 +98,12 @@ export default function AddressAutocomplete({
           code_postal: postalCode,
         })
       })
+
+      return () => {
+        if (typeof window !== 'undefined' && (window as any).google?.maps?.event && autocomplete) {
+          (window as any).google.maps.event.clearInstanceListeners(autocomplete)
+        }
+      }
     } catch (err) {
       console.error('Google Maps Autocomplete failed to initialize:', err)
     }

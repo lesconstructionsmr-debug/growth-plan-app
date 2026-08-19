@@ -831,7 +831,7 @@
     <!-- Navigation Header -->
     <header>
         <div class="container nav-content">
-            <a href="#" class="logo">
+            <a href="/" class="logo">
                 <div class="logo-icon">
                     <i class="fa-solid fa-chart-line"></i>
                 </div>
@@ -840,9 +840,9 @@
             <ul class="nav-links">
                 <li><a href="#problem-solution">Pourquoi Nous</a></li>
                 <li><a href="#features">Bénéfices</a></li>
-                <li><a href="#calculator">Simulateur & Qualification</a></li>
+                <li><a href="/tarifs">Tarifs</a></li>
             </ul>
-            <a href="#calculator" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
+            <a href="/register" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
                 <i class="fa-solid fa-bolt"></i> Tester la Qualification
             </a>
         </div>
@@ -861,10 +861,10 @@
             Gérez vos demandes, vos soumissions et vos suivis à la même place. Growth Plan ERP filtre les "tireux de roches" et vous connecte avec des clients sérieux. Moins de soirées dans la paperasse, plus de chantiers rentables.
         </p>
         <div class="hero-cta-group">
-            <a href="#calculator" class="btn btn-primary">
+            <a href="/onboarding" class="btn btn-primary">
                 <i class="fa-solid fa-play"></i> Voir la Plateforme en Action
             </a>
-            <a href="#calculator" class="btn btn-secondary">
+            <a href="/login" class="btn btn-secondary">
                 <i class="fa-solid fa-comments"></i> Parler à un Conseiller
             </a>
         </div>
@@ -1099,7 +1099,7 @@
             <p>
                 Laissez la charge mentale de côté. Concentrez-vous sur ce que vous faites de mieux : livrer des projets de qualité. On s'occupe de structurer votre croissance.
             </p>
-            <a href="#calculator" class="btn btn-primary" style="padding: 18px 36px; font-size: 1.1rem;">
+            <a href="/onboarding" class="btn btn-primary" style="padding: 18px 36px; font-size: 1.1rem;">
                 <i class="fa-solid fa-rocket"></i> Démarrer avec Growth Plan ERP
             </a>
             <div style="margin-top: 16px; color: var(--text-muted); font-size: 0.9rem;">
@@ -1115,9 +1115,9 @@
                 © 2026 Growth Plan ERP. Tous droits réservés. Spécialement conçu pour l'industrie de la construction au Québec.
             </div>
             <div style="display: flex; gap: 20px;">
-                <a href="#" style="color: var(--text-dim); text-decoration: none;">Confidentialité</a>
-                <a href="#" style="color: var(--text-dim); text-decoration: none;">Conditions d'utilisation</a>
-                <a href="#" style="color: var(--text-dim); text-decoration: none;">Contact Support</a>
+                <a href="/tarifs" style="color: var(--text-dim); text-decoration: none;">Tarifs</a>
+                <a href="/login" style="color: var(--text-dim); text-decoration: none;">Connexion</a>
+                <a href="/register" style="color: var(--text-dim); text-decoration: none;">Inscription</a>
             </div>
         </div>
     </footer>
@@ -1127,7 +1127,7 @@
         <div class="modal-container">
             <div class="modal-header">
                 <div class="modal-title">
-                    <i class="fa-solid fa-terminal"></i> Simulation Webhook API : `/api/v1/webhooks/leads/capture`
+                    <i class="fa-solid fa-terminal"></i> API Contact : <code>/api/contact/audit</code>
                 </div>
                 <button class="close-modal" id="closeModalBtn">&times;</button>
             </div>
@@ -1243,8 +1243,8 @@
             // Initial calculation
             const currentScore = calculateScore();
 
-            // Simulate Webhook POST Request
-            leadForm.addEventListener('submit', (e) => {
+            // Form submission handler with real fetch to /api/contact/audit
+            leadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const score = calculateScore();
                 const firstName = document.getElementById('firstName').value;
@@ -1261,43 +1261,23 @@
                 webhookModal.classList.add('active');
                 terminalBody.innerHTML = '';
 
-                // Simulate terminal streaming logs
+                const payload = {
+                    name: `${firstName} ${lastName}`.trim(),
+                    company: company,
+                    email: email,
+                    phone: phone,
+                    trade: 'Construction',
+                    chantiers_par_mois: budgetVolumeSelect.value,
+                    chiffre_affaires: budgetVolumeSelect.value
+                };
+
                 const logs = [
-                    { text: `[SYSTEM] Initialisation de la captation lead Webhook...`, delay: 200, class: 'info' },
-                    { text: `POST /api/v1/webhooks/leads/capture HTTP/1.1`, delay: 500, class: '' },
-                    { text: `Host: api.growthplan-erp.ca\nContent-Type: application/json`, delay: 700, class: '' },
-                    { text: `\nPayload JSON transmis:`, delay: 900, class: '' },
-                    { 
-                        text: JSON.stringify({
-                            event: "LEAD_CAPTURE_FORM_SUBMITTED",
-                            timestamp: new Date().toISOString(),
-                            lead: {
-                                first_name: firstName,
-                                last_name: lastName,
-                                email: email,
-                                phone: phone,
-                                company: company,
-                                job_title_code: jobTitleSelect.value,
-                                volume_code: budgetVolumeSelect.value
-                            },
-                            qualification: {
-                                total_score: score,
-                                temperature: temperature,
-                                status: temperature === 'HOT' ? 'SQL_READY' : 'MQL_NURTURING'
-                            }
-                        }, null, 2),
-                        delay: 1100,
-                        class: 'info'
-                    },
-                    { text: `\n[MOTEUR SCORING] Validation du payload & enregistrement dans la table 'Leads'...`, delay: 1600, class: '' },
-                    { text: `[DATABASE] Lead créé avec ID UUID: ${crypto.randomUUID()}`, delay: 2000, class: 'success' },
-                    { text: temperature === 'HOT' 
-                        ? `[TRIGGER] ⚡ SEUIL HOT FRANCHI (${score} pts > 60 pts) !\n  -> Message envoyé au canal Slack #leads-chauds\n  -> Notification push SMS envoyée à l'équipe des ventes\n  -> Tâche CRM prioritaire créée (Échéance 24h)`
-                        : `[ROUTING] Lead placé dans la file d'attente MQL (${temperature} - ${score} pts).`, 
-                      delay: 2400, 
-                      class: temperature === 'HOT' ? 'success' : 'info' 
-                    },
-                    { text: `\nHTTP/1.1 200 OK Response: {"success": true, "status": "PROCESSED", "lead_temperature": "${temperature}"}`, delay: 2800, class: 'success' }
+                    { text: `[SYSTEM] Initialisation de la demande d'audit...`, delay: 200, class: 'info' },
+                    { text: `POST /api/contact/audit HTTP/1.1`, delay: 400, class: '' },
+                    { text: `Content-Type: application/json`, delay: 600, class: '' },
+                    { text: `\nPayload JSON transmis:`, delay: 800, class: '' },
+                    { text: JSON.stringify(payload, null, 2), delay: 1000, class: 'info' },
+                    { text: `\n[MOTEUR AUDIT] Transmission en cours vers /api/contact/audit...`, delay: 1400, class: '' }
                 ];
 
                 logs.forEach(item => {
@@ -1309,6 +1289,36 @@
                         terminalBody.scrollTop = terminalBody.scrollHeight;
                     }, item.delay);
                 });
+
+                try {
+                    const response = await fetch('/api/contact/audit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const resData = await response.json();
+
+                    setTimeout(() => {
+                        const line = document.createElement('div');
+                        if (response.ok && resData.success) {
+                            line.className = 'terminal-line success';
+                            line.textContent = `\nHTTP/1.1 200 OK\n[DATABASE] Lead créé avec succès dans Supabase (ID: ${resData.lead_id || 'OK'})`;
+                        } else {
+                            line.className = 'terminal-line info';
+                            line.textContent = `\nHTTP/1.1 ${response.status}\n[REPONSE API] ${JSON.stringify(resData)}`;
+                        }
+                        terminalBody.appendChild(line);
+                        terminalBody.scrollTop = terminalBody.scrollHeight;
+                    }, 1800);
+                } catch (err) {
+                    setTimeout(() => {
+                        const line = document.createElement('div');
+                        line.className = 'terminal-line info';
+                        line.textContent = `\n[ERREUR RESEAU] ${err.message || err}`;
+                        terminalBody.appendChild(line);
+                        terminalBody.scrollTop = terminalBody.scrollHeight;
+                    }, 1800);
+                }
             });
 
             // Close modal handlers

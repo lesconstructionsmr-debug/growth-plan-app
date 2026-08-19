@@ -139,6 +139,7 @@ export default function NouveauClientPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (status !== 'idle') return
     if (!validate()) return
     setStatus('saving')
     try {

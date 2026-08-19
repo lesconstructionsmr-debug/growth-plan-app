@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   Building2, Plus, Search, MapPin, Calendar, Clock,
   CheckCircle2, PauseCircle, XCircle, Circle, Users,
@@ -40,10 +40,7 @@ export default function JobsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isAdmin, setIsAdmin] = useState(true)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   useEffect(() => {
     fetch('/api/me')
@@ -87,6 +84,7 @@ export default function JobsPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Voulez-vous vraiment supprimer ce chantier ?')) return
+    setJobs(prev => prev.filter(j => j.id !== id))
     await supabase.from('jobs').delete().eq('id', id)
     loadJobs()
   }
@@ -94,8 +92,10 @@ export default function JobsPage() {
   async function handleBatchDelete() {
     if (selectedIds.length === 0) return
     if (!confirm(`Voulez-vous vraiment supprimer les ${selectedIds.length} chantiers sélectionnés ?`)) return
-    await supabase.from('jobs').delete().in('id', selectedIds)
+    const idsToDelete = [...selectedIds]
     setSelectedIds([])
+    setJobs(prev => prev.filter(j => !idsToDelete.includes(j.id)))
+    await supabase.from('jobs').delete().in('id', idsToDelete)
     loadJobs()
   }
 

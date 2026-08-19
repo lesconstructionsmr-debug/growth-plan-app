@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   TrendingUp, BarChart3, LineChart as LineIcon,
   Download, Sparkles, Building2, Landmark, Hammer,
@@ -85,10 +85,7 @@ export default function MarchePage() {
   const [activeMaterial, setActiveMaterial] = useState<string>('Peinture latex')
   const [dbNotice, setDbNotice] = useState(false)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const [syncing, setSyncing] = useState(false)
 

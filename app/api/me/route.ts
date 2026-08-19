@@ -22,6 +22,8 @@ export async function GET() {
         role: 'owner',
         full_name: null,
         name: 'Mon Entreprise',
+      }, {
+        headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
       })
     }
 
@@ -40,6 +42,8 @@ export async function GET() {
       agence_enabled:  agenceEnabled,
       role:            profile.role      ?? 'owner',
       full_name:       profile.full_name ?? null,
+    }, {
+      headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
     })
   } catch (err) {
     return apiError(err, '[GET /api/me]')
@@ -67,7 +71,9 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, vertical: targetVertical })
+    return NextResponse.json({ success: true, vertical: targetVertical }, {
+      headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
+    })
   } catch (err) {
     return apiError(err, '[POST /api/me]')
   }

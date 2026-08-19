@@ -148,6 +148,7 @@ export default function Sidebar({ role: roleProp = 'owner' }: SidebarProps) {
 
         <button
           onClick={() => setMobileOpen(v => !v)}
+          aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
           style={{
             background: 'var(--ga)',
             border: '0.5px solid var(--gold-3)',
@@ -319,6 +320,7 @@ export default function Sidebar({ role: roleProp = 'owner' }: SidebarProps) {
 
         <button
           onClick={toggle}
+          aria-label="Changer le thème"
           title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
@@ -332,6 +334,7 @@ export default function Sidebar({ role: roleProp = 'owner' }: SidebarProps) {
         </button>
         <button
           onClick={handleLogout}
+          aria-label="Déconnexion"
           title={t('Déconnexion')}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   Receipt, ChevronLeft, Plus, Trash2, Check,
   Loader2, AlertCircle, User, Building2, Calendar,
@@ -132,10 +132,7 @@ export default function NouvelleFacturePage() {
   const [devisMap, setDevisMap] = useState<Record<string, DevisOption[]>>({})
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase.from('clients').select('id, nom').order('nom').then(({ data }) => {
       setClients((data ?? []).map((c: any) => ({ id: c.id, nom: c.nom })))
     })
@@ -187,6 +184,7 @@ export default function NouvelleFacturePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (status !== 'idle') return
     if (!validate()) return
     setStatus('saving')
     try {

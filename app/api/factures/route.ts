@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
       appliquer_tvq:  body.appliquer_tvq,
     })
 
-    return NextResponse.json(facture, { status: 201 })
+    return NextResponse.json(facture, {
+      status: 201,
+      headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
+    })
   } catch (err) {
     return apiError(err, '[POST /api/factures]')
   }

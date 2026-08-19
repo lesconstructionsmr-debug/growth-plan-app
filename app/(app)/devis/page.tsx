@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   FileText, Plus, Search, ChevronRight,
   Clock, CheckCircle2, XCircle, Send,
@@ -55,10 +55,7 @@ export default function DevisPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase
       .from('devis')
       .select('id, numero, titre, statut, date_emission, valide_jusqu_au, montant_ttc, clients(nom)')

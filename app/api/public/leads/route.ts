@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { parseJsonLead, type IngestFields } from '@/lib/leads/parse-ingest'
+import { checkRateLimit } from '@/lib/api/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS })
 }
 
-async function readFields(req: NextRequest): Promise<IngestFields> {
+async function readFields(req: NextRequest): Promise<{ fields: IngestFields; rawBody: Record<string, unknown> }> {
   const urlToken = req.nextUrl.searchParams.get('token') || ''
   const contentType = req.headers.get('content-type') || ''
   const isForm =
@@ -29,31 +30,51 @@ async function readFields(req: NextRequest): Promise<IngestFields> {
   if (!isForm) {
     const body = await req.json().catch(() => null)
     if (body && typeof body === 'object') {
-      return parseJsonLead(body as Record<string, unknown>, urlToken)
+      return {
+        fields: parseJsonLead(body as Record<string, unknown>, urlToken),
+        rawBody: body as Record<string, unknown>,
+      }
     }
   }
 
   const form = await req.formData().catch(() => null)
   if (form) {
+    const rawBody: Record<string, unknown> = {}
+    form.forEach((value, key) => {
+      rawBody[key] = value
+    })
     return {
-      token: String(form.get('token') ?? urlToken).trim(),
-      nom: String(form.get('nom') ?? form.get('name') ?? '').trim(),
-      email: String(form.get('email') ?? '').trim(),
-      telephone: String(form.get('telephone') ?? form.get('phone') ?? '').trim(),
-      source: String(form.get('source') ?? 'Formulaire site web').trim() || 'Formulaire site web',
-      notes: String(form.get('notes') ?? '').trim(),
-      googleKey: '',
-      isGoogle: false,
+      fields: {
+        token: String(form.get('token') ?? urlToken).trim(),
+        nom: String(form.get('nom') ?? form.get('name') ?? '').trim(),
+        email: String(form.get('email') ?? '').trim(),
+        telephone: String(form.get('telephone') ?? form.get('phone') ?? '').trim(),
+        source: String(form.get('source') ?? 'Formulaire site web').trim() || 'Formulaire site web',
+        notes: String(form.get('notes') ?? '').trim(),
+        googleKey: '',
+        isGoogle: false,
+      },
+      rawBody,
     }
   }
 
-  return parseJsonLead({}, urlToken)
+  return { fields: parseJsonLead({}, urlToken), rawBody: {} }
 }
 
 /** POST /api/public/leads — Capture publique depuis le site du client (jeton par compagnie). */
 export async function POST(req: NextRequest) {
   try {
-    const fields = await readFields(req)
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1'
+    const { allowed } = checkRateLimit(ip, 15, 15 * 60 * 1000)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Trop de requêtes' }, { status: 429 })
+    }
+
+    const { fields, rawBody } = await readFields(req)
+    if (rawBody?.website || rawBody?.hp) {
+      return NextResponse.json({ success: true, lead_id: 'honeypot_dropped' })
+    }
+
     const token = fields.token.trim()
     const nom = fields.nom.trim()
     const email = fields.email.trim()

@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
               { role: 'user', parts: [{ text: `${MASTER_PROMPT}\n\nHistorique:\n${messages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}` }] }
             ]
           }),
+          signal: AbortSignal.timeout(8000),
         })
         if (geminiRes.ok) {
           const gData = await geminiRes.json()
@@ -162,6 +163,7 @@ export async function POST(request: NextRequest) {
             temperature: 0.7,
             max_tokens: 1200,
           }),
+          signal: AbortSignal.timeout(8000),
         })
         if (res.ok) {
           const data = await res.json()
@@ -190,6 +192,7 @@ export async function POST(request: NextRequest) {
             messages: messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
             max_tokens: 1200,
           }),
+          signal: AbortSignal.timeout(8000),
         })
         if (res.ok) {
           const data = await res.json()

@@ -13,7 +13,9 @@ export async function GET() {
       .order('nom', { ascending: true })
 
     if (error) throw error
-    return NextResponse.json(data ?? [])
+    return NextResponse.json(data ?? [], {
+      headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
+    })
   } catch (err) {
     return apiError(err, '[GET /api/clients]')
   }
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest) {
         telephone: telephone?.trim() || null,
         adresse: adresse?.trim() || null,
         ville: ville?.trim() || null,
-        province: province || 'QC',
+        province: province?.trim() || 'QC',
         code_postal: code_postal?.trim() || null,
         notes: notes?.trim() || null,
       })
@@ -45,7 +47,10 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) throw error
-    return NextResponse.json(data, { status: 201 })
+    return NextResponse.json(data, {
+      status: 201,
+      headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
+    })
   } catch (err) {
     return apiError(err, '[POST /api/clients]')
   }

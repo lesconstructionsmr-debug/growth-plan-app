@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   TrendingUp,
@@ -28,16 +28,18 @@ import {
   Loader2,
   Plug,
   Megaphone,
+  ScanText,
+  LineChart,
+  Lock,
+  Globe,
 } from 'lucide-react'
 import {
   SETUP_FEE_CAD,
-  SETUP_FEE_LABEL,
-  SETUP_FEE_INCLUDES,
   PRICING_BASE_MONTHLY_CAD,
   PRICING_TIERS,
-  TIER_FEATURE_BULLETS,
   formatPriceCad,
 } from '@/lib/stripe/pricing'
+import { landingTranslations, Language } from '@/lib/i18n/landing-translations'
 
 // Icone de Logo 3D Or Plangrowth (Barres + Flèche Ascendante + Courbe G)
 const PlangrowthGoldLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
@@ -72,6 +74,23 @@ const PlangrowthGoldLogo = ({ className = "w-12 h-12" }: { className?: string })
 )
 
 export default function LandingPage() {
+  // Language State
+  const [lang, setLang] = useState<Language>('fr')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('plangrowth_lang') as Language
+    if (saved === 'fr' || saved === 'en') {
+      setLang(saved)
+    }
+  }, [])
+
+  const changeLanguage = (newLang: Language) => {
+    setLang(newLang)
+    localStorage.setItem('plangrowth_lang', newLang)
+  }
+
+  const t = landingTranslations[lang]
+
   // ROI Calculator State
   const [quotesPerMonth, setQuotesPerMonth] = useState<number>(15)
   const [avgProjectValue, setAvgProjectValue] = useState<number>(18000)
@@ -87,10 +106,14 @@ export default function LandingPage() {
     company: '',
     email: '',
     phone: '',
-    trade: 'Rénovation / Entrepreneur Général',
+    trade: t.modal.tradeOptions[0],
   })
 
-  // ROI Calculations - Formule réaliste et conservatrice (+5% de taux de signature)
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, trade: t.modal.tradeOptions[0] }))
+  }, [lang, t.modal.tradeOptions])
+
+  // ROI Calculations
   const newWinRate = Math.min(80, currentWinRate + 5)
   const currentMonthlyRevenue = (quotesPerMonth * (currentWinRate / 100)) * avgProjectValue
   const projectedMonthlyRevenue = (quotesPerMonth * (newWinRate / 100)) * avgProjectValue
@@ -98,28 +121,57 @@ export default function LandingPage() {
   const yearlyGain = monthlyGain * 12
   const hoursSavedPerWeek = Math.round(quotesPerMonth * 0.4 + 2)
 
+  const formatMoney = (val: number) => {
+    if (lang === 'en') {
+      return '$' + val.toLocaleString('en-US')
+    }
+    return val.toLocaleString('fr-CA') + ' $'
+  }
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormSubmitting(true)
     setFormError(null)
     try {
-      const res = await fetch('https://app.growth-plan.ca/api/contact/audit', {
+      const res = await fetch('/api/contact/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          quotes_per_month: quotesPerMonth,
+          avg_project_value: avgProjectValue,
+          language: lang,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setFormError(data.error || 'Erreur lors de l\'envoi. Réessayez.')
+        setFormError(data.error || t.modal.errorGeneric)
         return
       }
       setFormSubmitted(true)
     } catch {
-      setFormError('Erreur réseau. Réessayez.')
+      setFormError(t.modal.errorGeneric)
     } finally {
       setFormSubmitting(false)
     }
   }
+
+  const moduleIcons = [
+    FileText,
+    Zap,
+    Users,
+    Smartphone,
+    DollarSign,
+    ShieldCheck,
+    FolderOpen,
+    HardHat,
+    UserCog,
+    BarChart3,
+    ScanText,
+    LineChart,
+    Lock,
+    Megaphone,
+  ]
 
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-slate-100 selection:bg-amber-400 selection:text-slate-950 font-sans antialiased overflow-x-hidden">
@@ -136,36 +188,63 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-24 flex items-center justify-between">
           
           {/* BRAND SIGNATURE LOGO */}
-          <Link href="/" className="flex items-center space-x-3.5 group">
+          <Link href="/" className="flex items-center space-x-3.5 group shrink-0">
             <PlangrowthGoldLogo className="w-12 h-12 transform group-hover:scale-105 transition-transform duration-300" />
             <div className="flex flex-col">
               <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37] drop-shadow-md">
                 Plangrowth
               </span>
               <span className="text-[10px] text-amber-300/80 font-mono tracking-widest uppercase -mt-0.5">
-                Architecte de l'Évolution Numérique
+                {t.vision.subtitle}
               </span>
             </div>
           </Link>
 
           {/* DESKTOP NAV */}
-          <nav className="hidden lg:flex items-center space-x-8 text-xs font-bold uppercase tracking-wider text-slate-300">
-            <a href="#roi-calculator" className="hover:text-amber-400 transition-colors">Calculateur ROI</a>
-            <a href="#piliers" className="hover:text-amber-400 transition-colors">Les 3 Piliers</a>
-            <a href="#modules" className="hover:text-amber-400 transition-colors">Fonctionnalités</a>
-            <a href="#quebec" className="hover:text-amber-400 transition-colors">Québec</a>
-            <a href="#acquisition" className="hover:text-amber-400 transition-colors">Pubs → CRM</a>
-            <a href="#signature" className="hover:text-amber-400 transition-colors">Vision & Scalabilité</a>
-            <Link href="/tarifs" className="hover:text-amber-400 transition-colors">Tarifs</Link>
+          <nav className="hidden xl:flex items-center space-x-6 text-xs font-bold uppercase tracking-wider text-slate-300">
+            <a href="#roi-calculator" className="hover:text-amber-400 transition-colors">{t.nav.roiCalculator}</a>
+            <a href="#piliers" className="hover:text-amber-400 transition-colors">{t.nav.pillars}</a>
+            <a href="#modules" className="hover:text-amber-400 transition-colors">{t.nav.features}</a>
+            <a href="#quebec" className="hover:text-amber-400 transition-colors">{t.nav.quebec}</a>
+            <a href="#acquisition" className="hover:text-amber-400 transition-colors">{t.nav.acquisition}</a>
+            <a href="#signature" className="hover:text-amber-400 transition-colors">{t.nav.vision}</a>
+            <Link href="/tarifs" className="hover:text-amber-400 transition-colors">{t.nav.pricing}</Link>
           </nav>
 
-          {/* CTA & ACCÈS ERP */}
-          <div className="flex items-center space-x-4">
+          {/* CTA, LANGUAGE & ACCÈS ERP */}
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            
+            {/* LANGUAGE SWITCHER */}
+            <div className="flex items-center rounded-xl bg-slate-900 border border-slate-800 p-1">
+              <button
+                onClick={() => changeLanguage('fr')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-all flex items-center gap-1 ${
+                  lang === 'fr'
+                    ? 'bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Passer en Français"
+              >
+                FR
+              </button>
+              <button
+                onClick={() => changeLanguage('en')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-all flex items-center gap-1 ${
+                  lang === 'en'
+                    ? 'bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Switch to English"
+              >
+                EN
+              </button>
+            </div>
+
             <Link
               href="/login"
-              className="text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white px-4 py-2.5 rounded-xl hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all"
+              className="text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white px-3 sm:px-4 py-2.5 rounded-xl hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all hidden sm:inline-block"
             >
-              Connexion ERP
+              {t.nav.erpLogin}
             </Link>
 
             <button
@@ -173,8 +252,8 @@ export default function LandingPage() {
               className="relative group p-[1px] rounded-xl overflow-hidden shadow-lg shadow-amber-500/20 focus:outline-none"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] rounded-xl group-hover:opacity-90 transition-opacity"></span>
-              <span className="relative block px-5 py-2.5 rounded-[11px] bg-[#0A0B0E] text-amber-300 font-bold text-xs uppercase tracking-wider transition-all group-hover:bg-transparent group-hover:text-slate-950">
-                Réserver un Audit ROI (15 min)
+              <span className="relative block px-3 sm:px-5 py-2.5 rounded-[11px] bg-[#0A0B0E] text-amber-300 font-bold text-xs uppercase tracking-wider transition-all group-hover:bg-transparent group-hover:text-slate-950">
+                {t.nav.bookAudit}
               </span>
             </button>
           </div>
@@ -187,64 +266,62 @@ export default function LandingPage() {
         {/* BRAND SLOGAN BADGE */}
         <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900/90 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-widest mb-8 shadow-2xl backdrop-blur-xl">
           <Crown className="w-4 h-4 text-amber-400" />
-          <span>Structure • Acquisition • Scalabilité</span>
+          <span>{t.hero.sloganBadge}</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1] max-w-5xl mx-auto">
-          Transformez votre compagnie de service avec un{' '}
+          {t.hero.titlePart1}
           <span className="bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37] bg-clip-text text-transparent drop-shadow-lg">
-            Carnet de Commandes Premium
-          </span>{' '}
-          & un Contrôle Total de vos Marges.
+            {t.hero.titleGold}
+          </span>
+          {t.hero.titlePart2}
         </h1>
 
         <p className="mt-8 text-lg sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-normal">
-          De la relance automatique du devis sous 24h jusqu&apos;au dossier chantier unifié et à la conformité QC.
-          L&apos;ERP conçu par <span className="text-amber-400 font-semibold">Plangrowth</span> pour structurer les entrepreneurs vers la scalabilité.
+          {t.hero.subtitlePart1}
+          <span className="text-amber-400 font-semibold">{t.hero.subtitleBrand}</span>
+          {t.hero.subtitlePart2}
         </p>
 
         {/* CTA BUTTONS */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-          <button
-            onClick={() => setIsModalOpen(true)}
+        <div className="mt-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 max-w-3xl mx-auto">
+          <Link
+            href="/onboarding"
             className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-2xl shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
           >
-            <span>Démarrer l'Essai Gratuit (14 jours)</span>
+            <span>{t.hero.ctaRegister}</span>
             <ArrowRight className="w-5 h-5 text-slate-950" />
+          </Link>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-amber-500/30 font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-5 h-5 text-amber-400" />
+            <span>{t.hero.ctaAudit}</span>
           </button>
           <a
             href="#roi-calculator"
             className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-amber-500/30 font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2"
           >
             <Calculator className="w-5 h-5 text-amber-400" />
-            <span>Calculer mes fuites de marge</span>
+            <span>{t.hero.ctaRoi}</span>
           </a>
         </div>
 
         {/* FOUNDER SIGNATURE BADGE */}
         <div className="mt-10 inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-400 text-xs">
           <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
-          <span>Architecte de l'Évolution Numérique — <strong className="text-slate-200">Fondateur : Maxime Rochon</strong></span>
+          <span>{t.hero.founderBadge}<strong className="text-slate-200">{t.hero.founderName}</strong></span>
         </div>
 
         {/* TRUST BADGES */}
         <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-8 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-amber-400" />
-            <span>Site, Google Ads &amp; Meta branchés au CRM</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-amber-400" />
-            <span>Relances Automatiques 24h</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-amber-400" />
-            <span>Image Devis Million-Dollar</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-amber-400" />
-            <span>Suivi Terrain & Zéro Reprise</span>
-          </div>
+          {t.hero.trustBadges.map((badge, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-amber-400" />
+              <span>{badge}</span>
+            </div>
+          ))}
         </div>
 
         {/* MOCKUP / DASHBOARD PREVIEW */}
@@ -253,39 +330,39 @@ export default function LandingPage() {
             <div className="flex items-center justify-between pb-6 border-b border-slate-800 mb-6">
               <div className="flex items-center gap-3">
                 <PlangrowthGoldLogo className="w-7 h-7" />
-                <span className="text-xs text-amber-300 font-mono font-bold">tableau-de-bord.growth-plan.ca</span>
+                <span className="text-xs text-amber-300 font-mono font-bold">{t.hero.dashboard.url}</span>
               </div>
               <span className="text-xs px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 font-mono border border-amber-500/20 font-bold">
-                ● Suivi en temps réel des chantiers &amp; devis
+                {t.hero.dashboard.liveTag}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                  <span>Suivi &amp; Relances Devis (24h)</span>
+                  <span>{t.hero.dashboard.card1Title}</span>
                   <Zap className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-white">14 Relances Envoyées</p>
-                <p className="text-xs text-amber-400 mt-2 font-semibold">3 devis relancés signés ce mois-ci</p>
+                <p className="text-2xl font-black text-white">{t.hero.dashboard.card1Metric}</p>
+                <p className="text-xs text-amber-400 mt-2 font-semibold">{t.hero.dashboard.card1Desc}</p>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                  <span>Marge Brute Contrôlée</span>
+                  <span>{t.hero.dashboard.card2Title}</span>
                   <TrendingUp className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-white">32.5 %</p>
-                <p className="text-xs text-slate-400 mt-2 font-medium">Alertes dérives matériaux &amp; temps</p>
+                <p className="text-2xl font-black text-white">{t.hero.dashboard.card2Metric}</p>
+                <p className="text-xs text-slate-400 mt-2 font-medium">{t.hero.dashboard.card2Desc}</p>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
-                  <span>Standardisation &amp; Qualité</span>
+                  <span>{t.hero.dashboard.card3Title}</span>
                   <ShieldCheck className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-2xl font-black text-white">100% Fiches Qualité</p>
-                <p className="text-xs text-amber-400 mt-2 font-semibold">Validation photo avant fermeture</p>
+                <p className="text-2xl font-black text-white">{t.hero.dashboard.card3Metric}</p>
+                <p className="text-xs text-amber-400 mt-2 font-semibold">{t.hero.dashboard.card3Desc}</p>
               </div>
             </div>
           </div>
@@ -297,13 +374,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="mb-14">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              ⚙️ Le Flux Opérationnel Unifié
+              {t.flow.tag}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Un seul système pour toutes vos opérations
+              {t.flow.title}
             </h2>
             <p className="text-red-500 font-bold uppercase tracking-widest text-sm mt-2">
-              Du premier contact jusqu'au paiement
+              {t.flow.subtitle}
             </p>
           </div>
 
@@ -317,9 +394,9 @@ export default function LandingPage() {
               <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
                 <Target className="w-8 h-8" />
               </div>
-              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">CRM &amp; Leads</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">{t.flow.steps[0].title}</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Site, Google Ads et Meta/Instagram : une demande, un prospect dans le CRM.
+                {t.flow.steps[0].desc}
               </p>
             </div>
 
@@ -328,9 +405,9 @@ export default function LandingPage() {
               <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
                 <FileText className="w-8 h-8" />
               </div>
-              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Soumissions</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">{t.flow.steps[1].title}</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Créez des devis professionnels et personnalisés en quelques clics.
+                {t.flow.steps[1].desc}
               </p>
             </div>
 
@@ -339,9 +416,9 @@ export default function LandingPage() {
               <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
                 <TrendingUp className="w-8 h-8" />
               </div>
-              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Ventes</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">{t.flow.steps[2].title}</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Suivez vos signatures, vos taux de conversion et vos marges en temps réel.
+                {t.flow.steps[2].desc}
               </p>
             </div>
 
@@ -350,9 +427,9 @@ export default function LandingPage() {
               <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
                 <Calendar className="w-8 h-8" />
               </div>
-              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Planification</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">{t.flow.steps[3].title}</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Gérez l'horaire de vos équipes et planifiez les interventions de chantier.
+                {t.flow.steps[3].desc}
               </p>
             </div>
 
@@ -361,9 +438,9 @@ export default function LandingPage() {
               <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
                 <Wrench className="w-8 h-8" />
               </div>
-              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Opérations</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">{t.flow.steps[4].title}</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Dossier chantier unifié : documents, pointages et facturation au même endroit.
+                {t.flow.steps[4].desc}
               </p>
             </div>
 
@@ -372,9 +449,9 @@ export default function LandingPage() {
               <div className="w-[90px] h-[90px] rounded-full border-2 border-red-500 bg-slate-950 flex items-center justify-center text-red-500 group-hover:scale-105 transition-transform duration-300 shadow-lg shadow-red-500/15">
                 <CreditCard className="w-8 h-8" />
               </div>
-              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">Paiements</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-white mt-5 font-black">{t.flow.steps[5].title}</h3>
               <p className="text-xs text-slate-400 mt-3 leading-relaxed max-w-[150px] mx-auto">
-                Suivez les encaissements Stripe ou virement et la rentabilité nette finale.
+                {t.flow.steps[5].desc}
               </p>
             </div>
 
@@ -387,13 +464,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              📊 Analyse de Récupération de Chiffre d'Affaires — Plangrowth
+              {t.roi.tag}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Combien de soumissions perdez-vous par simple manque de suivi au bon moment ?
+              {t.roi.title}
             </h2>
             <p className="text-slate-400 mt-4 text-base">
-              80% des contrats se signent au premier entrepreneur qui effectue un suivi professionnel sous 24h. Calculez votre potentiel de récupération.
+              {t.roi.subtitle}
             </p>
           </div>
 
@@ -402,9 +479,9 @@ export default function LandingPage() {
             <div className="lg:col-span-7 space-y-8">
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <label className="text-sm font-semibold text-slate-200">Nombre de devis envoyés par mois</label>
+                  <label className="text-sm font-semibold text-slate-200">{t.roi.labelQuotes}</label>
                   <span className="text-lg font-bold text-amber-400 font-mono bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/20">
-                    {quotesPerMonth} devis
+                    {quotesPerMonth} {t.roi.unitQuotes}
                   </span>
                 </div>
                 <input
@@ -419,9 +496,9 @@ export default function LandingPage() {
 
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <label className="text-sm font-semibold text-slate-200">Valeur moyenne d'un projet / chantier ($)</label>
+                  <label className="text-sm font-semibold text-slate-200">{t.roi.labelProjectValue}</label>
                   <span className="text-lg font-bold text-amber-400 font-mono bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/20">
-                    {avgProjectValue.toLocaleString('fr-CA')} $
+                    {formatMoney(avgProjectValue)}
                   </span>
                 </div>
                 <input
@@ -437,7 +514,7 @@ export default function LandingPage() {
 
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <label className="text-sm font-semibold text-slate-200">Taux de signature actuel (%)</label>
+                  <label className="text-sm font-semibold text-slate-200">{t.roi.labelWinRate}</label>
                   <span className="text-lg font-bold text-amber-400 font-mono bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/20">
                     {currentWinRate} %
                   </span>
@@ -458,30 +535,30 @@ export default function LandingPage() {
             <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 to-slate-950 p-6 sm:p-8 rounded-xl border border-amber-500/40 relative overflow-hidden shadow-2xl">
               <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/15 blur-3xl rounded-full"></div>
               
-              <h3 className="text-xs uppercase font-mono tracking-widest text-slate-400">Potentiel de Récupération Estimé</h3>
+              <h3 className="text-xs uppercase font-mono tracking-widest text-slate-400">{t.roi.cardTag}</h3>
               
               <div className="mt-4">
-                <span className="text-sm text-slate-400">Chiffre d'affaires annuel récupérable :</span>
+                <span className="text-sm text-slate-400">{t.roi.cardYearlyLabel}</span>
                 <p className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37] font-mono tracking-tight mt-1">
-                  +{yearlyGain.toLocaleString('fr-CA')} $
+                  +{formatMoney(yearlyGain)}
                 </p>
                 <p className="text-xs text-amber-300 font-medium mt-1">
-                  soit +{monthlyGain.toLocaleString('fr-CA')} $ / mois (~1 à 2 contrats additionnels signés)
+                  {t.roi.cardMonthlyLabel}{formatMoney(monthlyGain)}{t.roi.cardMonthlySuffix}
                 </p>
               </div>
 
               <div className="mt-6 pt-6 border-t border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Temps administratif économisé :</span>
-                  <span className="text-white font-bold font-mono">{hoursSavedPerWeek}h / semaine</span>
+                  <span className="text-slate-400">{t.roi.timeSavedLabel}</span>
+                  <span className="text-white font-bold font-mono">{hoursSavedPerWeek} {t.roi.timeSavedUnit}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Amélioration estimée du taux de signature :</span>
+                  <span className="text-slate-400">{t.roi.winRateGainLabel}</span>
                   <span className="text-amber-400 font-bold font-mono">+{newWinRate - currentWinRate}% ({currentWinRate}% → {newWinRate}%)</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Seuil de rentabilité ERP :</span>
-                  <span className="text-amber-300 font-bold font-mono">Rentabilisé dès le 1er devis récupéré</span>
+                  <span className="text-slate-400">{t.roi.breakevenLabel}</span>
+                  <span className="text-amber-300 font-bold font-mono">{t.roi.breakevenValue}</span>
                 </div>
               </div>
 
@@ -489,12 +566,12 @@ export default function LandingPage() {
                 onClick={() => setIsModalOpen(true)}
                 className="w-full mt-6 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
               >
-                <span>Tester mon potentiel de relance (Audit 15 min)</span>
+                <span>{t.roi.ctaButton}</span>
                 <ArrowRight className="w-4 h-4 text-slate-950" />
               </button>
 
               <p className="text-[10px] text-slate-500 mt-3 text-center">
-                * Estimation basée sur un gain réaliste de +5% de signature grâce aux relances automatiques 24h.
+                {t.roi.disclaimer}
               </p>
             </div>
           </div>
@@ -505,77 +582,71 @@ export default function LandingPage() {
       <section id="piliers" className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-            🏆 L'Orchestration Plangrowth
+            {t.pillars.tag}
           </span>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white mt-3">
-            3 Piliers stratégiques pour régner sur votre marché.
+            {t.pillars.title}
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* PILIER 1 : FINANCIER */}
+          {/* PILIER 1 */}
           <div className="bg-slate-900/90 p-8 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition-all hover:-translate-y-1 group shadow-xl">
             <div className="w-14 h-14 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
               <BarChart3 className="w-7 h-7" />
             </div>
-            <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Pilier 1</span>
-            <h3 className="text-xl font-bold text-white mt-2">📊 Rentabilité & Relance Devis 24h</h3>
+            <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">{t.pillars.items[0].tag}</span>
+            <h3 className="text-xl font-bold text-white mt-2">{t.pillars.items[0].title}</h3>
             <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-              Ne laissez aucun devis refroidir. Le système relance vos prospects par SMS & Email sous 24h et calcule vos marges réelles en temps réel.
+              {t.pillars.items[0].desc}
             </p>
             <ul className="mt-6 space-y-2 text-xs text-slate-300">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                <span>Alertes fuites de marge automatiques</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                <span>Facturation d'acompte en 1 clic</span>
-              </li>
+              {t.pillars.items[0].bullets.map((bullet, idx) => (
+                <li key={idx} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* PILIER 2 : MARQUE & CONVERSION */}
+          {/* PILIER 2 */}
           <div className="bg-slate-900/90 p-8 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition-all hover:-translate-y-1 group shadow-xl">
             <div className="w-14 h-14 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
               <Sparkles className="w-7 h-7" />
             </div>
-            <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Pilier 2</span>
-            <h3 className="text-xl font-bold text-white mt-2">🧲 Image de Marque & Clients Premium</h3>
+            <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">{t.pillars.items[1].tag}</span>
+            <h3 className="text-xl font-bold text-white mt-2">{t.pillars.items[1].title}</h3>
             <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-              Présentez des devis interactifs d'aspect haut de gamme avec signature électronique. Proposez un portail client transparent qui vous démarque.
+              {t.pillars.items[1].desc}
             </p>
             <ul className="mt-6 space-y-2 text-xs text-slate-300">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                <span>Signature électronique sécurisée</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                <span>Portail client transparent</span>
-              </li>
+              {t.pillars.items[1].bullets.map((bullet, idx) => (
+                <li key={idx} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* PILIER 3 : OPÉRATIONNEL LEAN */}
+          {/* PILIER 3 */}
           <div className="bg-slate-900/90 p-8 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition-all hover:-translate-y-1 group shadow-xl">
             <div className="w-14 h-14 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-6 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
               <Wrench className="w-7 h-7" />
             </div>
-            <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Pilier 3</span>
-            <h3 className="text-xl font-bold text-white mt-2">⚙️ Standardisation Terrain & Zéro Reprise</h3>
+            <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">{t.pillars.items[2].tag}</span>
+            <h3 className="text-xl font-bold text-white mt-2">{t.pillars.items[2].title}</h3>
             <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-              Éliminez les quiproquos avec vos équipes et sous-traitants. Planning d'intervention synchronisé et fiches de vérification qualité.
+              {t.pillars.items[2].desc}
             </p>
             <ul className="mt-6 space-y-2 text-xs text-slate-300">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                <span>Planning sous-traitants synchronisé</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                <span>Contrôle qualité photo obligatoire</span>
-              </li>
+              {t.pillars.items[2].bullets.map((bullet, idx) => (
+                <li key={idx} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -590,22 +661,22 @@ export default function LandingPage() {
             <PlangrowthGoldLogo className="w-20 h-20 mx-auto mb-6" />
 
             <h2 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37]">
-              Plangrowth
+              {t.vision.brand}
             </h2>
             <p className="text-amber-300 text-xs font-mono uppercase tracking-widest mt-1">
-              Architecte de l'Évolution Numérique
+              {t.vision.subtitle}
             </p>
             <p className="text-slate-400 text-sm font-semibold tracking-wider uppercase mt-2">
-              Structure • Acquisition • Scalabilité
+              {t.vision.slogan}
             </p>
 
             <blockquote className="mt-8 text-slate-300 italic text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-              "Notre mission est simple : donner à chaque entrepreneur et entreprise de service la structure technologique indispensable pour sécuriser leurs marges et passer du chaos opérationnel à la scalabilité financière."
+              {t.vision.quote}
             </blockquote>
 
             <div className="mt-8 pt-6 border-t border-slate-800/80 inline-block">
-              <span className="text-xs text-slate-400">Fondateur :</span>
-              <p className="text-base font-bold text-white tracking-wide">Maxime Rochon</p>
+              <span className="text-xs text-slate-400">{t.vision.founderLabel}</span>
+              <p className="text-base font-bold text-white tracking-wide">{t.vision.founderName}</p>
               <p className="text-xs text-amber-400 font-mono">growth-plan.ca</p>
             </div>
           </div>
@@ -617,101 +688,26 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              🛠️ La Suite Complète BTP & Services
+              {t.modules.tag}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Chaque outil dont votre compagnie a besoin.
+              {t.modules.title}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <FileText className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Devis & Chiffrage Ultra-Rapide</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Bibliothèque d'articles intégrée, calcul des coûts de main-d'œuvre et envoi PDF/Web instantané.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <Zap className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Relances 24h & Automatisations</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Relance SMS/Email personnalisée sans lever le petit doigt pour clôturer les devis en attente.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <Users className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Planning & Sous-Traitants</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Assignation des équipes par glisser-déposer, notifications automatiques des horaires d'intervention.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <Smartphone className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">App Mobile Terrain</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Pointage des heures, photos de chantier et bon de travail validé directement sur le smartphone des équipes.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <DollarSign className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Suivi Financier & Facturation</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Factures d'avancement, gestion des extras/avenants et synchronisation avec vos comptes.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <ShieldCheck className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Standardisation & Zéro Reprise</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Listes de contrôle qualité obligatoires avant la fermeture du chantier pour garantir la satisfaction client.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <FolderOpen className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Dossier Chantier Unifié</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Un chantier, un dossier : devis, documents, pointages et factures centralisés pour chaque projet.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <HardHat className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Conformité Québec (CCQ & Retenue)</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Suivi CCQ par métier, retenue de garantie 10 % et appels d&apos;offres SEAO intégrés.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <UserCog className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Équipe & Assignations</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Rôles propriétaire/admin/employé : chaque membre voit uniquement ses chantiers assignés.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <BarChart3 className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Pipeline Ventes Live</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Suivez vos devis, signatures et conversions en temps réel depuis votre tableau de bord ventes.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
-              <Megaphone className="w-8 h-8 text-amber-400 mb-4" />
-              <h4 className="text-lg font-bold text-white">Pubs Google, Meta &amp; Instagram</h4>
-              <p className="text-slate-400 text-sm mt-2">
-                Inclus dans l&apos;adhésion : on branche vos formulaires pub au CRM. Vous ne collez rien. Instagram = Meta.
-              </p>
-            </div>
+            {t.modules.items.map((mod, idx) => {
+              const IconComponent = moduleIcons[idx] || FileText
+              return (
+                <div key={idx} className="p-6 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-all">
+                  <IconComponent className="w-8 h-8 text-amber-400 mb-4" />
+                  <h4 className="text-lg font-bold text-white">{mod.title}</h4>
+                  <p className="text-slate-400 text-sm mt-2">
+                    {mod.desc}
+                  </p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -721,49 +717,43 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              🍁 Conçu pour le Québec
+              {t.quebec.tag}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Un ERP qui parle construction québécoise
+              {t.quebec.title}
             </h2>
             <p className="text-slate-400 mt-4 text-base">
-              CCQ, retenue légale, SEAO et gestion multi-chantiers — sans modules payants à la carte.
+              {t.quebec.subtitle}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all">
               <FolderOpen className="w-10 h-10 text-amber-400 mb-4" />
-              <h3 className="text-lg font-bold text-white">Un chantier, un dossier</h3>
+              <h3 className="text-lg font-bold text-white">{t.quebec.card1Title}</h3>
               <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-                Documents, pointages terrain, extras et factures liés au même chantier. Fini les fichiers éparpillés entre Excel, courriels et WhatsApp.
+                {t.quebec.card1Desc}
               </p>
             </div>
 
             <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all">
               <HardHat className="w-10 h-10 text-amber-400 mb-4" />
-              <h3 className="text-lg font-bold text-white">Module Conformité QC</h3>
+              <h3 className="text-lg font-bold text-white">{t.quebec.card2Title}</h3>
               <ul className="mt-4 space-y-2 text-xs text-slate-300">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Temps CCQ par métier (électricien, plombier, charpentier…)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Retenue de garantie 10 % calculée automatiquement</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Suivi des appels d&apos;offres SEAO</span>
-                </li>
+                {t.quebec.card2Bullets.map((bullet, idx) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>{bullet}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
             <div className="p-8 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all">
               <UserCog className="w-10 h-10 text-amber-400 mb-4" />
-              <h3 className="text-lg font-bold text-white">Équipe structurée</h3>
+              <h3 className="text-lg font-bold text-white">{t.quebec.card3Title}</h3>
               <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-                Propriétaire et admins voient tout ; les employés accèdent uniquement aux chantiers qui leur sont assignés. Les sous-traitants du répertoire ne comptent pas comme utilisateurs facturables.
+                {t.quebec.card3Desc}
               </p>
             </div>
           </div>
@@ -775,59 +765,52 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              Inclus dans les {SETUP_FEE_CAD} $ d&apos;adhésion
+              {t.acquisition.tag}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              On branche vos demandes au CRM. Vous ne collez rien.
+              {t.acquisition.title}
             </h2>
             <p className="text-slate-400 mt-4 text-base leading-relaxed">
-              Site web, Google Ads, Facebook et Instagram : quand quelqu&apos;un demande une soumission, ça tombe dans Leads.
-              Instagram passe par Meta — c&apos;est le même compte.
+              {t.acquisition.subtitle}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
             <div className="p-8 rounded-2xl bg-slate-950 border border-amber-500/30">
               <Plug className="w-10 h-10 text-amber-400 mb-4" />
-              <h3 className="text-lg font-bold text-white">Votre site</h3>
+              <h3 className="text-lg font-bold text-white">{t.acquisition.cards[0].title}</h3>
               <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-                Le formulaire Contact de votre site envoie les demandes dans Leads. Pas de webmestre ? On le fait pour vous.
+                {t.acquisition.cards[0].desc}
               </p>
             </div>
             <div className="p-8 rounded-2xl bg-slate-950 border border-amber-500/30">
               <Target className="w-10 h-10 text-amber-400 mb-4" />
-              <h3 className="text-lg font-bold text-white">Google Ads</h3>
+              <h3 className="text-lg font-bold text-white">{t.acquisition.cards[1].title}</h3>
               <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-                Les formulaires de vos pubs Google (Lead Form) créent un prospect dans le même CRM. Vous continuez à gérer vos campagnes.
+                {t.acquisition.cards[1].desc}
               </p>
             </div>
             <div className="p-8 rounded-2xl bg-slate-950 border border-amber-500/30">
               <Megaphone className="w-10 h-10 text-amber-400 mb-4" />
-              <h3 className="text-lg font-bold text-white">Meta &amp; Instagram</h3>
+              <h3 className="text-lg font-bold text-white">{t.acquisition.cards[2].title}</h3>
               <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-                Lead Ads Facebook et Instagram : la personne remplit le formulaire dans la pub, ça arrive dans Leads. Un seul branchement Meta.
+                {t.acquisition.cards[2].desc}
               </p>
             </div>
           </div>
 
           <div className="max-w-3xl mx-auto p-6 sm:p-8 rounded-2xl bg-slate-950 border border-slate-800">
-            <p className="text-sm font-semibold text-white mb-4">Comment ça se passe après l&apos;inscription</p>
+            <p className="text-sm font-semibold text-white mb-4">{t.acquisition.setupTitle}</p>
             <ol className="space-y-3 text-sm text-slate-300">
-              <li className="flex gap-3">
-                <span className="text-amber-400 font-mono font-bold shrink-0">1.</span>
-                Vous nous donnez l&apos;adresse du site et, si vous en avez, vos comptes Google Ads et Meta.
-              </li>
-              <li className="flex gap-3">
-                <span className="text-amber-400 font-mono font-bold shrink-0">2.</span>
-                Plan Growth branche les formulaires. Vous n&apos;avez rien à coller.
-              </li>
-              <li className="flex gap-3">
-                <span className="text-amber-400 font-mono font-bold shrink-0">3.</span>
-                Les demandes arrivent dans Leads. L&apos;entonnoir (prospect → devis → vente) se remplit tout seul.
-              </li>
+              {t.acquisition.steps.map((step, idx) => (
+                <li key={idx} className="flex gap-3">
+                  <span className="text-amber-400 font-mono font-bold shrink-0">{idx + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
             </ol>
             <p className="text-xs text-slate-500 mt-5">
-              Vous gardez vos campagnes. On ne gère pas votre budget pub — on fait arriver les demandes dans Plan Growth.
+              {t.acquisition.disclaimer}
             </p>
           </div>
         </div>
@@ -838,16 +821,16 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10">
             <span className="text-amber-400 font-mono text-xs uppercase tracking-widest font-bold">
-              💰 À partir de {formatPriceCad(PRICING_BASE_MONTHLY_CAD)} $ / mois
+              {t.pricing.tag}
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-3">
-              Des tarifs clairs pour chaque niveau d&apos;entreprise.
+              {t.pricing.title}
             </h2>
             <p className="text-slate-400 mt-4 text-sm">
-              Abonnement annuel · engagement 12 mois · + {SETUP_FEE_CAD} $ d&apos;adhésion (site, Google Ads, Meta/Instagram)
+              {t.pricing.subtitle}
             </p>
             <p className="text-slate-500 mt-2 text-xs">
-              Un utilisateur = personne avec accès à l&apos;app (propriétaire, admin ou employé qui pointe). Les sous-traitants du répertoire ne comptent pas.
+              {t.pricing.userDef}
             </p>
           </div>
 
@@ -855,12 +838,12 @@ export default function LandingPage() {
             <div className="flex gap-3 items-start mb-4">
               <Plug className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-white">+ {SETUP_FEE_CAD} $ frais d&apos;adhésion (unique)</p>
-                <p className="text-xs text-slate-400 mt-1">{SETUP_FEE_LABEL}</p>
+                <p className="text-sm font-semibold text-white">{t.pricing.setupFeeTitle}</p>
+                <p className="text-xs text-slate-400 mt-1">{t.pricing.setupFeeLabel}</p>
               </div>
             </div>
             <ul className="space-y-2 text-xs text-slate-300 pl-8">
-              {SETUP_FEE_INCLUDES.map(item => (
+              {t.pricing.setupFeeIncludes.map(item => (
                 <li key={item} className="flex items-start gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                   <span>{item}</span>
@@ -870,83 +853,91 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
-            {PRICING_TIERS.map(tier => (
-              <div
-                key={tier.id}
-                className={`p-6 rounded-2xl flex flex-col justify-between ${
-                  tier.popular
-                    ? 'bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500 shadow-2xl shadow-amber-500/10 relative'
-                    : 'bg-slate-900/90 border border-slate-800'
-                }`}
-              >
-                {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#F5D061] to-[#D4AF37] text-slate-950 font-black text-[10px] font-mono uppercase tracking-wider whitespace-nowrap">
-                    Le Plus Populaire
-                  </div>
-                )}
+            {PRICING_TIERS.map((tier, idx) => {
+              const tierTrans = t.pricing.tiers[idx] || {
+                name: tier.name,
+                subtitle: tier.subtitle,
+                usersLabel: tier.usersLabel,
+              }
 
-                <div>
-                  <span className={`text-xs font-mono font-bold uppercase ${tier.popular ? 'text-amber-400' : 'text-slate-400'}`}>
-                    {tier.name}
-                  </span>
-                  <h3 className="text-lg font-bold text-white mt-1">{tier.subtitle}</h3>
+              return (
+                <div
+                  key={tier.id}
+                  className={`p-6 rounded-2xl flex flex-col justify-between ${
+                    tier.popular
+                      ? 'bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-500 shadow-2xl shadow-amber-500/10 relative'
+                      : 'bg-slate-900/90 border border-slate-800'
+                  }`}
+                >
+                  {tier.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#F5D061] to-[#D4AF37] text-slate-950 font-black text-[10px] font-mono uppercase tracking-wider whitespace-nowrap">
+                      {t.pricing.popularBadge}
+                    </div>
+                  )}
 
-                  <div className="mt-5">
-                    {tier.contactOnly ? (
-                      <span className="text-2xl font-extrabold text-white font-mono">Sur mesure</span>
-                    ) : (
-                      <>
-                        <span className={`text-3xl font-extrabold font-mono ${tier.popular ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37]' : 'text-white'}`}>
-                          {formatPriceCad(tier.monthlyDisplayCad)} $
-                        </span>
-                        <span className="text-slate-400 text-sm"> / mois</span>
-                        <p className="text-[10px] text-slate-500 mt-2">
-                          {formatPriceCad(tier.annualTotalCad)} $ / an · engagement 12 mois
-                        </p>
-                      </>
-                    )}
-                  </div>
+                  <div>
+                    <span className={`text-xs font-mono font-bold uppercase ${tier.popular ? 'text-amber-400' : 'text-slate-400'}`}>
+                      {tierTrans.name}
+                    </span>
+                    <h3 className="text-lg font-bold text-white mt-1">{tierTrans.subtitle}</h3>
 
-                  <ul className="mt-6 space-y-2.5 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>{tier.usersLabel}</span>
-                    </li>
-                    {TIER_FEATURE_BULLETS.map(item => (
-                      <li key={item} className="flex items-center gap-2">
+                    <div className="mt-5">
+                      {tier.contactOnly ? (
+                        <span className="text-2xl font-extrabold text-white font-mono">{t.pricing.contactOnlyText}</span>
+                      ) : (
+                        <>
+                          <span className={`text-3xl font-extrabold font-mono ${tier.popular ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2B2] via-[#F5D061] to-[#D4AF37]' : 'text-white'}`}>
+                            {lang === 'en' ? `$${tier.monthlyDisplayCad}` : `${formatPriceCad(tier.monthlyDisplayCad)} $`}
+                          </span>
+                          <span className="text-slate-400 text-sm"> {t.pricing.monthlySuffix}</span>
+                          <p className="text-[10px] text-slate-500 mt-2">
+                            {lang === 'en' ? `$${tier.annualTotalCad}` : `${formatPriceCad(tier.annualTotalCad)} $`} {t.pricing.annualSuffix}
+                          </p>
+                        </>
+                      )}
+                    </div>
+
+                    <ul className="mt-6 space-y-2.5 text-xs text-slate-300">
+                      <li className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        <span>{item}</span>
+                        <span>{tierTrans.usersLabel}</span>
                       </li>
-                    ))}
-                  </ul>
-                </div>
+                      {t.pricing.bullets.map(item => (
+                        <li key={item} className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                {tier.contactOnly ? (
-                  <Link
-                    href="/support"
-                    className="w-full mt-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-all text-center block"
-                  >
-                    Nous contacter
-                  </Link>
-                ) : (
-                  <Link
-                    href="/tarifs"
-                    className={`w-full mt-6 py-3 rounded-xl font-bold text-sm transition-all text-center block ${
-                      tier.popular
-                        ? 'bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black uppercase tracking-wider shadow-lg shadow-amber-500/20'
-                        : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                    }`}
-                  >
-                    Essai gratuit 14 jours
-                  </Link>
-                )}
-              </div>
-            ))}
+                  {tier.contactOnly ? (
+                    <Link
+                      href="/support"
+                      className="w-full mt-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-all text-center block"
+                    >
+                      {t.pricing.contactBtnText}
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/tarifs"
+                      className={`w-full mt-6 py-3 rounded-xl font-bold text-sm transition-all text-center block ${
+                        tier.popular
+                          ? 'bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black uppercase tracking-wider shadow-lg shadow-amber-500/20'
+                          : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                      }`}
+                    >
+                      {t.pricing.trialBtnText}
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           <p className="text-center mt-10">
             <Link href="/tarifs" className="text-amber-400 hover:text-amber-300 text-sm font-semibold inline-flex items-center gap-2">
-              Voir tous les détails et codes promo
+              {t.pricing.viewDetails}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </p>
@@ -957,17 +948,17 @@ export default function LandingPage() {
       <section className="py-20 bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 relative z-10 overflow-hidden">
         <div className="max-w-5xl mx-auto px-4 text-center">
           <h2 className="text-3xl sm:text-5xl font-black tracking-tight">
-            Prêt à faire passer votre compagnie au niveau supérieur ?
+            {t.ctaBanner.title}
           </h2>
           <p className="mt-4 text-base sm:text-lg font-bold text-slate-900 max-w-2xl mx-auto">
-            Plangrowth — Architecte de l'Évolution Numérique
+            {t.ctaBanner.subtitle}
           </p>
           <div className="mt-8 flex justify-center">
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-8 py-4 rounded-xl bg-slate-950 hover:bg-slate-900 text-amber-300 font-black text-sm uppercase tracking-wider shadow-2xl transition-all flex items-center gap-3"
             >
-              <span>Réserver mon Audit ROI & Démo (Gratuit)</span>
+              <span>{t.ctaBanner.button}</span>
               <ArrowRight className="w-5 h-5 text-amber-300" />
             </button>
           </div>
@@ -982,16 +973,16 @@ export default function LandingPage() {
             <div>
               <span className="font-bold text-slate-200 text-sm">Plangrowth</span>
               <p className="text-[10px] text-slate-500">
-                Structure • Acquisition • Scalabilité — Fondateur : Maxime Rochon
+                {t.footer.tagline}
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link href="/tarifs" className="hover:text-slate-300">Tarifs</Link>
-            <Link href="/conditions-utilisation" className="hover:text-slate-300">Conditions d&apos;utilisation</Link>
-            <Link href="/politique-confidentialite" className="hover:text-slate-300">Politique de confidentialité</Link>
-            <Link href="/support" className="hover:text-slate-300">Support</Link>
+            <Link href="/tarifs" className="hover:text-slate-300">{t.footer.tarifs}</Link>
+            <Link href="/conditions-utilisation" className="hover:text-slate-300">{t.footer.terms}</Link>
+            <Link href="/politique-confidentialite" className="hover:text-slate-300">{t.footer.privacy}</Link>
+            <Link href="/support" className="hover:text-slate-300">{t.footer.support}</Link>
           </div>
         </div>
       </footer>
@@ -1012,18 +1003,18 @@ export default function LandingPage() {
                 <div className="flex items-center gap-3 mb-4">
                   <PlangrowthGoldLogo className="w-10 h-10" />
                   <div>
-                    <h3 className="text-xl font-bold text-white">Audit ROI Plangrowth (15 min)</h3>
-                    <p className="text-xs text-amber-400 font-mono">100% Gratuit — Sans aucun engagement</p>
+                    <h3 className="text-xl font-bold text-white">{t.modal.title}</h3>
+                    <p className="text-xs text-amber-400 font-mono">{t.modal.subtitle}</p>
                   </div>
                 </div>
 
                 <form onSubmit={handleFormSubmit} className="space-y-4 mt-6">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Nom complet</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">{t.modal.labelName}</label>
                     <input
                       type="text"
                       required
-                      placeholder="Jean Tremblay"
+                      placeholder={t.modal.placeholderName}
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-amber-500"
@@ -1031,11 +1022,11 @@ export default function LandingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Nom de votre entreprise / compagnie</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">{t.modal.labelCompany}</label>
                     <input
                       type="text"
                       required
-                      placeholder="Les Constructions Tremblay inc."
+                      placeholder={t.modal.placeholderCompany}
                       value={formData.company}
                       onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-amber-500"
@@ -1044,11 +1035,11 @@ export default function LandingPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">Email professionnel</label>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">{t.modal.labelEmail}</label>
                       <input
                         type="email"
                         required
-                        placeholder="jean@construction.com"
+                        placeholder={t.modal.placeholderEmail}
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-amber-500"
@@ -1056,11 +1047,11 @@ export default function LandingPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">Téléphone (SMS relance)</label>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">{t.modal.labelPhone}</label>
                       <input
                         type="tel"
                         required
-                        placeholder="(514) 555-0199"
+                        placeholder={t.modal.placeholderPhone}
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-amber-500"
@@ -1069,18 +1060,17 @@ export default function LandingPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Secteur d'activité principal</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">{t.modal.labelTrade}</label>
                     <select
                       value={formData.trade}
                       onChange={(e) => setFormData({ ...formData, trade: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-amber-500"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-amber-500 text-white"
                     >
-                      <option value="Rénovation / Entrepreneur Général">Rénovation / Entrepreneur Général</option>
-                      <option value="Électricité / Plomberie / CVAC">Électricité / Plomberie / CVAC</option>
-                      <option value="Charpente & Structure">Charpente & Structure</option>
-                      <option value="Finition & Aménagement Intérieur">Finition & Aménagement Intérieur</option>
-                      <option value="Génie Civil & Commercial">Génie Civil & Commercial</option>
-                      <option value="Autre Service Spécialisé">Autre Service Spécialisé</option>
+                      {t.modal.tradeOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1094,9 +1084,9 @@ export default function LandingPage() {
                     className="w-full mt-6 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
                   >
                     {formSubmitting ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /><span>Envoi en cours…</span></>
+                      <><Loader2 className="w-4 h-4 animate-spin" /><span>{t.modal.submitting}</span></>
                     ) : (
-                      <><Send className="w-4 h-4 text-slate-950" /><span>Confirmer ma demande d&apos;Audit ROI</span></>
+                      <><Send className="w-4 h-4 text-slate-950" /><span>{t.modal.submit}</span></>
                     )}
                   </button>
                 </form>
@@ -1106,15 +1096,15 @@ export default function LandingPage() {
                 <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-bold text-white">Demande reçue avec succès !</h3>
+                <h3 className="text-2xl font-bold text-white">{t.modal.successTitle}</h3>
                 <p className="text-sm text-slate-300 mt-2">
-                  Merci {formData.name}. L'équipe Plangrowth vous contactera dans les 24 heures au {formData.phone} pour votre audit de rentabilité.
+                  {t.modal.successDesc.replace('{name}', formData.name).replace('{phone}', formData.phone)}
                 </p>
                 <button
                   onClick={() => setIsModalOpen(false)}
                   className="mt-6 px-6 py-2.5 rounded-xl bg-slate-800 text-white text-sm font-semibold hover:bg-slate-700 transition-colors"
                 >
-                  Fermer
+                  {t.modal.close}
                 </button>
               </div>
             )}

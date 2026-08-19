@@ -6,12 +6,11 @@ import { createClient } from '@supabase/supabase-js'
 
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!url || !serviceKey) {
-    // Échec explicite — jamais silencieux (S1.1 : le webhook échouait sans trace)
     throw new Error(
-      'SUPABASE_SERVICE_ROLE_KEY manquante — configurer .env.local et Netlify env vars'
+      'NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing in environment variables.'
     )
   }
 

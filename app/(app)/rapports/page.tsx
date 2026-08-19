@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import { BarChart3, TrendingUp, Receipt, FileText, Hammer, Loader2, RefreshCw } from 'lucide-react'
 import { normalizeStatut } from '@/lib/status'
 
@@ -41,10 +41,7 @@ export default function RapportsPage() {
   const [loading, setLoading] = useState(true)
   const [periode, setPeriode] = useState<'30' | '90' | '180' | '365'>('30')
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const load = useCallback(async () => {
     setLoading(true)

@@ -4,19 +4,40 @@ import { canAccessControlCenter, canUseAgenceMode } from '@/lib/platform-admin'
 import { canAccessRoute } from '@/lib/auth/permissions'
 
 const PUBLIC_PATHS = [
-  '/login', '/register', '/forgot-password',
-  '/politique-confidentialite', '/conditions-utilisation',
-  '/support', '/tarifs', '/join', '/onboarding',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/politique-confidentialite',
+  '/conditions-utilisation',
+  '/support',
+  '/tarifs',
+  '/join',
+  '/onboarding',
 ]
+
+const PUBLIC_API_PREFIXES = [
+  '/api/auth/',
+  '/api/public/',
+  '/api/contact/',
+  '/api/portal/',
+  '/api/join',
+  '/api/onboarding',
+  '/api/stripe/webhook',
+  '/api/cron/',
+  '/api/webhook',
+  '/api/webhooks',
+]
+
+function applySecurityHeaders(res: NextResponse): NextResponse {
+  res.headers.set('X-Content-Type-Options', 'nosniff')
+  res.headers.set('X-Frame-Options', 'DENY')
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  return res
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  let response = NextResponse.next({ request })
-
-  // Headers de sécurité
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  let response = applySecurityHeaders(NextResponse.next({ request }))
 
   const host = (
     request.headers.get('x-forwarded-host') ||
@@ -27,24 +48,12 @@ export async function middleware(request: NextRequest) {
 
   // Sur app.growth-plan.ca, la racine '/' va TOUJOURS vers l'ERP (/dashboard -> /login si non connecté)
   if ((host.startsWith('app.') || host.includes('app.growth-plan')) && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  // Laisser passer immédiatement les routes publiques et API (ex: growth-plan.ca principal)
-  if (
-    pathname === '/' ||
-    pathname === '/landing' ||
-    PUBLIC_PATHS.some(p => p !== '/' && pathname.startsWith(p)) ||
-    pathname.startsWith('/api/') ||
-    pathname.startsWith('/portal/') ||
-    pathname.startsWith('/auth/')
-  ) {
-    return response
+    return applySecurityHeaders(NextResponse.redirect(new URL('/dashboard', request.url)))
   }
 
   // Fail-closed : sans config Supabase
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return new NextResponse('Configuration serveur incomplète', { status: 503 })
+    return applySecurityHeaders(new NextResponse('Configuration serveur incomplète', { status: 503 }))
   }
 
   const supabase = createServerClient(
@@ -58,11 +67,13 @@ export async function middleware(request: NextRequest) {
         set(name: string, value: string, options: CookieOptions) {
           request.cookies.set(name, value)
           response = NextResponse.next({ request })
+          applySecurityHeaders(response)
           response.cookies.set(name, value, options)
         },
         remove(name: string, options: CookieOptions) {
           request.cookies.set(name, '')
           response = NextResponse.next({ request })
+          applySecurityHeaders(response)
           response.cookies.set(name, '', options)
         },
       },
@@ -77,10 +88,33 @@ export async function middleware(request: NextRequest) {
     console.warn('[middleware] Auth token warning handled cleanly')
   }
 
-  // Pas connecté ou jeton obsolète → /login
+  const isPublicApi = PUBLIC_API_PREFIXES.some(prefix => {
+    const cleanPrefix = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix
+    return pathname === cleanPrefix || pathname.startsWith(cleanPrefix + '/')
+  })
+
+  // Traitement si utilisateur non connecté
   if (!user) {
+    if (pathname.startsWith('/api/')) {
+      if (!isPublicApi) {
+        return applySecurityHeaders(NextResponse.json({ error: 'Non autorisé' }, { status: 401 }))
+      }
+      return response
+    }
+
+    const isPublicNonApiPath =
+      pathname === '/' ||
+      pathname === '/landing' ||
+      PUBLIC_PATHS.some(p => p !== '/' && (pathname === p || pathname.startsWith(p + '/'))) ||
+      pathname.startsWith('/portal/') ||
+      pathname.startsWith('/auth/')
+
+    if (isPublicNonApiPath) {
+      return response
+    }
+
     const loginUrl = new URL('/login', request.url)
-    const redirectResponse = NextResponse.redirect(loginUrl)
+    const redirectResponse = applySecurityHeaders(NextResponse.redirect(loginUrl))
     request.cookies.getAll().forEach(c => {
       if (c.name.includes('sb-') || c.name.includes('auth-token')) {
         redirectResponse.cookies.delete(c.name)
@@ -89,14 +123,28 @@ export async function middleware(request: NextRequest) {
     return redirectResponse
   }
 
-  // Centre de contrôle / admin plateforme — Max + PLATFORM_ADMIN_EMAILS
-  if (pathname.startsWith('/admin')) {
+  // Traitement si utilisateur connecté
+  // Verification accès admin pour routes HTML /admin et routes API /api/admin/
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/api/admin')
+  if (isAdminRoute) {
     if (!canAccessControlCenter(user.email)) {
-      return NextResponse.redirect(new URL('/dashboard?error=admin_forbidden', request.url))
+      if (pathname.startsWith('/api/')) {
+        return applySecurityHeaders(
+          NextResponse.json({ error: 'Accès refusé - Droits administrateur requis' }, { status: 403 })
+        )
+      }
+      return applySecurityHeaders(
+        NextResponse.redirect(new URL('/dashboard?error=admin_forbidden', request.url))
+      )
     }
   }
 
-  // RBAC Phase 2 — collab limité selon companies.vertical
+  // Pour les requêtes API (hors /api/admin déjà vérifié ci-dessus), on autorise le passage
+  if (pathname.startsWith('/api/')) {
+    return response
+  }
+
+  // RBAC Phase 2 — page-level RBAC route checks
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, company_id')
@@ -117,7 +165,7 @@ export async function middleware(request: NextRequest) {
 
   const agencePaths = ['/dossiers', '/preteurs', '/commissions']
   if (!canUseAgenceMode(user.email) && agencePaths.some(p => pathname === p || pathname.startsWith(`${p}/`))) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return applySecurityHeaders(NextResponse.redirect(new URL('/dashboard', request.url)))
   }
 
   const collabHome = (vertical === 'agence' || vertical === 'courtier') ? '/dossiers' : '/jobs'
@@ -125,17 +173,17 @@ export async function middleware(request: NextRequest) {
   if (!canAccessRoute(role, pathname, vertical)) {
     const dest = new URL(collabHome, request.url)
     dest.searchParams.set('error', 'access_denied')
-    return NextResponse.redirect(dest)
+    return applySecurityHeaders(NextResponse.redirect(dest))
   }
 
   // Employés : /dashboard → accueil collab (canAccessRoute ci-dessus couvre déjà ce cas)
   if (pathname === '/dashboard' && !canAccessRoute(role, '/dashboard', vertical)) {
-    return NextResponse.redirect(new URL(collabHome, request.url))
+    return applySecurityHeaders(NextResponse.redirect(new URL(collabHome, request.url)))
   }
 
   return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

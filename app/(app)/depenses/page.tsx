@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import dynamic from 'next/dynamic'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import { Receipt, Plus, Search, Loader2, X, Wallet, Check, Trash2, CheckSquare, Square, Edit2, Camera } from 'lucide-react'
-import DepensesInboxPanel from './depenses-inbox-panel'
+
+const DepensesInboxPanel = dynamic(() => import('./depenses-inbox-panel'), { ssr: false })
 
 const DEFAULT_CATEGORIES = [
   'Matériaux',
@@ -76,10 +78,7 @@ export default function DepensesPage() {
   const [showCatManager, setShowCatManager] = useState(false)
   const [newCatInput, setNewCatInput] = useState('')
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const load = useCallback(async () => {
     setLoading(true)

@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   ArrowLeft, FileText, Send, CheckCircle2, XCircle,
   Edit3, Download, Eye, Copy, Trash2, User, Calendar,
@@ -422,10 +422,7 @@ export default function DevisDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase
       .from('devis')
       .select('id, numero, titre, statut, lignes, montant_ht, tps, tvq, montant_ttc, date_emission, valide_jusqu_au, notes, clients(nom, email, ville)')

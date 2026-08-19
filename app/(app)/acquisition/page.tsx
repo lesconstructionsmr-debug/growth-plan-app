@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import dynamic from 'next/dynamic'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import Link from 'next/link'
 import { Loader2, RefreshCw, Target } from 'lucide-react'
 import { normalizeStatut } from '@/lib/status'
@@ -9,8 +10,9 @@ import {
   CHANNELS, EMPTY_BUDGETS, cac, classifySource, startOfMonth,
   type Channel, type MarketingBudgets,
 } from '@/lib/leads/acquisition'
-import FunnelStudioPanel from './funnel-studio-panel'
-import QualifierPanel from './qualifier-panel'
+
+const FunnelStudioPanel = dynamic(() => import('./funnel-studio-panel'), { ssr: false })
+const QualifierPanel = dynamic(() => import('./qualifier-panel'), { ssr: false })
 
 type LeadLite = {
   id: string
@@ -35,10 +37,7 @@ export default function AcquisitionPage() {
   const [budgets, setBudgets] = useState<MarketingBudgets>(EMPTY_BUDGETS)
   const [persisted, setPersisted] = useState(true)
 
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), [])
+  const supabase = getBrowserClient()
 
   const load = useCallback(async () => {
     setLoading(true)

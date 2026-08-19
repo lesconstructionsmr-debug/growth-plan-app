@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: `Rappel envoyé à ${clientEmail}`, email_sent: true })
     }
 
-    console.log(`[RAPPEL SIMULÉ] → ${clientEmail} | ${reference}`)
+    console.log(`[RAPPEL SIMULÉ] → ${clientEmail?.replace(/(.{2})(.*)(@.*)/, '$1***$3')} | ${reference}`)
     return NextResponse.json({ success: true, message: `[DEV] Rappel simulé. Ajoutez RESEND_API_KEY pour envoyer.`, email_sent: false, simulated: true })
   } catch (err) {
     return apiError(err, '[POST /api/reminders]')

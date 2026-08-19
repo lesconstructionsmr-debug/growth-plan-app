@@ -25,7 +25,10 @@ export async function POST(req: NextRequest) {
       statut:           body.statut ?? 'brouillon',
     })
 
-    return NextResponse.json(devis, { status: 201 })
+    return NextResponse.json(devis, {
+      status: 201,
+      headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
+    })
   } catch (err) {
     return apiError(err, '[POST /api/devis]')
   }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   TrendingUp, FileText, Building2, Receipt,
   Clock, ChevronRight, Plus, AlertCircle,
@@ -141,9 +141,13 @@ function QuickActions({ agence = false }: { agence?: boolean }) {
 }
 
 export default function DashboardPage() {
+  const [salutation, setSalutation] = useState('Bonjour')
   const now = new Date()
-  const heure = now.getHours()
-  const salutation = heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir'
+
+  useEffect(() => {
+    const heure = new Date().getHours()
+    setSalutation(heure < 12 ? 'Bonjour' : heure < 18 ? 'Bon après-midi' : 'Bonsoir')
+  }, [])
 
   const [kpi, setKpi] = useState<KpiData>({ ca30j: 0, devisEnAttente: 0, jobsActifs: 0, facturesImpayees: 0 })
   const [agenceKpi, setAgenceKpi] = useState<AgenceKpi>({ pipelineActif: 0, commissionsARecevoir: 0, commissionsRecues30j: 0, dossiersActifs: 0 })
@@ -177,10 +181,7 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
@@ -190,132 +191,127 @@ export default function DashboardPage() {
 
     let cancelled = false
 
-    fetch('/api/me')
-      .then(r => r.json())
-      .then(me => {
-        if (cancelled) return
-        const agence = false
-        setIsAgence(agence)
+    const il30j = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().split('T')[0]
 
-        if (agence) {
-          return fetch('/api/agence/kpis')
-            .then(r => r.json())
-            .then(data => {
-              if (cancelled) return
-              setAgenceKpi({
-                pipelineActif: Number(data.pipelineActif ?? 0),
-                commissionsARecevoir: Number(data.commissionsARecevoir ?? 0),
-                commissionsRecues30j: Number(data.commissionsRecues30j ?? 0),
-                dossiersActifs: Number(data.dossiersActifs ?? 0),
-              })
-              const recents = Array.isArray(data.recents) ? data.recents : []
-              setRecentDossiers(recents.map((d: {
-                id: string
-                numero?: string
-                etiquette?: string
-                montant_pret?: number | null
-                created_at?: string
-                clients?: { nom?: string } | { nom?: string }[] | null
-              }) => {
-                const clients = d.clients
-                const nom = Array.isArray(clients) ? clients[0]?.nom : clients?.nom
-                return {
-                  id: d.id,
-                  nom: `${d.numero ?? 'Dossier'}${nom ? ` — ${nom}` : ''}`,
-                  montant: d.montant_pret != null
-                    ? Number(d.montant_pret).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
-                    : '—',
-                  statut: etiquetteLabel(d.etiquette) || '—',
-                  statutColor: 'var(--gold)',
-                  date: d.created_at
-                    ? new Date(d.created_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })
-                    : '—',
-                  href: `/dossiers/${d.id}`,
-                }
-              }))
-              setLoading(false)
+    const STATUT_COLOR: Record<string, string> = {
+      brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
+      approuve: 'var(--green)', refuse: 'var(--red)', expire: 'var(--amber)', converti: 'var(--gold)',
+      en_cours: 'var(--blue)', planifie: 'var(--amber)', termine: 'var(--green)', annule: 'var(--red)',
+    }
+    const STATUT_LABEL: Record<string, string> = {
+      brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
+      refuse: 'Refusé', expire: 'Expiré', converti: 'Facturé',
+      en_cours: 'En cours', planifie: 'Planifié', termine: 'Terminé', annule: 'Annulé',
+    }
+
+    Promise.all([
+      fetch('/api/me').then(r => r.json()).catch(() => null),
+      supabase.from('factures').select('montant_ttc').eq('statut', 'payee').gte('date_paiement', il30j),
+      supabase.from('devis').select('id', { count: 'exact', head: true }).in('statut', ['envoye', 'vu']),
+      supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('statut', 'en_cours'),
+      supabase.from('factures').select('montant_ttc').in('statut', ['envoyee', 'vue', 'partielle', 'en_retard']),
+      supabase.from('devis').select('id, numero, titre, statut, montant_ttc, date_emission, clients(nom)').order('created_at', { ascending: false }).limit(5),
+      supabase.from('jobs').select('id, titre, statut, budget, date_debut, clients(nom)').order('created_at', { ascending: false }).limit(5),
+      supabase.from('devis').select('id, numero, titre, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
+      supabase.from('factures').select('id, numero, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
+    ]).then(([me, facPay, devisAtt, jobsAct, facImp, devisRec, jobsRec, devisAct, facAct]) => {
+      if (cancelled) return
+      const agence = false
+      setIsAgence(agence)
+
+      if (agence) {
+        return fetch('/api/agence/kpis')
+          .then(r => r.json())
+          .then(data => {
+            if (cancelled) return
+            setAgenceKpi({
+              pipelineActif: Number(data.pipelineActif ?? 0),
+              commissionsARecevoir: Number(data.commissionsARecevoir ?? 0),
+              commissionsRecues30j: Number(data.commissionsRecues30j ?? 0),
+              dossiersActifs: Number(data.dossiersActifs ?? 0),
             })
-            .catch(() => { if (!cancelled) setLoading(false) })
-        }
-
-        const il30j = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().split('T')[0]
-
-        const STATUT_COLOR: Record<string, string> = {
-          brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
-          approuve: 'var(--green)', refuse: 'var(--red)', expire: 'var(--amber)', converti: 'var(--gold)',
-          en_cours: 'var(--blue)', planifie: 'var(--amber)', termine: 'var(--green)', annule: 'var(--red)',
-        }
-        const STATUT_LABEL: Record<string, string> = {
-          brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
-          refuse: 'Refusé', expire: 'Expiré', converti: 'Facturé',
-          en_cours: 'En cours', planifie: 'Planifié', termine: 'Terminé', annule: 'Annulé',
-        }
-
-        Promise.all([
-          supabase.from('factures').select('montant_ttc').eq('statut', 'payee').gte('date_paiement', il30j),
-          supabase.from('devis').select('id', { count: 'exact', head: true }).in('statut', ['envoye', 'vu']),
-          supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('statut', 'en_cours'),
-          supabase.from('factures').select('montant_ttc').in('statut', ['envoyee', 'vue', 'partielle', 'en_retard']),
-          supabase.from('devis').select('id, numero, titre, statut, montant_ttc, date_emission, clients(nom)').order('created_at', { ascending: false }).limit(5),
-          supabase.from('jobs').select('id, titre, statut, budget, date_debut, clients(nom)').order('created_at', { ascending: false }).limit(5),
-          supabase.from('devis').select('id, numero, titre, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
-          supabase.from('factures').select('id, numero, statut, created_at, clients(nom)').order('created_at', { ascending: false }).limit(4),
-        ]).then(([facPay, devisAtt, jobsAct, facImp, devisRec, jobsRec, devisAct, facAct]) => {
-          if (cancelled) return
-          setKpi({
-            ca30j: (facPay.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
-            devisEnAttente: devisAtt.count ?? 0,
-            jobsActifs: jobsAct.count ?? 0,
-            facturesImpayees: (facImp.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
+            const recents = Array.isArray(data.recents) ? data.recents : []
+            setRecentDossiers(recents.map((d: {
+              id: string
+              numero?: string
+              etiquette?: string
+              montant_pret?: number | null
+              created_at?: string
+              clients?: { nom?: string } | { nom?: string }[] | null
+            }) => {
+              const clients = d.clients
+              const nom = Array.isArray(clients) ? clients[0]?.nom : clients?.nom
+              return {
+                id: d.id,
+                nom: `${d.numero ?? 'Dossier'}${nom ? ` — ${nom}` : ''}`,
+                montant: d.montant_pret != null
+                  ? Number(d.montant_pret).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+                  : '—',
+                statut: etiquetteLabel(d.etiquette) || '—',
+                statutColor: 'var(--gold)',
+                date: d.created_at
+                  ? new Date(d.created_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })
+                  : '—',
+                href: `/dossiers/${d.id}`,
+              }
+            }))
+            setLoading(false)
           })
-          setRecentDevis((devisRec.data ?? []).map((d: any) => ({
-            id: d.id,
-            nom: `${d.clients?.nom ?? '—'} — ${d.titre ?? d.numero}`,
-            montant: Number(d.montant_ttc ?? 0).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }),
-            statut: STATUT_LABEL[d.statut] ?? d.statut,
-            statutColor: STATUT_COLOR[d.statut] ?? 'var(--txt-3)',
-            date: new Date(d.date_emission).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }),
-            href: `/devis/${d.id}`,
-          })))
-          setRecentJobs((jobsRec.data ?? []).map((j: any) => ({
-            id: j.id,
-            nom: `${j.titre} — ${j.clients?.nom ?? '—'}`,
-            montant: j.budget ? Number(j.budget).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }) : '—',
-            statut: STATUT_LABEL[j.statut] ?? j.statut,
-            statutColor: STATUT_COLOR[j.statut] ?? 'var(--txt-3)',
-            date: j.date_debut ? new Date(j.date_debut).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }) : '—',
-            href: `/jobs/${j.id}`,
-          })))
-          const COULEUR: Record<string, string> = {
-            brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
-            approuve: 'var(--green)', refuse: 'var(--red)', converti: 'var(--gold)',
-            envoyee: 'var(--blue)', payee: 'var(--green)', en_retard: 'var(--red)',
-          }
-          const LABEL_STATUT: Record<string, string> = {
-            brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
-            refuse: 'Refusé', converti: 'Facturé', envoyee: 'Envoyée', payee: 'Payée', en_retard: 'En retard',
-          }
-          const feed = [
-            ...(devisAct.data ?? []).map((d: any) => ({
-              id: 'dv-' + d.id,
-              label: `Devis ${d.numero} — ${(d.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[d.statut] ?? d.statut}`,
-              date: d.created_at,
-              color: COULEUR[d.statut] ?? 'var(--txt-3)',
-              href: `/devis/${d.id}`,
-            })),
-            ...(facAct.data ?? []).map((f: any) => ({
-              id: 'fc-' + f.id,
-              label: `Facture ${f.numero} — ${(f.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[f.statut] ?? f.statut}`,
-              date: f.created_at,
-              color: COULEUR[f.statut] ?? 'var(--txt-3)',
-              href: `/factures/${f.id}`,
-            })),
-          ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
-          setActivite(feed)
-          setLoading(false)
-        })
+          .catch(() => { if (!cancelled) setLoading(false) })
+      }
+
+      setKpi({
+        ca30j: (facPay.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
+        devisEnAttente: devisAtt.count ?? 0,
+        jobsActifs: jobsAct.count ?? 0,
+        facturesImpayees: (facImp.data ?? []).reduce((s: number, f: any) => s + Number(f.montant_ttc ?? 0), 0),
       })
-      .catch(() => { if (!cancelled) setLoading(false) })
+      setRecentDevis((devisRec.data ?? []).map((d: any) => ({
+        id: d.id,
+        nom: `${d.clients?.nom ?? '—'} — ${d.titre ?? d.numero}`,
+        montant: Number(d.montant_ttc ?? 0).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }),
+        statut: STATUT_LABEL[d.statut] ?? d.statut,
+        statutColor: STATUT_COLOR[d.statut] ?? 'var(--txt-3)',
+        date: new Date(d.date_emission).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }),
+        href: `/devis/${d.id}`,
+      })))
+      setRecentJobs((jobsRec.data ?? []).map((j: any) => ({
+        id: j.id,
+        nom: `${j.titre} — ${j.clients?.nom ?? '—'}`,
+        montant: j.budget ? Number(j.budget).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }) : '—',
+        statut: STATUT_LABEL[j.statut] ?? j.statut,
+        statutColor: STATUT_COLOR[j.statut] ?? 'var(--txt-3)',
+        date: j.date_debut ? new Date(j.date_debut).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }) : '—',
+        href: `/jobs/${j.id}`,
+      })))
+      const COULEUR: Record<string, string> = {
+        brouillon: 'var(--txt-3)', envoye: 'var(--blue)', vu: 'var(--purple)',
+        approuve: 'var(--green)', refuse: 'var(--red)', converti: 'var(--gold)',
+        envoyee: 'var(--blue)', payee: 'var(--green)', en_retard: 'var(--red)',
+      }
+      const LABEL_STATUT: Record<string, string> = {
+        brouillon: 'Brouillon', envoye: 'Envoyé', vu: 'Vu', approuve: 'Approuvé',
+        refuse: 'Refusé', converti: 'Facturé', envoyee: 'Envoyée', payee: 'Payée', en_retard: 'En retard',
+      }
+      const feed = [
+        ...(devisAct.data ?? []).map((d: any) => ({
+          id: 'dv-' + d.id,
+          label: `Devis ${d.numero} — ${(d.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[d.statut] ?? d.statut}`,
+          date: d.created_at,
+          color: COULEUR[d.statut] ?? 'var(--txt-3)',
+          href: `/devis/${d.id}`,
+        })),
+        ...(facAct.data ?? []).map((f: any) => ({
+          id: 'fc-' + f.id,
+          label: `Facture ${f.numero} — ${(f.clients as any)?.nom ?? '—'} · ${LABEL_STATUT[f.statut] ?? f.statut}`,
+          date: f.created_at,
+          color: COULEUR[f.statut] ?? 'var(--txt-3)',
+          href: `/factures/${f.id}`,
+        })),
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
+      setActivite(feed)
+      setLoading(false)
+    }).catch(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
   }, [])
@@ -356,7 +352,7 @@ export default function DashboardPage() {
                 </button>
               )}
             </h1>
-            <p style={{ fontSize: '12px', color: 'var(--txt-3)', margin: '2px 0 0' }}>
+            <p suppressHydrationWarning style={{ fontSize: '12px', color: 'var(--txt-3)', margin: '2px 0 0' }}>
               {now.toLocaleDateString('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>

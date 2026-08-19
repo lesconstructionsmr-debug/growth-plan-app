@@ -22,6 +22,7 @@ export async function readDocument(b64: string, mime: string): Promise<string | 
               }],
               generationConfig: { temperature: 0.1, maxOutputTokens: 400 },
             }),
+            signal: AbortSignal.timeout(8000),
           }
         )
         if (!res.ok) continue
@@ -54,6 +55,7 @@ export async function readDocument(b64: string, mime: string): Promise<string | 
             ],
           }],
         }),
+        signal: AbortSignal.timeout(8000),
       })
       if (res.ok) {
         const data = await res.json()

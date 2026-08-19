@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   Receipt, Plus, Search, ChevronRight,
   CheckCircle2, Clock, AlertCircle, XCircle,
@@ -56,10 +56,7 @@ export default function FacturesPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase
       .from('factures')
       .select('id, numero, titre, statut, date_emission, date_echeance, montant_ttc, clients(nom)')

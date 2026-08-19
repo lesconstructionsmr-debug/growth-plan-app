@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import Image from 'next/image'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   Settings, Building2, Hash, CreditCard, FileText, Palette,
   Upload, Save, Loader2, CheckCircle2, Shield, Trash2, Download, Mail, Lock,
@@ -455,10 +456,7 @@ export default function ParametresPage() {
   const [agenceEnabled, setAgenceEnabled] = useState(false)
   const [updatingVertical, setUpdatingVertical] = useState(false)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   useEffect(() => {
     fetch('/api/me')
@@ -649,7 +647,7 @@ export default function ParametresPage() {
             <F label="Logo">
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ width: '64px', height: '64px', borderRadius: '10px', background: 'var(--ga)', border: '0.5px solid var(--gold-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
-                  {logoPreview ? <img src={logoPreview} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={22} color="var(--gold-3)" />}
+                  {logoPreview ? <Image src={logoPreview} alt="logo" width={64} height={64} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Building2 size={22} color="var(--gold-3)" />}
                 </div>
                 {canManage && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

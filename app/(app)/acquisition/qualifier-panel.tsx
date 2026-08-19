@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { useEffect, useState } from 'react'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import Link from 'next/link'
 import { Loader2, Save, CheckCircle2 } from 'lucide-react'
 import { scoreLead } from '@/lib/leads/acquisition'
@@ -16,10 +16,7 @@ type LeadRow = {
 }
 
 export default function QualifierPanel() {
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), [])
+  const supabase = getBrowserClient()
   const [leads, setLeads] = useState<LeadRow[]>([])
   const [leadId, setLeadId] = useState('')
   const [typeProjet, setTypeProjet] = useState<'reno' | 'commercial' | 'construction'>('reno')

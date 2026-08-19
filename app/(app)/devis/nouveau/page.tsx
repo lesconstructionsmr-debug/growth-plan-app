@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   FileText, ChevronLeft, Plus, Trash2, Check,
   Loader2, AlertCircle, User, Building2,
@@ -147,10 +147,7 @@ export default function NouveauDevisPage() {
   const [clients, setClients] = useState<ClientOption[]>([])
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
     supabase.from('clients').select('id, nom, ville').order('nom').then(({ data }) => {
       setClients((data ?? []).map((c: any) => ({ id: c.id, nom: c.nom, ville: c.ville ?? null })))
     })
@@ -184,6 +181,7 @@ export default function NouveauDevisPage() {
   }
 
   async function handleSubmit(action: 'brouillon' | 'envoyer') {
+    if (status !== 'idle') return
     if (!validate()) return
     setStatus('saving')
     try {

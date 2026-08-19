@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   Users, Plus, Search, User, Phone, Mail,
   MapPin, ChevronRight, Loader2, Trash2, CheckSquare, Square, ExternalLink
@@ -41,10 +41,7 @@ export default function ClientsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isAgence, setIsAgence] = useState(false)
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = getBrowserClient()
 
   const loadClients = useCallback(async () => {
     setLoading(true)
@@ -80,6 +77,7 @@ export default function ClientsPage() {
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation()
     if (!confirm('Voulez-vous vraiment supprimer ce client ?')) return
+    setClients(prev => prev.filter(c => c.id !== id))
     await supabase.from('clients').delete().eq('id', id)
     loadClients()
   }
@@ -87,8 +85,10 @@ export default function ClientsPage() {
   async function handleBatchDelete() {
     if (selectedIds.length === 0) return
     if (!confirm(`Voulez-vous vraiment supprimer les ${selectedIds.length} clients sélectionnés ?`)) return
-    await supabase.from('clients').delete().in('id', selectedIds)
+    const idsToDelete = [...selectedIds]
     setSelectedIds([])
+    setClients(prev => prev.filter(c => !idsToDelete.includes(c.id)))
+    await supabase.from('clients').delete().in('id', idsToDelete)
     loadClients()
   }
 

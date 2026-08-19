@@ -40,7 +40,7 @@ async function syncMarketTrends() {
 
     try {
       // Taux directeur Banque du Canada
-      const resRate = await fetch('https://www.bankofcanada.ca/valet/observations/v39079/json?recent=1', { cache: 'no-store' })
+      const resRate = await fetch('https://www.bankofcanada.ca/valet/observations/v39079/json?recent=1', { cache: 'no-store', signal: AbortSignal.timeout(8000) })
       if (resRate.ok) {
         const dataRate = await resRate.json()
         const obs = dataRate?.observations?.[0]
@@ -50,7 +50,7 @@ async function syncMarketTrends() {
       }
 
       // Taux USD/CAD
-      const resFx = await fetch('https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1', { cache: 'no-store' })
+      const resFx = await fetch('https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1', { cache: 'no-store', signal: AbortSignal.timeout(8000) })
       if (resFx.ok) {
         const dataFx = await resFx.json()
         const obs = dataFx?.observations?.[0]
@@ -102,7 +102,8 @@ async function syncMarketTrends() {
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+            signal: AbortSignal.timeout(8000),
           })
           if (res.ok) {
             const data = await res.json()

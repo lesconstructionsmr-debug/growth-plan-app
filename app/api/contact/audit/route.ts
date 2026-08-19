@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit } from '@/lib/api/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,20 +32,30 @@ export async function OPTIONS(req: NextRequest) {
 /** POST /api/contact/audit — Demande d'audit ROI depuis la landing page */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}))
-    const { name, company, email, phone, trade } = body as {
-      name?: string
-      company?: string
-      email?: string
-      phone?: string
-      trade?: string
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1'
+    const { allowed } = checkRateLimit(ip, 10, 15 * 60 * 1000)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Trop de requêtes, veuillez réessayer plus tard' }, { status: 429 })
     }
 
-    const nom = name?.trim()
-    const entreprise = company?.trim()
-    const emailTrim = email?.trim()
-    const tel = phone?.trim()
-    const secteur = trade?.trim() || 'Non précisé'
+    const body = await req.json().catch(() => ({}))
+    if (body.website || body.hp) {
+      return NextResponse.json({ success: true, lead_id: 'honeypot_dropped' })
+    }
+
+    const name = body.name || body.nom || ''
+    const company = body.company || body.entreprise || ''
+    const email = body.email || ''
+    const phone = body.phone || body.telephone || ''
+    const trade = body.trade || body.secteur || ''
+    const chantiers_par_mois = body.chantiers_par_mois || body.quotes_per_month || null
+    const chiffre_affaires = body.chiffre_affaires || body.avg_project_value || null
+
+    const nom = String(name).trim()
+    const entreprise = String(company).trim()
+    const emailTrim = String(email).trim()
+    const tel = String(phone).trim()
+    const secteur = String(trade).trim() || 'Non précisé'
 
     if (!nom || !entreprise) {
       return json(req, { error: 'Nom et entreprise requis', stored: false }, 400)
@@ -64,11 +75,19 @@ export async function POST(req: NextRequest) {
       return json(req, { error: 'SUPABASE_SERVICE_ROLE_KEY non configuré sur Netlify', stored: false }, 503)
     }
 
-    const notes = [
+    const noteLines = [
       `Entreprise: ${entreprise}`,
       `Secteur: ${secteur}`,
-      'Source: Landing — Audit ROI Plangrowth',
-    ].join('\n')
+    ]
+    if (chantiers_par_mois !== null && chantiers_par_mois !== undefined && chantiers_par_mois !== '') {
+      noteLines.push(`Chantiers par mois: ${chantiers_par_mois}`)
+    }
+    if (chiffre_affaires !== null && chiffre_affaires !== undefined && chiffre_affaires !== '') {
+      noteLines.push(`Chiffre d'affaires: ${chiffre_affaires}`)
+    }
+    noteLines.push('Source: Landing — Audit ROI Plangrowth')
+
+    const notes = noteLines.join('\n')
 
     const admin = createAdminClient()
     const { data, error } = await admin.from('leads').insert({

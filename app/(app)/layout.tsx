@@ -50,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <SubscriptionBanner status={subStatus} trialDaysLeft={trialDaysLeft} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar role={userRole} />
-        <main style={{ flex: 1, overflow: 'auto', background: 'var(--bg-0)' }}>
+        <main style={{ flex: 1, minWidth: 0, overflow: 'auto', background: 'var(--bg-0)' }}>
           {children}
         </main>
       </div>
