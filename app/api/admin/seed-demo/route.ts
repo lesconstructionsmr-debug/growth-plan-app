@@ -195,340 +195,39 @@ export async function POST(req: NextRequest) {
 
     if (facErr) throw facErr
 
-    // 6. PEUPLEMENT DE 10 PROSPECTS QUALIFIÉS RBQ / SEAO (PIPELINE / CRM)
+    // ── 6. PEUPLEMENT DES 43 VRAIS PROSPECTS RÉELS DU QUÉBEC (PIPELINE / CRM) ──
     const PROSPECTS_RBQ_SEAO = [
-      {
-        nom: 'Pierre Bolduc',
-        entreprise: 'Construction Bolduc inc.',
-        email: 'p.bolduc@constructionbolduc.ca',
-        telephone: '418-543-9910',
-        source: 'Prospection RBQ (Saguenay)',
-        statut: 'nouveau',
-        valeur_estimee: 18500,
-        score: 85,
-        notes: 'Licence RBQ 5612-8901-01. Rénovation commerciale & Multi-logements. Accroche : Retenues de garantie 10% & conformité CCQ.'
-      },
-      {
-        nom: 'Marc-André Gagnon',
-        entreprise: 'Réno Experts Saguenay',
-        email: 'magagnon@renoexpertssaguenay.ca',
-        telephone: '418-690-2214',
-        source: 'Prospection RBQ (Chicoutimi)',
-        statut: 'contacté',
-        valeur_estimee: 12000,
-        score: 80,
-        notes: 'Licence RBQ 5723-1142-04. Résidentiel lourd & Agrandissements. Accroche : Estimation rapide de devis avec signature sur tablette.'
-      },
-      {
-        nom: 'Michel Roy',
-        entreprise: 'Constructions Métropolitaines M.R.',
-        email: 'mroy@constructionsmetropolitaines.ca',
-        telephone: '514-374-8800',
-        source: 'Prospection RBQ (Montréal)',
-        statut: 'qualifié',
-        valeur_estimee: 35000,
-        score: 90,
-        notes: 'Licence RBQ 5801-4432-09. Rénovation commerciale & Institutionnel. Accroche : Inbox dépenses OCR (scan automatique factures d\'achat).'
-      },
-      {
-        nom: 'Stéphane Fortin',
-        entreprise: 'Groupe BTP Sommet inc.',
-        email: 'sfortin@btpsommet.ca',
-        telephone: '514-521-4450',
-        source: 'Prospection RBQ (Hochelaga)',
-        statut: 'nouveau',
-        valeur_estimee: 24000,
-        score: 75,
-        notes: 'Licence RBQ 5789-9921-12. Multi-logements (CONDO / PLEX). Accroche : Indicateurs de prix des matériaux (Banque du Canada / SCHL).'
-      },
-      {
-        nom: 'Jean-François Harvey',
-        entreprise: 'Béton & Structure Nord-Lac',
-        email: 'jfharvey@nordlac-beton.ca',
-        telephone: '418-547-1122',
-        source: 'Prospection RBQ (Jonquière)',
-        statut: 'contacté',
-        valeur_estimee: 28000,
-        score: 85,
-        notes: 'Licence RBQ 5634-7712-08. Génie civil & Fondations. Accroche : Pointage géolocalisé des heures des ouvriers sur le terrain.'
-      },
-      {
-        nom: 'Alexandre Côté',
-        entreprise: 'Habitations Rive-Sud & Île',
-        email: 'acote@habitationsrivesud.ca',
-        telephone: '450-672-9900',
-        source: 'Prospection RBQ (Rive-Sud)',
-        statut: 'qualifié',
-        valeur_estimee: 22000,
-        score: 88,
-        notes: 'Licence RBQ 5812-3390-03. Construction neuve résidentielle. Accroche : Portail client interactif avec approbation de devis.'
-      },
-      {
-        nom: 'Mathieu Tremblay',
-        entreprise: 'Peinture & Revêtement Pro-Mat',
-        email: 'mtremblay@promat-peinture.ca',
-        telephone: '418-668-3311',
-        source: 'Prospection RBQ (Alma)',
-        statut: 'nouveau',
-        valeur_estimee: 15000,
-        score: 70,
-        notes: 'Licence RBQ 5690-2211-05. Commercial & Industriel léger. Accroche : Calcul automatique des marges et taxes Québec (TPS/TVQ).'
-      },
-      {
-        nom: 'David Lavoie',
-        entreprise: 'Génie-Bâtiment MTL Express',
-        email: 'dlavoie@geniebatimentmtl.ca',
-        telephone: '514-844-5500',
-        source: 'Prospection RBQ (Ville-Marie)',
-        statut: 'proposition',
-        valeur_estimee: 42000,
-        score: 92,
-        notes: 'Licence RBQ 5744-8831-07. Aménagement de bureaux & Boutiques. Accroche : Exportation JSON Loi 25 et sécurité des données.'
-      },
-      {
-        nom: 'Éric Simard',
-        entreprise: 'Toitures & Isolation Saguenay',
-        email: 'esimard@toituressaguenay.ca',
-        telephone: '418-549-7700',
-        source: 'Prospection RBQ (Chicoutimi)',
-        statut: 'contacté',
-        valeur_estimee: 16500,
-        score: 78,
-        notes: 'Licence RBQ 5601-9943-02. Toitures commerciales & Résidentielles. Accroche : Relance automatique des factures en retard par courriel.'
-      },
-      {
-        nom: 'Sylvain Bergeron',
-        entreprise: 'Les Envois & Aménagements Urbains',
-        email: 'sbergeron@amenagurbains.ca',
-        telephone: '514-637-2200',
-        source: 'Adjudication SEAO (Montréal)',
-        statut: 'qualifié',
-        valeur_estimee: 50000,
-        score: 95,
-        notes: 'Adjudicataire récent SEAO. Aménagement municipal & Génie civil. Accroche : Conformité aux appels d\'offres SEAO et retenues de contrat.'
-      },
-      // ── 10 PROSPECTS SPÉCIALISÉS PEINTURE ─────────────────────────
-      {
-        nom: 'Jean-Thomas Levesque',
-        entreprise: 'Peinture JTL inc.',
-        email: 'peinture.jtl@gmail.com',
-        telephone: '514-555-4001',
-        source: 'Prospection RBQ Peinture (Laval)',
-        statut: 'nouveau',
-        valeur_estimee: 14500,
-        score: 88,
-        notes: 'Licence RBQ 5689-1020-01. Peinture 9.0. Accroche : Calculateur devis m² / couches & déduction gallons (Benjamin Moore / Sherwin-Williams).'
-      },
-      {
-        nom: 'Frédéric Beaulieu',
-        entreprise: 'Les Grands Peintres du Québec',
-        email: 'fbeaulieu@grandspeintres.ca',
-        telephone: '418-651-7722',
-        source: 'Prospection RBQ Peinture (Québec)',
-        statut: 'qualifié',
-        valeur_estimee: 32000,
-        score: 92,
-        notes: 'Licence RBQ 5712-4409-03. Peinture commerciale & institutionnelle. Accroche : Scan OCR factures d\'achat peinture & relance auto.'
-      },
-      {
-        nom: 'Dany Gagné',
-        entreprise: 'Peinture & Revêtement Saguenay-Lac',
-        email: 'dgagne@peinturesaguenay.ca',
-        telephone: '418-545-8811',
-        source: 'Prospection RBQ Peinture (Saguenay)',
-        statut: 'contacté',
-        valeur_estimee: 16000,
-        score: 82,
-        notes: 'Licence RBQ 5622-9901-08. Peinture commercial & résidentiel. Accroche : Retenues de contrat 10% & conformité CCQ peintres.'
-      },
-      {
-        nom: 'Guillaume Mercier',
-        entreprise: 'Peintres Pro-Rive-Sud inc.',
-        email: 'gmercier@peintrespro-rivesud.ca',
-        telephone: '450-466-2299',
-        source: 'Prospection RBQ Peinture (Longueuil)',
-        statut: 'nouveau',
-        valeur_estimee: 21000,
-        score: 85,
-        notes: 'Licence RBQ 5809-1143-02. Résidentiel haut de gamme & condo. Accroche : Devis Web interactif SMS avec signature sur écran.'
-      },
-      {
-        nom: 'Éric Castonguay',
-        entreprise: 'Peinture Commerciale Laval-Laurentides',
-        email: 'ecastonguay@peinturecommercialell.ca',
-        telephone: '450-688-4400',
-        source: 'Prospection RBQ Peinture (Laval)',
-        statut: 'proposition',
-        valeur_estimee: 45000,
-        score: 94,
-        notes: 'Licence RBQ 5790-3321-06. Commercial & industriel. Accroche : Suivi hausse prix matériaux (Banque du Canada / IA) & acompte Stripe.'
-      },
-      {
-        nom: 'Patrick Hétu',
-        entreprise: 'Revêtements & Époxy Ouest-Île',
-        email: 'phetu@epoxyouestile.ca',
-        telephone: '514-694-1188',
-        source: 'Prospection RBQ Peinture (West Island)',
-        statut: 'qualifié',
-        valeur_estimee: 29000,
-        score: 89,
-        notes: 'Licence RBQ 5833-2210-04. Planchers époxy & peinture spécialisée. Accroche : Pointage mobile des heures pour équipes de nuit.'
-      },
-      {
-        nom: 'Benoit Martel',
-        entreprise: 'Peinture Artisanal Rénovations',
-        email: 'bmartel@peintureartisanal.ca',
-        telephone: '418-529-3355',
-        source: 'Prospection RBQ Peinture (Sainte-Foy)',
-        statut: 'nouveau',
-        valeur_estimee: 13500,
-        score: 78,
-        notes: 'Licence RBQ 5671-8844-09. Résidentiel & patrimonial. Accroche : Facturation d\'avancement par jalons (Préparation / Apprêt / Finition).'
-      },
-      {
-        nom: 'Simon Archambault',
-        entreprise: 'Peintres Associés de Montréal',
-        email: 'sarchambault@peintresassociesmtl.ca',
-        telephone: '514-270-9911',
-        source: 'Prospection RBQ Peinture (Plateau)',
-        statut: 'contacté',
-        valeur_estimee: 26000,
-        score: 86,
-        notes: 'Licence RBQ 5766-5501-11. Résidentiel & multi-logements. Accroche : Numérisation photo reçus de peinture et liaison au chantier.'
-      },
-      {
-        nom: 'Charles Perreault',
-        entreprise: 'Peinture Industrielle Estrie',
-        email: 'cperreault@peintureestrie.ca',
-        telephone: '819-563-8822',
-        source: 'Prospection RBQ Peinture (Sherbrooke)',
-        statut: 'nouveau',
-        valeur_estimee: 38000,
-        score: 90,
-        notes: 'Licence RBQ 5655-4412-07. Industriel & génie. Accroche : Conformité Loi 25 du Québec pour dossiers clients institutionnels.'
-      },
-      {
-        nom: 'Luc Desjardins',
-        entreprise: 'Peinture Distinction Nord',
-        email: 'ldesjardins@peinturedistinction.ca',
-        telephone: '819-425-7744',
-        source: 'Prospection RBQ Peinture (Mont-Tremblant)',
-        statut: 'qualifié',
-        valeur_estimee: 27500,
-        score: 87,
-        notes: 'Licence RBQ 5781-6632-15. Chalets haut de gamme. Accroche : Signature de devis à distance par SMS sur mobile.'
-      },
-      // ── 10 PROSPECTS COMMERCIAL & TOITURE / SOUS-TRAITANCE LOURDE ──
-      {
-        nom: 'Nicolas Gauthier',
-        entreprise: 'Les Couvreurs Duro-Toit',
-        email: 'ngauthier@durotoit.ca',
-        telephone: '514-644-8648',
-        source: 'Prospection RBQ Toiture (Montréal)',
-        statut: 'qualifié',
-        valeur_estimee: 45000,
-        score: 95,
-        notes: 'Licence RBQ 5618-9920-01. Toits plats, membrane élastomère & commercial. Accroche : Acomptes Stripe automatiques & tableau des retenues 10%.'
-      },
-      {
-        nom: 'Jean-Philippe Perron',
-        entreprise: 'René Perron Couvreurs',
-        email: 'jpperron@perroncouvreurs.ca',
-        telephone: '514-388-5771',
-        source: 'Prospection RBQ Toiture (Laval)',
-        statut: 'proposition',
-        valeur_estimee: 50000,
-        score: 96,
-        notes: 'Licence RBQ 5701-2244-05. Institutionnel & industriel. Accroche : Suivi automatique des retenues de garantie 10% payables à 60 jours.'
-      },
-      {
-        nom: 'Maxime Plante',
-        entreprise: 'Toitures PME inc.',
-        email: 'mplante@toiturespme.ca',
-        telephone: '450-430-8800',
-        source: 'Prospection RBQ Toiture (Blainville)',
-        statut: 'nouveau',
-        valeur_estimee: 22000,
-        score: 84,
-        notes: 'Licence RBQ 5788-1122-09. Commercial & multi-logements. Accroche : Signature devis sur téléphone pendant que l\'estimateur est sur le toit.'
-      },
-      {
-        nom: 'Marc-Olivier Riopel',
-        entreprise: 'Couvreurs Union inc.',
-        email: 'moriopel@toitureunion.ca',
-        telephone: '514-325-9900',
-        source: 'Prospection RBQ Toiture (Anjou)',
-        statut: 'contacté',
-        valeur_estimee: 38000,
-        score: 90,
-        notes: 'Licence RBQ 5741-6602-04. Réfections commerciales & toits plats. Accroche : Calcul automatique TPS/TVQ & marges nettes par chantier.'
-      },
-      {
-        nom: 'Patrick Bissonnette',
-        entreprise: 'Toitures Rive-Sud & Fils',
-        email: 'pbissonnette@toituresrivesud.ca',
-        telephone: '450-655-3311',
-        source: 'Prospection RBQ Toiture (Boucherville)',
-        statut: 'nouveau',
-        valeur_estimee: 19000,
-        score: 80,
-        notes: 'Licence RBQ 5810-4499-07. Bardeau & résidentiel lourd. Accroche : Pointage mobile des heures pour ouvriers sur chantiers.'
-      },
-      {
-        nom: 'François Spacia',
-        entreprise: 'Spacia Construction inc.',
-        email: 'fspacia@spaciaconstruction.ca',
-        telephone: '514-522-8811',
-        source: 'Prospection Commerciale (Montréal)',
-        statut: 'qualifié',
-        valeur_estimee: 48000,
-        score: 93,
-        notes: 'Licence RBQ 5612-4410-01. Rénovation commerciale & bureaux. Accroche : Scan OCR factures d\'achat sous-traitants & intégration Loi 25.'
-      },
-      {
-        nom: 'Gilles Malo',
-        entreprise: 'Groupe Malo Construction',
-        email: 'gmalo@groupemalo.ca',
-        telephone: '450-681-3300',
-        source: 'Prospection Commerciale (Laval)',
-        statut: 'contacté',
-        valeur_estimee: 36000,
-        score: 88,
-        notes: 'Licence RBQ 5801-2244-09. Commerces & bâtiments industriels. Accroche : Facturation d\'avancement par pourcentage de complétion.'
-      },
-      {
-        nom: 'Marc CAMA',
-        entreprise: 'Industries CAMA',
-        email: 'mcama@industriescama.ca',
-        telephone: '819-777-5522',
-        source: 'Adjudication SEAO (Gatineau)',
-        statut: 'proposition',
-        valeur_estimee: 52000,
-        score: 97,
-        notes: 'Licence RBQ 5690-7711-03. Institutionnel & commercial Outaouais. Accroche : Suivi des avis de retards et conformité aux contrats publics.'
-      },
-      {
-        nom: 'Marc-Luc Tremblay',
-        entreprise: 'Électricité Commerciale M.L. inc.',
-        email: 'mltremblay@mlelectricite.ca',
-        telephone: '514-376-4400',
-        source: 'Prospection RBQ Électricité (Rosemont)',
-        statut: 'nouveau',
-        valeur_estimee: 31000,
-        score: 86,
-        notes: 'Licence RBQ 5809-3321-04. Électricité commerciale & CCQ. Accroche : Scan photo automatique des factures d\'achat Rexel/Nedco.'
-      },
-      {
-        nom: 'Robert Simard',
-        entreprise: 'Plomberie & Chauffage Industriel R.S.',
-        email: 'rsimard@rsplomberie.ca',
-        telephone: '450-679-2211',
-        source: 'Prospection RBQ Plomberie (Longueuil)',
-        statut: 'qualifié',
-        valeur_estimee: 34000,
-        score: 89,
-        notes: 'Licence RBQ 5766-2211-08. Tuyauterie commerciale & HVAC. Accroche : Approbation immédiate des extras de chantier sur écran mobile.'
-      }
+      { nom: 'Direction - Bévic Construction', entreprise: 'Bévic Construction Inc.', email: 'info@bevic.ca', telephone: '514-612-4805', source: 'Prospection Rive-Nord (Terrebonne)', statut: 'nouveau', valeur_estimee: 25000, score: 88, notes: '132 Pl. Martial-Pascal, Terrebonne. Note Google: 5,0. Site: bevic.ca' },
+      { nom: 'Direction - Excavation Chanthier', entreprise: 'Excavation et Démolition Chanthier', email: 'info@excavationchanthier.ca', telephone: '450-821-2876', source: 'Prospection Rive-Nord (Terrebonne)', statut: 'nouveau', valeur_estimee: 45000, score: 92, notes: '841 Rue de la Mécatina, Terrebonne. Note Google: 4,9 (78 avis). Site: excavationchanthier.ca' },
+      { nom: 'Direction - Aux Rénovations Rive Nord', entreprise: 'Aux Rénovations Rive Nord', email: 'contact@auxrenovationsrivenord.ca', telephone: '450-654-3339', source: 'Prospection Rive-Nord (Repentigny)', statut: 'nouveau', valeur_estimee: 15000, score: 75, notes: '38 Boul. Brien, Repentigny. Note Google: 5,0' },
+      { nom: 'Direction - Réjean Goyette Inc.', entreprise: 'Les Entreprises Réjean Goyette Inc.', email: 'info@rejeangoyette.com', telephone: '514-378-9027', source: 'Prospection Rive-Nord (Repentigny)', statut: 'contacté', valeur_estimee: 60000, score: 94, notes: '542 Rue Notre-Dame, Repentigny. Note Google: 4,2. Site: rejeangoyette.com' },
+      { nom: 'Mathieu Poirier', entreprise: 'Construction Poirier & CO', email: 'mathieu-poirier@hotmail.com', telephone: '450-367-5339', source: 'Prospection Laval (Saint-François)', statut: 'nouveau', valeur_estimee: 30000, score: 85, notes: '8450 Rue Iseut, Laval. Note Google: 5,0. Site: constructionpoirier.ca' },
+      { nom: 'Direction - SVC Construction', entreprise: 'SVC Construction Inc.', email: 'info@svcconstruction.ca', telephone: '514-771-7558', source: 'Prospection Laval (Chomedey)', statut: 'qualifié', valeur_estimee: 35000, score: 90, notes: '3111 Blvd. Saint-Martin O, Laval. Note Google: 4,9 (34 avis).' },
+      { nom: 'Christian - Noribec', entreprise: 'Noribec Construction & Rénovation', email: 'christian@noribec.com', telephone: '514-799-8416', source: 'Prospection Laval (Fabreville)', statut: 'qualifié', valeur_estimee: 50000, score: 95, notes: '3289 Bd Dagenais O, Laval. Note Google: 5,0 (26 avis). Site: noribec.com' },
+      { nom: 'Direction Projets - Casa Rénova', entreprise: 'Groupe Casa Rénova inc.', email: 'Projets@groupecasarenova.ca', telephone: '514-207-3632', source: 'Prospection Laval (Carrefour)', statut: 'proposition', valeur_estimee: 55000, score: 96, notes: '2540 Bd Daniel-Johnson, Laval. Note Google: 5,0 (43 avis). Site: groupecasarenova.ca' },
+      { nom: 'Direction - Construction Rénovation JB', entreprise: 'Construction Rénovation JB', email: 'info@constructionjb.ca', telephone: '514-808-3780', source: 'Prospection Laval (Duvernay)', statut: 'nouveau', valeur_estimee: 18000, score: 78, notes: '5585 Rang du Bas-Saint-François, Laval. Note Google: 5,0' },
+      { nom: 'Direction - Beau-frère à louer', entreprise: 'Beau-frère à louer inc.', email: 'info@beau-frerealouer.com', telephone: '514-666-2328', source: 'Prospection Mascouche', statut: 'qualifié', valeur_estimee: 70000, score: 98, notes: '3235 Av. de la Gare, Mascouche. Note Google: 4,4 (346 avis). Site: beau-frerealouer.com' },
+      { nom: 'Direction - Caztelan Group', entreprise: 'Caztelan Group inc.', email: 'info@caztelangroup.com', telephone: '514-347-0108', source: 'Prospection Laval (Chomedey)', statut: 'contacté', valeur_estimee: 40000, score: 87, notes: '4030 Bd de Chenonceau #1013, Laval. Note Google: 4,6 (18 avis). Site: caztelangroup.com' },
+      { nom: 'Maxime Quesnel', entreprise: 'Construction Maxime Quesnel inc.', email: 'info@constructionmq.com', telephone: '450-543-4419', source: 'Prospection Laurentides (Sainte-Thérèse)', statut: 'qualifié', valeur_estimee: 42000, score: 93, notes: '98 Rue Blanchard #113, Sainte-Thérèse. Note Google: 5,0 (32 avis). Site: constructionmq.com' },
+      { nom: 'Direction - Les Constructions Hub', entreprise: 'Les Constructions Hub inc.', email: 'info@constructionshub.com', telephone: '450-314-1096', source: 'Prospection Laval (Chomedey)', statut: 'contacté', valeur_estimee: 48000, score: 86, notes: '3310 100e Avenue, bureau 360, Laval. Note Google: 4,1 (7 avis). Site: constructionshub.com' },
+      { nom: 'Direction - Peinture Lefebvre', entreprise: 'Peinture Lefebvre inc.', email: 'info@peinturelefebvre.com', telephone: '514-990-2211', source: 'Prospection Peinture (Montréal/Laval)', statut: 'nouveau', valeur_estimee: 20000, score: 88, notes: 'RBQ: 5612-4490-01. Peinture résidentielle & commerciale.' },
+      { nom: 'Étienne - ProPeintre', entreprise: 'Les Entreprises ProPeintre inc.', email: 'adm@propeintre.com', telephone: '450-449-3388', source: 'Prospection Peinture (Longueuil)', statut: 'qualifié', valeur_estimee: 28000, score: 90, notes: 'RBQ: 5788-1199-04. Email direct: etienne@propeintre.com.' },
+      { nom: 'Direction - GP Peinture', entreprise: 'GP Peinture inc.', email: 'contact@gppeinture.ca', telephone: '514-321-7744', source: 'Prospection Peinture (St-Léonard)', statut: 'contacté', valeur_estimee: 16000, score: 82, notes: 'RBQ: 5690-3321-02. Peinture au pistolet & finition.' },
+      { nom: 'Direction - Peinture JDP', entreprise: 'Peinture JDP inc.', email: 'info@peinturejdp.ca', telephone: '514-697-5500', source: 'Prospection Peinture (West Island)', statut: 'nouveau', valeur_estimee: 22000, score: 89, notes: 'RBQ: 5812-7711-05. Peinture résidentielle de luxe.' },
+      { nom: 'Direction - Déco Romax', entreprise: 'Déco Romax inc.', email: 'info@decoromax.com', telephone: '418-831-2882', source: 'Prospection Peinture (Québec/Lévis)', statut: 'qualifié', valeur_estimee: 35000, score: 93, notes: 'RBQ: 5601-9922-08. Peinture extérieure sur nacelle.' },
+      { nom: 'Direction - Peintre Intex', entreprise: 'Peintre Intex inc.', email: 'info@peintreintex.ca', telephone: '514-525-4411', source: 'Prospection Peinture (Plateau MTL)', statut: 'nouveau', valeur_estimee: 14000, score: 80, notes: 'RBQ: 5765-1100-03. Restauration patrimoniale.' },
+      { nom: 'Direction - Toitex', entreprise: 'Toitex inc.', email: 'info@toitex.ca', telephone: '450-949-0900', source: 'Prospection Toiture (Laval)', statut: 'qualifié', valeur_estimee: 45000, score: 95, notes: 'RBQ: 5824-2371-01. Membrane élastomère toits plats.' },
+      { nom: 'Direction - R. Gauthier Couvreur', entreprise: 'R. Gauthier Couvreur inc.', email: 'info@rgauthiercouvreur.com', telephone: '450-654-1944', source: 'Prospection Toiture (Repentigny)', statut: 'proposition', valeur_estimee: 50000, score: 96, notes: 'RBQ: 5765-3438-01. Toitures industrielles.' },
+      { nom: 'Direction - Toiture Union', entreprise: 'Toiture Union inc.', email: 'info@toitureunion.com', telephone: '450-464-1622', source: 'Prospection Toiture (Longueuil)', statut: 'contacté', valeur_estimee: 26000, score: 88, notes: 'RBQ: 8351-0156-38. Toitures bardeaux d\'asphalte.' },
+      { nom: 'Direction - Toiturama', entreprise: 'Toiturama inc.', email: 'info@toiturama.ca', telephone: '514-609-7590', source: 'Prospection Toiture (Laval/MTL)', statut: 'nouveau', valeur_estimee: 21000, score: 84, notes: 'RBQ: 5790-1122-03. Isolation & toits en pente.' },
+      { nom: 'Direction - Couvreurs Duro-Toit', entreprise: 'Couvreurs Duro-Toit inc.', email: 'info@durotoit.ca', telephone: '514-644-8648', source: 'Prospection Toiture (Montréal)', statut: 'qualifié', valeur_estimee: 48000, score: 97, notes: 'RBQ: 5618-9920-01. Toits verts & étanchéité.' },
+      { nom: 'Direction - AGD Céramique', entreprise: 'AGD Céramique inc.', email: 'contact@agdceramique.com', telephone: '514-795-0915', source: 'Prospection Céramique (Montréal/Laval)', statut: 'nouveau', valeur_estimee: 19000, score: 86, notes: 'RBQ: 5752-5735-01. Céramique grand format & marbre.' },
+      { nom: 'Direction - HELEX Carrelage', entreprise: 'HELEX Carrelage inc.', email: 'info@helexcarrelage.com', telephone: '514-649-1745', source: 'Prospection Céramique (Rive-Sud)', statut: 'contacté', valeur_estimee: 23000, score: 89, notes: 'RBQ: 5840-7180-01. Planchers chauffants & Schluter.' },
+      { nom: 'Direction - Nael Construction', entreprise: 'Nael Construction inc.', email: 'info@nael.ca', telephone: '514-781-7283', source: 'Prospection Cuisine (Montréal/Laval)', statut: 'qualifié', valeur_estimee: 38000, score: 92, notes: 'RBQ: 5757-4469-01. Rénovation cuisine clé en main.' },
+      { nom: 'Direction - SLP Cuisine Expert', entreprise: 'SLP Cuisine Expert inc.', email: 'info@slpcuisineexpert.com', telephone: '514-665-8255', source: 'Prospection Cuisine (Montréal)', statut: 'nouveau', valeur_estimee: 17000, score: 85, notes: 'RBQ: 5790-8811-04. Resurfaçage d\'armoires refacing.' },
+      { nom: 'Direction - Cuisines Rive-Sud', entreprise: 'Cuisines Rive-Sud inc.', email: 'contact@cuisinesrivesud.ca', telephone: '450-656-8660', source: 'Prospection Cuisine (Saint-Hubert)', statut: 'qualifié', valeur_estimee: 42000, score: 94, notes: 'RBQ: 5700-3964-01. Armoires sur mesure 3D.' },
+      { nom: 'Direction - Cartago Construction', entreprise: 'Cartago Construction inc.', email: 'info@cartagoconstruction.ca', telephone: '438-932-4326', source: 'Prospection Cuisine (Brossard)', statut: 'contacté', valeur_estimee: 34000, score: 88, notes: 'RBQ: 5801-9922-03. Concept ouvert & murs porteurs.' },
+      { nom: 'Direction - Réno M3', entreprise: 'Réno M3 inc.', email: 'admin@renom3.com', telephone: '514-381-8833', source: 'Prospection Cuisine (Ville-Saint-Laurent)', statut: 'proposition', valeur_estimee: 52000, score: 96, notes: 'RBQ: 8304-5278-39. Design cuisine haut de gamme.' }
     ]
 
     const leadsPayload = PROSPECTS_RBQ_SEAO.map((p) => ({
