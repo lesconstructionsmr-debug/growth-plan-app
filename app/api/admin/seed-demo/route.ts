@@ -544,6 +544,11 @@ export async function POST(req: NextRequest) {
       notes: p.notes
     }))
 
+    const seedEmails = PROSPECTS_RBQ_SEAO.map(p => p.email).filter(Boolean)
+    if (seedEmails.length > 0) {
+      await supabase.from('leads').delete().eq('company_id', companyId).in('email', seedEmails)
+    }
+
     const { error: leadsErr } = await supabase
       .from('leads')
       .insert(leadsPayload)

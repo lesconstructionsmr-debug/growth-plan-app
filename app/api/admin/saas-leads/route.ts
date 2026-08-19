@@ -61,6 +61,12 @@ export async function GET(req: NextRequest) {
     const forceSeed = url.searchParams.get('seed') === 'true'
 
     if (forceSeed) {
+      // Nettoyer les doublons de démo existants avant d'insérer
+      const demoEmails = PROSPECTS_SAAS_SEED.map(p => p.email).filter(Boolean)
+      if (demoEmails.length > 0) {
+        await admin.from('platform_leads').delete().in('email', demoEmails)
+      }
+
       const { data: seededData, error: seedErr } = await admin
         .from('platform_leads')
         .insert(PROSPECTS_SAAS_SEED)
@@ -88,6 +94,29 @@ export async function GET(req: NextRequest) {
       if (!seedErr && seededData) {
         return NextResponse.json(seededData)
       }
+    }
+
+    // Déduplication automatique à la volée : nettoyer les doublons éventuels
+    if (data && data.length > 0) {
+      const seen = new Set<string>()
+      const duplicateIdsToDelete: string[] = []
+      const uniqueData = []
+
+      for (const item of data) {
+        const key = (item.email || item.nom || item.id).toLowerCase()
+        if (seen.has(key)) {
+          duplicateIdsToDelete.push(item.id)
+        } else {
+          seen.add(key)
+          uniqueData.push(item)
+        }
+      }
+
+      if (duplicateIdsToDelete.length > 0) {
+        await admin.from('platform_leads').delete().in('id', duplicateIdsToDelete)
+      }
+
+      return NextResponse.json(uniqueData)
     }
 
     return NextResponse.json(data ?? [])
