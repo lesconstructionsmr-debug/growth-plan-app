@@ -417,9 +417,6 @@ export async function GET(req: NextRequest) {
       const { data: seededData, error: seedErr } = await admin
         .from('platform_leads')
         .insert(PROSPECTS_SAAS_SEED)
-        .select('*')
-        .order('created_at', { ascending: false })
-
       if (seedErr) throw seedErr
       return NextResponse.json(seededData ?? [])
     }
@@ -430,17 +427,32 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
     if (error) throw error
 
-    // Si la table est vide, alimenter automatiquement avec les 43 vrais prospects québécois réels
-    if (!data || data.length === 0) {
+    const FAKE_DEMO_EMAILS = new Set([
+      'p.bolduc@constructionbolduc.ca', 'magagnon@renoexpertssaguenay.ca', 'mroy@constructionsmetropolitaines.ca',
+      'sfortin@btpsommet.ca', 'jfharvey@nordlac-beton.ca', 'acote@habitationsrivesud.ca', 'mtremblay@promat-peinture.ca',
+      'dlavoie@geniebatimentmtl.ca', 'esimard@toituressaguenay.ca', 'sbergeron@amenagurbains.ca', 'peinture.jtl@gmail.com',
+      'fbeaulieu@grandspeintres.ca', 'dgagne@peinturesaguenay.ca', 'gmercier@peintrespro-rivesud.ca',
+      'ecastonguay@peinturecommercialell.ca', 'phetu@epoxyouestile.ca', 'bmartel@peintureartisanal.ca',
+      'sarchambault@peintresassociesmtl.ca', 'cperreault@peintureestrie.ca', 'ldesjardins@peinturedistinction.ca',
+      'ngauthier@durotoit.ca', 'jpperron@perroncouvreurs.ca', 'mplante@toiturespme.ca', 'moriopel@toitureunion.ca',
+      'pbissonnette@toituresrivesud.ca', 'fspacia@spaciaconstruction.ca', 'gmalo@groupemalo.ca', 'mcama@industriescama.ca',
+      'mltremblay@mlelectricite.ca', 'rsimard@rsplomberie.ca'
+    ])
+
+    const hasFakeData = data && data.some((item: any) => item.email && FAKE_DEMO_EMAILS.has(item.email.toLowerCase()))
+
+    if (forceSeed || !data || data.length === 0 || hasFakeData) {
+      // Vider complètement la table pour supprimer définitivement les fiches fictives
+      await admin.from('platform_leads').delete().not('id', 'is', null)
+
       const { data: seededData, error: seedErr } = await admin
         .from('platform_leads')
         .insert(PROSPECTS_SAAS_SEED)
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (!seedErr && seededData) {
-        return NextResponse.json(seededData)
-      }
+      if (seedErr) throw seedErr
+      return NextResponse.json(seededData ?? [])
     }
 
     // Déduplication automatique à la volée : nettoyer les doublons éventuels
