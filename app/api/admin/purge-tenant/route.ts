@@ -43,11 +43,23 @@ export async function DELETE(req: NextRequest) {
       .single()
 
     const roleProprio = ['propriétaire', 'owner']
-    if (!profile || !roleProprio.includes(profile.role ?? '')) {
-      return NextResponse.json(
-        { error: 'Seul le propriétaire du compte peut demander la suppression définitive.' },
-        { status: 403 }
-      )
+    const isOwner = profile && roleProprio.includes(profile.role ?? '')
+
+    if (!isOwner) {
+      // Pour les membres non-propriétaires : supprimer uniquement leur propre profil et compte auth
+      await admin.from('profiles').delete().eq('id', user.id)
+      await admin.from('invitations').delete().eq('email', user.email)
+      const { error: authErr } = await admin.auth.admin.deleteUser(user.id)
+
+      if (authErr) {
+        return NextResponse.json({ error: `Erreur suppression compte: ${authErr.message}` }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Votre compte utilisateur a été définitivement supprimé.',
+        users_deleted: 1,
+      })
     }
 
     // ── Collecte des utilisateurs avant suppression (pour log) ────────
