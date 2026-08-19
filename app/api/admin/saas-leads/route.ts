@@ -576,24 +576,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
     if (error) throw error
 
-    const FAKE_DEMO_EMAILS = new Set([
-      'p.bolduc@constructionbolduc.ca', 'magagnon@renoexpertssaguenay.ca', 'mroy@constructionsmetropolitaines.ca',
-      'sfortin@btpsommet.ca', 'jfharvey@nordlac-beton.ca', 'acote@habitationsrivesud.ca', 'mtremblay@promat-peinture.ca',
-      'dlavoie@geniebatimentmtl.ca', 'esimard@toituressaguenay.ca', 'sbergeron@amenagurbains.ca', 'peinture.jtl@gmail.com',
-      'fbeaulieu@grandspeintres.ca', 'dgagne@peinturesaguenay.ca', 'gmercier@peintrespro-rivesud.ca',
-      'ecastonguay@peinturecommercialell.ca', 'phetu@epoxyouestile.ca', 'bmartel@peintureartisanal.ca',
-      'sarchambault@peintresassociesmtl.ca', 'cperreault@peintureestrie.ca', 'ldesjardins@peinturedistinction.ca',
-      'ngauthier@durotoit.ca', 'jpperron@perroncouvreurs.ca', 'mplante@toiturespme.ca', 'moriopel@toitureunion.ca',
-      'pbissonnette@toituresrivesud.ca', 'fspacia@spaciaconstruction.ca', 'gmalo@groupemalo.ca', 'mcama@industriescama.ca',
-      'mltremblay@mlelectricite.ca', 'rsimard@rsplomberie.ca'
-    ])
-
-    const hasFakeData = data && data.some((item: any) => item.email && FAKE_DEMO_EMAILS.has(item.email.toLowerCase()))
-
-    if (forceSeed || !data || data.length === 0 || hasFakeData) {
-      // Vider complètement la table uniquement si données fictives détectées ou table vide
-      await admin.from('platform_leads').delete().not('id', 'is', null)
-
+    if (!data || data.length === 0) {
       const { data: seededData, error: seedErr } = await admin
         .from('platform_leads')
         .insert(PROSPECTS_SAAS_SEED)
@@ -602,29 +585,6 @@ export async function GET(req: NextRequest) {
 
       if (seedErr) throw seedErr
       return NextResponse.json(seededData ?? [])
-    }
-
-    // Déduplication automatique à la volée : nettoyer les doublons éventuels
-    if (data && data.length > 0) {
-      const seen = new Set<string>()
-      const duplicateIdsToDelete: string[] = []
-      const uniqueData = []
-
-      for (const item of data) {
-        const key = (item.email || item.nom || item.id).toLowerCase()
-        if (seen.has(key)) {
-          duplicateIdsToDelete.push(item.id)
-        } else {
-          seen.add(key)
-          uniqueData.push(item)
-        }
-      }
-
-      if (duplicateIdsToDelete.length > 0) {
-        await admin.from('platform_leads').delete().in('id', duplicateIdsToDelete)
-      }
-
-      return NextResponse.json(uniqueData)
     }
 
     return NextResponse.json(data ?? [])
