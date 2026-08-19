@@ -589,10 +589,9 @@ export async function GET(req: NextRequest) {
     ])
 
     const hasFakeData = data && data.some((item: any) => item.email && FAKE_DEMO_EMAILS.has(item.email.toLowerCase()))
-    const isExactCountMissing = data && data.length < 43
 
-    if (forceSeed || !data || data.length === 0 || hasFakeData || isExactCountMissing) {
-      // Vider complètement la table pour supprimer définitivement les fiches fictives ou incomplètes
+    if (forceSeed || !data || data.length === 0 || hasFakeData) {
+      // Vider complètement la table uniquement si données fictives détectées ou table vide
       await admin.from('platform_leads').delete().not('id', 'is', null)
 
       const { data: seededData, error: seedErr } = await admin
