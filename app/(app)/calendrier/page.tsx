@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { getBrowserClient } from '@/lib/supabase/browser'
-import { Calendar, ChevronLeft, ChevronRight, Plus, MapPin, Clock, Loader2, User, Building2, FileText, Sparkles, Info } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Plus, MapPin, Clock, Loader2, User, Users, Building2, FileText, Sparkles, Info } from 'lucide-react'
 import { normalizeStatut } from '@/lib/status'
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
