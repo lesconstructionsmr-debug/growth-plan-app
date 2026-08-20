@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { getBrowserClient } from '@/lib/supabase/browser'
-import { Calendar, ChevronLeft, ChevronRight, Plus, MapPin, Clock, Loader2, User } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Plus, MapPin, Clock, Loader2, User, Building2, FileText, Sparkles, Info } from 'lucide-react'
 import { normalizeStatut } from '@/lib/status'
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -111,7 +112,7 @@ export default function CalendrierPage() {
     const key = dateKey(year, month, day)
     const evs = events.filter(e => e.date === key)
     setSelectedDate(key)
-    setSelected(evs.length > 0 ? evs : null)
+    setSelected(evs)
   }
 
   function prev() { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1) }
@@ -142,27 +143,55 @@ export default function CalendrierPage() {
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1000px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Calendar size={18} color="var(--gold)" />
-          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>Calendrier</h1>
+          <Calendar size={20} color="var(--gold)" />
+          <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>Calendrier</h1>
           <span style={{ fontSize: '11px', color: 'var(--txt-3)', background: 'var(--bg-3)', borderRadius: '5px', padding: '2px 7px' }}>{evtsDuMois.length} événements</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link href="/jobs" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', background: 'var(--gold-3)', color: 'var(--gold)', fontSize: '12px', fontWeight: 600, textDecoration: 'none', border: '0.5px solid var(--gold-border)' }}>
+            <Building2 size={14} /> Nouveau Chantier
+          </Link>
+          <Link href="/devis/nouveau" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--txt-1)', fontSize: '12px', fontWeight: 500, textDecoration: 'none', border: '0.5px solid var(--line)' }}>
+            <FileText size={14} /> Nouveau Devis
+          </Link>
         </div>
       </div>
 
       {/* Stats rapides */}
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {[
           { label: 'Dates chantier', val: chantiers, color: 'var(--gold)'   },
           { label: 'Échéances devis', val: devisEvts, color: 'var(--amber)' },
           { label: 'Échéances factures', val: factEvts, color: 'var(--red)' },
         ].map(s => (
-          <div key={s.label} style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: s.color }}>{s.val}</span>
+          <div key={s.label} style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '140px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: s.color }}>{s.val}</span>
             <span style={{ fontSize: '11px', color: 'var(--txt-3)' }}>{s.label}</span>
           </div>
         ))}
       </div>
+
+      {/* Mode d'emploi si mois vide */}
+      {evtsDuMois.length === 0 && (
+        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--gold-border)', borderRadius: '10px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ background: 'var(--gold-3)', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Sparkles size={20} color="var(--gold)" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '2px' }}>
+              Comment remplir votre calendrier ?
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--txt-3)', lineHeight: '1.4' }}>
+              Le calendrier regroupe automatiquement les <strong>dates de vos chantiers</strong>, les <strong>dates limites de devis</strong> et les <strong>échéances de factures</strong>. Ajoutez un chantier ou un devis pour voir apparaître vos dates clés ici !
+            </div>
+          </div>
+          <Link href="/jobs" style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--gold)', color: '#000', fontSize: '11px', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            Créer un chantier
+          </Link>
+        </div>
+      )}
 
       {/* Nav mois */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -175,7 +204,7 @@ export default function CalendrierPage() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 260px' : '1fr', gap: '16px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: selectedDate ? '1fr 280px' : '1fr', gap: '16px', alignItems: 'start' }}>
         {/* Grille */}
         <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '0.5px solid var(--line)' }}>
@@ -194,9 +223,10 @@ export default function CalendrierPage() {
                   borderRight: (i + 1) % 7 === 0 ? 'none' : '0.5px solid var(--line)',
                   borderBottom: i < cells.length - 7 ? '0.5px solid var(--line)' : 'none',
                   padding: '6px',
-                  background: isSel ? 'var(--ga)' : day && isToday(day) ? 'rgba(184,146,42,0.06)' : 'transparent',
+                  background: isSel ? 'rgba(184,146,42,0.12)' : day && isToday(day) ? 'rgba(184,146,42,0.06)' : 'transparent',
                   cursor: day ? 'pointer' : 'default',
-                  outline: isSel ? '0.5px solid var(--gold-3)' : 'none',
+                  outline: isSel ? '1px solid var(--gold)' : 'none',
+                  transition: 'background 0.15s ease',
                 }}>
                   {day && (
                     <>
@@ -219,27 +249,45 @@ export default function CalendrierPage() {
           </div>
         </div>
 
-        {/* Panneau détail */}
-        {selected && (
+        {/* Panneau détail / action au clic d'une date */}
+        {selectedDate && (
           <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '10px', overflow: 'hidden', position: 'sticky', top: '24px' }}>
             <div style={{ padding: '12px 14px', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>
-                {selectedDate && new Date(selectedDate + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {new Date(selectedDate + 'T12:00:00').toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' })}
               </span>
               <button onClick={() => { setSelected(null); setSelectedDate(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: 'var(--txt-3)' }}>✕</button>
             </div>
-            <div>
-              {selected.map((e, i) => (
-                <div key={e.id} style={{ padding: '12px 14px', borderBottom: i < selected.length - 1 ? '0.5px solid var(--line)' : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: e.couleur, flexShrink: 0 }} />
-                    <span style={{ fontSize: '10px', fontWeight: 600, color: e.couleur }}>{TYPE_LABEL[e.type]}</span>
+
+            {selected && selected.length > 0 ? (
+              <div>
+                {selected.map((e, i) => (
+                  <div key={e.id} style={{ padding: '12px 14px', borderBottom: i < selected.length - 1 ? '0.5px solid var(--line)' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: e.couleur, flexShrink: 0 }} />
+                      <span style={{ fontSize: '10px', fontWeight: 600, color: e.couleur }}>{TYPE_LABEL[e.type]}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '3px' }}>{e.titre}</div>
+                    {e.sous_titre && <div style={{ fontSize: '10px', color: 'var(--txt-3)', display: 'flex', alignItems: 'center', gap: '4px' }}><User size={9} />{e.sous_titre}</div>}
                   </div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '3px' }}>{e.titre}</div>
-                  {e.sous_titre && <div style={{ fontSize: '10px', color: 'var(--txt-3)', display: 'flex', alignItems: 'center', gap: '4px' }}><User size={9} />{e.sous_titre}</div>}
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: '20px 14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--txt-3)' }}>Aucun événement prévu pour cette date</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '6px' }}>
+                  <Link href="/jobs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '6px', background: 'var(--gold-3)', color: 'var(--gold)', fontSize: '11px', fontWeight: 600, textDecoration: 'none', border: '0.5px solid var(--gold-border)' }}>
+                    <Plus size={13} /> Planifier un chantier
+                  </Link>
+                  <Link href="/devis/nouveau" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--txt-1)', fontSize: '11px', textDecoration: 'none', border: '0.5px solid var(--line)' }}>
+                    <Plus size={13} /> RDV Estimation (Devis)
+                  </Link>
+                  <Link href="/leads" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--txt-2)', fontSize: '11px', textDecoration: 'none', border: '0.5px solid var(--line)' }}>
+                    <Users size={13} /> RDV Prospect (Leads CRM)
+                  </Link>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
