@@ -143,19 +143,11 @@ export default function CalendrierPage() {
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1000px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Calendar size={20} color="var(--gold)" />
-          <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>Calendrier</h1>
+          <Calendar size={18} color="var(--gold)" />
+          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--txt-1)', margin: 0 }}>Calendrier</h1>
           <span style={{ fontSize: '11px', color: 'var(--txt-3)', background: 'var(--bg-3)', borderRadius: '5px', padding: '2px 7px' }}>{evtsDuMois.length} événements</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link href="/jobs" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', background: 'var(--gold-3)', color: 'var(--gold)', fontSize: '12px', fontWeight: 600, textDecoration: 'none', border: '0.5px solid var(--gold-border)' }}>
-            <Building2 size={14} /> Nouveau Chantier
-          </Link>
-          <Link href="/devis/nouveau" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--txt-1)', fontSize: '12px', fontWeight: 500, textDecoration: 'none', border: '0.5px solid var(--line)' }}>
-            <FileText size={14} /> Nouveau Devis
-          </Link>
         </div>
       </div>
 
@@ -172,26 +164,6 @@ export default function CalendrierPage() {
           </div>
         ))}
       </div>
-
-      {/* Mode d'emploi si mois vide */}
-      {evtsDuMois.length === 0 && (
-        <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--gold-border)', borderRadius: '10px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ background: 'var(--gold-3)', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Sparkles size={20} color="var(--gold)" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt-1)', marginBottom: '2px' }}>
-              Comment remplir votre calendrier ?
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--txt-3)', lineHeight: '1.4' }}>
-              Le calendrier regroupe automatiquement les <strong>dates de vos chantiers</strong>, les <strong>dates limites de devis</strong> et les <strong>échéances de factures</strong>. Ajoutez un chantier ou un devis pour voir apparaître vos dates clés ici !
-            </div>
-          </div>
-          <Link href="/jobs" style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--gold)', color: '#000', fontSize: '11px', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            Créer un chantier
-          </Link>
-        </div>
-      )}
 
       {/* Nav mois */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -273,19 +245,8 @@ export default function CalendrierPage() {
                 ))}
               </div>
             ) : (
-              <div style={{ padding: '20px 14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--txt-3)' }}>Aucun événement prévu pour cette date</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '6px' }}>
-                  <Link href="/jobs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '6px', background: 'var(--gold-3)', color: 'var(--gold)', fontSize: '11px', fontWeight: 600, textDecoration: 'none', border: '0.5px solid var(--gold-border)' }}>
-                    <Plus size={13} /> Planifier un chantier
-                  </Link>
-                  <Link href="/devis/nouveau" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--txt-1)', fontSize: '11px', textDecoration: 'none', border: '0.5px solid var(--line)' }}>
-                    <Plus size={13} /> RDV Estimation (Devis)
-                  </Link>
-                  <Link href="/leads" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '6px', background: 'var(--bg-2)', color: 'var(--txt-2)', fontSize: '11px', textDecoration: 'none', border: '0.5px solid var(--line)' }}>
-                    <Users size={13} /> RDV Prospect (Leads CRM)
-                  </Link>
-                </div>
+              <div style={{ padding: '20px 14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '12px', color: 'var(--txt-3)' }}>Aucun événement prévu</div>
               </div>
             )}
           </div>
