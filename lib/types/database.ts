@@ -522,6 +522,27 @@ export interface Database {
         Insert: Partial<Database['public']['Tables']['market_trends']['Row']> & { date_ref: string; indicateur: string; valeur: number; unite: string; categorie: string }
         Update: Partial<Database['public']['Tables']['market_trends']['Row']>
       }
+      calendar_events: {
+        Row: {
+          id: string
+          company_id: string
+          titre: string
+          type: string
+          description: string | null
+          date: string
+          heure_debut: string | null
+          heure_fin: string | null
+          client_id: string | null
+          job_id: string | null
+          employe_id: string | null
+          adresse: string | null
+          couleur: string | null
+          statut: string
+          created_at: string
+        }
+        Insert: Partial<Database['public']['Tables']['calendar_events']['Row']> & { company_id: string; titre: string; date: string }
+        Update: Partial<Database['public']['Tables']['calendar_events']['Row']>
+      }
     }
     Functions: {
       portal_get_devis: {
