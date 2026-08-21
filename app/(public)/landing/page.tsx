@@ -149,6 +149,15 @@ export default function LandingPage() {
         return
       }
       setFormSubmitted(true)
+      setTimeout(() => {
+        const query = new URLSearchParams({
+          nom: formData.name,
+          company: formData.company,
+          email: formData.email,
+          phone: formData.phone,
+        }).toString()
+        window.location.href = `/onboarding?${query}`
+      }, 1800)
     } catch {
       setFormError(t.modal.errorGeneric)
     } finally {
@@ -285,13 +294,13 @@ export default function LandingPage() {
 
         {/* CTA BUTTONS */}
         <div className="mt-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 max-w-3xl mx-auto">
-          <Link
-            href="/onboarding"
+          <button
+            onClick={() => setIsModalOpen(true)}
             className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-[#F5D061] via-[#D4AF37] to-[#996D1D] text-slate-950 font-black text-sm uppercase tracking-wider shadow-2xl shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
           >
             <span>{t.hero.ctaRegister}</span>
             <ArrowRight className="w-5 h-5 text-slate-950" />
-          </Link>
+          </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-amber-500/30 font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2"
