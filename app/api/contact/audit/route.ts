@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     const notes = noteLines.join('\n')
 
-    // 1. Insertion dans platform_leads
+    // 1. Tenter l'insertion dans platform_leads
     const { data: platformLead, error: platformErr } = await admin
       .from('platform_leads')
       .insert({
@@ -90,15 +90,10 @@ export async function POST(req: NextRequest) {
         score: 95,
         notes,
       })
-      .select('*')
-      .single()
+      .select('id')
+      .maybeSingle()
 
-    if (platformErr) {
-      console.error('[Contact Audit] Erreur Supabase platform_leads:', platformErr)
-      return json(req, { error: `Erreur Supabase platform_leads: ${platformErr.message}`, stored: false }, 500)
-    }
-
-    // 2. Insertion dans leads
+    // 2. Tenter l'insertion dans la table leads (permise aux requêtes anonymes/publiques)
     const envCompanyId = process.env.LANDING_LEADS_COMPANY_ID?.trim()
     let targetCompanyId = envCompanyId
 
@@ -107,27 +102,30 @@ export async function POST(req: NextRequest) {
       targetCompanyId = firstCompany?.id
     }
 
-    if (targetCompanyId) {
-      const { error: companyLeadErr } = await admin
-        .from('leads')
-        .insert({
-          company_id: targetCompanyId,
-          nom: `${nom} (${entreprise})`,
-          email: emailTrim || '',
-          telephone: tel || '',
-          source: 'Landing — Audit ROI',
-          statut: 'nouveau',
-          notes,
-        })
-      if (companyLeadErr) {
-        console.warn('[Contact Audit] Erreur insertion leads:', companyLeadErr.message)
-      }
+    const { data: cLead, error: cErr } = await admin
+      .from('leads')
+      .insert({
+        company_id: targetCompanyId || null,
+        nom: `${nom} (${entreprise})`,
+        email: emailTrim || '',
+        telephone: tel || '',
+        source: 'Landing — Audit ROI',
+        statut: 'nouveau',
+        notes,
+      })
+      .select('id')
+      .maybeSingle()
+
+    // Si les deux insertions ont échoué, retourner l'erreur au client
+    if (platformErr && cErr) {
+      console.error('[Contact Audit] Échec insertions:', platformErr, cErr)
+      return json(req, { error: `Erreur enregistrement lead: ${cErr.message || platformErr.message}`, stored: false }, 500)
     }
 
     return json(req, {
       success: true,
       stored: true,
-      lead_id: platformLead?.id || 'captured',
+      lead_id: platformLead?.id || cLead?.id || 'captured',
     }, 200)
   } catch (err) {
     console.error('[Contact Audit Exception]', err)
