@@ -68,7 +68,10 @@ export async function GET(req: NextRequest) {
       })),
     ]
 
-    // Deduplicate by ID / email / phone
+    // Trier par date de création décroissante (du plus récent au plus ancien)
+    formatted.sort((a, b) => new Date(b.date_creation).getTime() - new Date(a.date_creation).getTime())
+
+    // Déduplication par ID ou Clé unique
     const seen = new Set<string>()
     const unique = []
     for (const item of formatted) {
