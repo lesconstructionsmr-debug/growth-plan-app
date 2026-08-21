@@ -19,8 +19,20 @@ function scoreFromAnswers(besoin?: string, taille?: string): number {
   return Math.min(100, p)
 }
 
-// 🟢 43 VRAIES ENTREPRISES RÉELLES DU QUÉBEC (Vérifiées sur Registre RBQ & Web)
+// 🟢 VRAIS PROSPECTS & LEADS LANDING PAGE QUÉBEC
 const PROSPECTS_SAAS_SEED = [
+  {
+    nom: 'Maxime Rochon (Growth Plan)',
+    entreprise: 'Growth Plan ERP',
+    email: 'lesconstructionsmr@gmail.com',
+    telephone: '438-990-5514',
+    source: 'Landing Page — Audit ROI',
+    statut: 'nouveau',
+    besoin: 'les_deux',
+    taille_equipe: '6-15',
+    score: 98,
+    notes: 'Demande d\'audit ROI capturée sur le site officiel Growth Plan.'
+  },
   // ── 13 ENTREPRISES RIVE-NORD & LAVAL ──────────────────────────────────────
   {
     nom: 'Direction - Bévic Construction',
