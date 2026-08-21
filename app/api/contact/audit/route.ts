@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
 
-    // 1. Toujours enregistrer dans platform_leads (Centre de Contrôle Fondateur)
     const noteLines = [
       `Entreprise: ${entreprise}`,
       `Secteur: ${secteur}`,
@@ -77,10 +76,11 @@ export async function POST(req: NextRequest) {
 
     const notes = noteLines.join('\n')
 
+    // 1. Insertion dans platform_leads
     const { data: platformLead, error: platformErr } = await admin
       .from('platform_leads')
       .insert({
-        nom,
+        nom: `${nom} (${entreprise})`,
         entreprise,
         email: emailTrim || null,
         telephone: tel || null,
@@ -90,22 +90,28 @@ export async function POST(req: NextRequest) {
         score: 95,
         notes,
       })
-      .select('id')
-      .maybeSingle()
+      .select('*')
+      .single()
 
     if (platformErr) {
-      console.warn('[Contact Audit] Erreur insertion platform_leads:', platformErr.message)
+      console.error('[Contact Audit] Erreur Supabase platform_leads:', platformErr)
+      return json(req, { error: `Erreur Supabase platform_leads: ${platformErr.message}`, stored: false }, 500)
     }
 
-    // 2. Insérer dans la table leads pour TOUTES les compagnies (pour affichage dans /leads)
-    let companyLeadId = null
+    // 2. Insertion dans leads
     const envCompanyId = process.env.LANDING_LEADS_COMPANY_ID?.trim()
+    let targetCompanyId = envCompanyId
 
-    if (envCompanyId) {
-      const { data: cLead } = await admin
+    if (!targetCompanyId) {
+      const { data: firstCompany } = await admin.from('companies').select('id').limit(1).maybeSingle()
+      targetCompanyId = firstCompany?.id
+    }
+
+    if (targetCompanyId) {
+      const { error: companyLeadErr } = await admin
         .from('leads')
         .insert({
-          company_id: envCompanyId,
+          company_id: targetCompanyId,
           nom: `${nom} (${entreprise})`,
           email: emailTrim || '',
           telephone: tel || '',
@@ -113,45 +119,19 @@ export async function POST(req: NextRequest) {
           statut: 'nouveau',
           notes,
         })
-        .select('id')
-        .maybeSingle()
-      if (cLead) companyLeadId = cLead.id
-    }
-
-    // Insérer également pour toutes les compagnies actives afin d'être visible dans l'onglet /leads du CRM
-    const { data: companies } = await admin.from('companies').select('id')
-    if (companies && companies.length > 0) {
-      for (const comp of companies) {
-        if (comp.id !== envCompanyId) {
-          try {
-            await admin.from('leads').insert({
-              company_id: comp.id,
-              nom: `${nom} (${entreprise})`,
-              email: emailTrim || '',
-              telephone: tel || '',
-              source: 'Landing — Audit ROI',
-              statut: 'nouveau',
-              notes,
-            })
-          } catch {
-            // Ignorer les erreurs d'insertion individuelles
-          }
-        }
+      if (companyLeadErr) {
+        console.warn('[Contact Audit] Erreur insertion leads:', companyLeadErr.message)
       }
     }
 
     return json(req, {
       success: true,
       stored: true,
-      lead_id: platformLead?.id || companyLeadId || 'captured',
+      lead_id: platformLead?.id || 'captured',
     }, 200)
   } catch (err) {
-    console.error('[Contact Audit]', err)
-    return json(req, {
-      success: true,
-      stored: true,
-      lead_id: 'captured',
-      message: 'Demande capturée avec succès',
-    }, 200)
+    console.error('[Contact Audit Exception]', err)
+    const msg = err instanceof Error ? err.message : 'Erreur interne'
+    return json(req, { error: msg, stored: false }, 500)
   }
 }
