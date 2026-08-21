@@ -62,63 +62,19 @@ export default function LeadsPage() {
   const loadLeads = useCallback(async () => {
     setLoading(true)
     try {
-      const [leadsRes, platformRes] = await Promise.all([
-        supabase
-          .from('leads')
-          .select('id, nom, email, telephone, valeur_estimee, statut, created_at, source')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('platform_leads')
-          .select('id, nom, entreprise, email, telephone, statut, created_at, source, notes')
-          .order('created_at', { ascending: false }),
-      ])
-
-      const rawLeads = leadsRes.data ?? []
-      const rawPlatform = platformRes.data ?? []
-
-      const formattedLeads: Lead[] = [
-        ...rawLeads.map((l: any) => ({
-          id: l.id,
-          nom: l.nom,
-          entreprise: l.source ?? undefined,
-          telephone: l.telephone ?? undefined,
-          email: l.email ?? undefined,
-          montant_estime: l.valeur_estimee ? Number(l.valeur_estimee) : undefined,
-          date_creation: l.created_at,
-          statut: (l.statut || 'nouveau') as StatutPipeline,
-          priorite: 'normale' as const,
-        })),
-        ...rawPlatform.map((l: any) => ({
-          id: l.id,
-          nom: l.entreprise ? `${l.nom} (${l.entreprise})` : l.nom,
-          entreprise: l.source || 'Landing Page',
-          telephone: l.telephone ?? undefined,
-          email: l.email ?? undefined,
-          montant_estime: undefined,
-          date_creation: l.created_at,
-          statut: (l.statut || 'nouveau') as StatutPipeline,
-          priorite: 'normale' as const,
-        })),
-      ]
-
-      // Déduplication par ID ou Clé unique
-      const seen = new Set<string>()
-      const uniqueLeads: Lead[] = []
-      for (const item of formattedLeads) {
-        const key = item.id || `${item.nom}-${item.email}`.toLowerCase()
-        if (!seen.has(key)) {
-          seen.add(key)
-          uniqueLeads.push(item)
-        }
-      }
-
-      setLeads(uniqueLeads)
+      const res = await fetch('/api/leads/list')
+      if (!res.ok) throw new Error('Erreur chargement leads')
+      const data = await res.json()
+      setLeads((data ?? []).map((l: any) => ({
+        ...l,
+        statut: (l.statut || 'nouveau') as StatutPipeline,
+      })))
     } catch (err) {
       console.error('[loadLeads]', err)
     } finally {
       setLoading(false)
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => { loadLeads() }, [loadLeads])
 
