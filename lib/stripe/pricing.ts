@@ -176,22 +176,6 @@ export function appendSetupFeeLineItem(params: URLSearchParams, index = 1) {
   params.set(`${prefix}[quantity]`, '1')
 }
 
-export function appendSetupFeeInvoiceItem(params: URLSearchParams, index = 0) {
-  const priceId = getSetupPriceId()
-  const prefix = `subscription_data[add_invoice_items][${index}]`
-
-  if (priceId) {
-    params.set(`${prefix}[price]`, priceId)
-    params.set(`${prefix}[quantity]`, '1')
-    return
-  }
-
-  params.set(`${prefix}[price_data][currency]`, 'cad')
-  params.set(`${prefix}[price_data][unit_amount]`, String(SETUP_FEE_CAD * 100))
-  params.set(`${prefix}[price_data][product_data][name]`, SETUP_FEE_LABEL)
-  params.set(`${prefix}[quantity]`, '1')
-}
-
 export function appendQuoteMetadata(
   params: URLSearchParams,
   quote: PricingQuote,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 import {
   appendQuoteMetadata,
-  appendSetupFeeInvoiceItem,
+  appendSetupFeeLineItem,
   appendSubscriptionLineItem,
   computeTierQuote,
   getPricingTier,
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
 
     // Line item d'abonnement récurrent (annuel)
     appendSubscriptionLineItem(params, quote, 0)
-    // Frais d'adhésion uniques (500$) passés via add_invoice_items pour compatibilité Stripe Checkout
-    appendSetupFeeInvoiceItem(params, 0)
+    // Frais d'adhésion uniques (500$) passés dans line_items[1]
+    appendSetupFeeLineItem(params, 1)
     appendQuoteMetadata(params, quote)
 
     if (!promo) params.append('allow_promotion_codes', 'true')
