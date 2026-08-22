@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getBrowserClient } from '@/lib/supabase/browser'
 import {
@@ -116,6 +116,9 @@ function newLigne(): LigneDevis {
 // ── Page ───────────────────────────────────────────────────────
 export default function NouveauDevisPage() {
   const router = useRouter()
+  const idempotencyKeyRef = useRef<string>(
+    typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2)
+  )
 
   const [form, setForm] = useState<FormData>({
     client_id: '',
@@ -187,7 +190,10 @@ export default function NouveauDevisPage() {
     try {
       const res = await fetch('/api/devis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKeyRef.current 
+        },
         body: JSON.stringify({
           ...form,
           statut: action === 'envoyer' ? 'envoye' : 'brouillon',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   Receipt, Plus, Search, ChevronRight,
@@ -50,6 +51,7 @@ function statutBadge(statut: StatutFacture) {
 }
 
 export default function FacturesPage() {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [statut, setStatut] = useState<StatutFacture | 'tous'>('tous')
   const [factures, setFactures] = useState<FactureRow[]>([])
@@ -62,7 +64,18 @@ export default function FacturesPage() {
       .select('id, numero, titre, statut, date_emission, date_echeance, montant_ttc, clients(nom)')
       .order('created_at', { ascending: false })
       .limit(100)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('[FacturesPage load error]', error)
+          const isAuthError = error.message?.toLowerCase().includes('jwt') || 
+                              error.code === 'PGRST301' || 
+                              error.message?.toLowerCase().includes('auth') ||
+                              error.message?.toLowerCase().includes('unauthorized')
+          if (isAuthError) {
+            router.push('/login?expired=true')
+            return
+          }
+        }
         setFactures((data ?? []).map((f: any) => {
           const total = Number(f.montant_ttc ?? 0)
           const paye = f.statut === 'payee' ? total : 0
@@ -81,7 +94,11 @@ export default function FacturesPage() {
         }))
         setLoading(false)
       })
-  }, [])
+      .catch(err => {
+        console.error('[FacturesPage catch error]', err)
+        setLoading(false)
+      })
+  }, [router])
 
   const filtered = factures.filter(f => {
     const matchSearch = f.titre.toLowerCase().includes(search.toLowerCase())

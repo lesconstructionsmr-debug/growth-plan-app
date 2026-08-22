@@ -1,14 +1,44 @@
 import { createClient } from './supabase-server'
 
-export async function getClients() {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('clients')
-    .select('*')
-    .order('created_at', { ascending: false })
+export interface ClientListItem {
+  id: string
+  nom: string
+  entreprise?: string | null
+  email?: string | null
+  telephone?: string | null
+  ville?: string | null
+  created_at: string
+}
 
-  if (error) { console.error('[getClients]', error); return [] }
-  return data ?? []
+export interface PaginatedClients {
+  data: ClientListItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export async function getClients(page = 1, pageSize = 50): Promise<PaginatedClients> {
+  const supabase = createClient()
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await supabase
+    .from('clients')
+    .select('id, nom, entreprise, email, telephone, ville, created_at', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (error) {
+    console.error('[getClients]', error)
+    return { data: [], total: 0, page, pageSize }
+  }
+
+  return {
+    data: (data ?? []) as ClientListItem[],
+    total: count ?? 0,
+    page,
+    pageSize,
+  }
 }
 
 export async function getClient(id: string) {

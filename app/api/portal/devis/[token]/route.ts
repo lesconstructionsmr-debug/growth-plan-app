@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnonClient } from '@/lib/supabase/anon'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Token invalide' }, { status: 400 })
     }
 
-    const supabase = createAnonClient()
+    const supabase = createAdminClient()
     const { data, error } = await supabase.rpc('portal_get_devis', { p_token: params.token })
 
     if (error) {
@@ -48,7 +48,7 @@ export async function POST(
       return NextResponse.json({ error: 'action invalide' }, { status: 400 })
     }
 
-    const supabase = createAnonClient()
+    const supabase = createAdminClient()
     const { data, error } = await supabase.rpc('portal_update_devis', {
       p_token:          params.token,
       p_action:         action,

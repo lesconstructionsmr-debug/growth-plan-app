@@ -3,16 +3,36 @@ import { requireCompany, requireCompanyAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const { supabase } = await requireCompany()
+    const { searchParams } = new URL(req.url)
 
-    const { data, error } = await supabase
+    const limitParam = searchParams.get('limit')
+    const offsetParam = searchParams.get('offset')
+    const search = searchParams.get('search')?.trim()
+
+    let query = supabase
       .from('clients')
       .select('id, nom, email, telephone, ville, created_at')
       .order('nom', { ascending: true })
 
+    if (search) {
+      query = query.or(`nom.ilike.%${search}%,email.ilike.%${search}%,ville.ilike.%${search}%`)
+    }
+
+    if (limitParam !== null || offsetParam !== null) {
+      const limit = Math.min(Math.max(parseInt(limitParam || '50', 10) || 50, 1), 100)
+      const offset = Math.max(parseInt(offsetParam || '0', 10) || 0, 0)
+      query = query.range(offset, offset + limit - 1)
+    } else {
+      // Rétrocompatibilité : plafond de sécurité à 100 lignes
+      query = query.limit(100)
+    }
+
+    const { data, error } = await query
     if (error) throw error
+
     return NextResponse.json(data ?? [], {
       headers: { 'Cache-Control': 'private, no-cache, no-store, must-revalidate' },
     })

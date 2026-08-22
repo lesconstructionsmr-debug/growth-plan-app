@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getBrowserClient } from '@/lib/supabase/browser'
 import {
@@ -98,6 +98,9 @@ function StyledInput({
 // ── Page ───────────────────────────────────────────────────────
 export default function NouvelleFacturePage() {
   const router = useRouter()
+  const idempotencyKeyRef = useRef<string>(
+    typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'fac-' + Date.now() + '-' + Math.random().toString(36).slice(2)
+  )
 
   const [form, setForm] = useState<FormData>({
     client_id: '',
@@ -190,7 +193,10 @@ export default function NouvelleFacturePage() {
     try {
       const res = await fetch('/api/factures', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKeyRef.current 
+        },
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error(await res.text())

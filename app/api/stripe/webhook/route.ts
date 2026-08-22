@@ -31,7 +31,25 @@ export async function POST(request: NextRequest) {
     hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
   })
 
-  // ── Traitement des événements ──────────────────────────────────
+  const supabase = createAdminClient()
+
+  // ── 1. Vérification Idempotence de l'événement Stripe ──────────
+  try {
+    const { data: existingEvent } = await supabase
+      .from('stripe_webhook_events')
+      .select('event_id')
+      .eq('event_id', event.id)
+      .maybeSingle()
+
+    if (existingEvent) {
+      console.log(`[webhook] Événement déjà traité (idempotent skip): ${event.id}`)
+      return NextResponse.json({ received: true, already_processed: true })
+    }
+  } catch (err) {
+    console.warn('[webhook] Idempotency check warning:', err)
+  }
+
+  // ── 2. Traitement des événements ───────────────────────────────
   try {
     switch (event.type) {
 
@@ -76,6 +94,13 @@ export async function POST(request: NextRequest) {
 
       default:
         console.log(`[webhook] Événement ignoré: ${event.type}`)
+    }
+
+    // Journalisation de l'événement traité pour l'idempotence
+    try {
+      await supabase.from('stripe_webhook_events').insert({ event_id: event.id })
+    } catch (logErr) {
+      console.warn('[webhook] Idempotency log notice:', logErr)
     }
   } catch (err) {
     console.error('[webhook] Erreur de traitement:', err)
@@ -122,44 +147,28 @@ async function handleSubscriptionChange(sub: StripeSubscription) {
     throw new Error(`[webhook] company_id introuvable pour la souscription ${sub.id}`)
   }
 
-  // Vérifier s'il existe déjà un abonnement pour cette compagnie
-  const { data: existingSub } = await supabase
-    .from('subscriptions')
-    .select('id')
-    .eq('company_id', companyId)
-    .single()
+  const plan = sub.items.data[0]?.price?.recurring?.interval === 'year' ? 'annuel' : 'mensuel'
+  const currentPeriodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : new Date().toISOString()
+  const trialEnd = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null
 
-  let error
-  if (existingSub) {
-    const { error: err } = await supabase
-      .from('subscriptions')
-      .update({
-        stripe_customer_id:     sub.customer,
-        stripe_subscription_id: sub.id,
-        status:                 sub.status,
-        plan:                   sub.items.data[0]?.price?.recurring?.interval === 'year' ? 'annuel' : 'mensuel',
-        current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
-        trial_end:              sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-      })
-      .eq('company_id', companyId)
-    error = err
-  } else {
-    const { error: err } = await supabase
-      .from('subscriptions')
-      .upsert({
-        company_id:             companyId,
-        stripe_customer_id:     sub.customer,
-        stripe_subscription_id: sub.id,
-        status:                 sub.status,
-        plan:                   sub.items.data[0]?.price?.recurring?.interval === 'year' ? 'annuel' : 'mensuel',
-        current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
-        trial_end:              sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
-      }, { onConflict: 'company_id' })
-    error = err
+  const { error } = await supabase
+    .from('subscriptions')
+    .upsert({
+      company_id:             companyId,
+      stripe_customer_id:     sub.customer,
+      stripe_subscription_id: sub.id,
+      status:                 sub.status,
+      plan,
+      current_period_end:     currentPeriodEnd,
+      trial_end:              trialEnd,
+    }, { onConflict: 'company_id' })
+
+  if (error) {
+    console.error(`[webhook] Erreur upsert subscription ${sub.id} (company: ${companyId}):`, error.message)
+    throw new Error(`[webhook] mise à jour subscription ${sub.id}: ${error.message}`)
   }
 
-  if (error) throw new Error(`[webhook] mise à jour subscription ${sub.id}: ${error.message}`)
-  console.log(`[webhook] Abonnement mis à jour: ${sub.id} → ${sub.status} pour company_id: ${companyId}`)
+  console.log(`[webhook] Abonnement synchronisé: ${sub.id} → ${sub.status} pour company_id: ${companyId}`)
 }
 
 async function handleSubscriptionDeleted(sub: StripeSubscription) {

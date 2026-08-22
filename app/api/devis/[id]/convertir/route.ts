@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
+import { generateNextDocumentNumber } from '@/lib/api/sequence'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,13 +52,7 @@ export async function POST(
     }
 
     // ── ÉTAPE 2 : Générer le numéro de facture ────────────────────────
-    const year = new Date().getFullYear()
-    const { count } = await supabase
-      .from('factures')
-      .select('id', { count: 'exact', head: true })
-      .eq('company_id', companyId)
-    const seqNum = String((count ?? 0) + 1).padStart(3, '0')
-    const numero = `FAC-${year}-${seqNum}`
+    const numero = await generateNextDocumentNumber(supabase, companyId, 'facture')
 
     // ── ÉTAPE 3 : Créer la facture ────────────────────────────────────
     const { data: facture, error: facErr } = await supabase

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getBrowserClient } from '@/lib/supabase/browser'
 import {
   Users, Plus, Search, User, Phone, Mail,
-  MapPin, ChevronRight, Loader2, Trash2, CheckSquare, Square, ExternalLink
+  MapPin, ChevronRight, ChevronLeft, Loader2, Trash2, CheckSquare, Square, ExternalLink
 } from 'lucide-react'
 import type { StatutClient } from '@/lib/types/models'
 import { useLanguage } from '@/components/layout/language-provider'
@@ -40,30 +40,55 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isAgence, setIsAgence] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(50)
+  const [totalClients, setTotalClients] = useState(0)
 
   const supabase = getBrowserClient()
 
   const loadClients = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('clients')
-      .select('id, nom, email, telephone, ville, created_at')
-      .order('created_at', { ascending: false })
+    try {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
 
-    setClients((data ?? []).map((c: any) => ({
-      id: c.id,
-      nom: c.nom,
-      type: 'particulier',
-      statut: 'actif',
-      email: c.email ?? null,
-      telephone: c.telephone ?? null,
-      ville: c.ville ?? null,
-      nombre_projets: 0,
-      total_facture: 0,
-      cree_le: c.created_at,
-    })))
-    setLoading(false)
-  }, [supabase])
+      const { data, error, count } = await supabase
+        .from('clients')
+        .select('id, nom, email, telephone, ville, created_at', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to)
+
+      if (error) {
+        console.error('[ClientsPage load error]', error)
+        const isAuthError = error.message?.toLowerCase().includes('jwt') || 
+                            error.code === 'PGRST301' || 
+                            error.message?.toLowerCase().includes('auth') ||
+                            error.message?.toLowerCase().includes('unauthorized')
+        if (isAuthError) {
+          router.push('/login?expired=true')
+          return
+        }
+      }
+
+      setTotalClients(count ?? 0)
+      setClients((data ?? []).map((c: any) => ({
+        id: c.id,
+        nom: c.nom,
+        type: 'particulier',
+        statut: 'actif',
+        email: c.email ?? null,
+        telephone: c.telephone ?? null,
+        ville: c.ville ?? null,
+        nombre_projets: 0,
+        total_facture: 0,
+        cree_le: c.created_at,
+      })))
+    } catch (err) {
+      console.error('[ClientsPage catch error]', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase, router, page, pageSize])
 
   useEffect(() => {
     fetch('/api/me')
@@ -110,7 +135,7 @@ export default function ClientsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--txt-1)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users size={22} color="var(--gold)" /> {isAgence ? 'Emprunteurs' : t('Clients')}
+            <Users size={22} color="var(--gold)" /> {isAgence ? 'Emprunteurs' : t('Clients')} {totalClients > 0 && <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--txt-3)' }}>({totalClients})</span>}
           </h1>
           <div style={{ fontSize: '12px', color: 'var(--txt-3)', marginTop: '2px' }}>
             Cliquez sur n'importe quel client pour ouvrir sa fiche détaillée
@@ -308,6 +333,52 @@ export default function ClientsPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Contrôles de pagination */}
+      {totalClients > pageSize && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', background: 'var(--bg-1)', border: '0.5px solid var(--line)',
+          borderRadius: '10px', marginTop: '4px', flexWrap: 'wrap', gap: '8px'
+        }}>
+          <div style={{ fontSize: '12px', color: 'var(--txt-3)' }}>
+            Affichage de {(page - 1) * pageSize + 1} à {Math.min(page * pageSize, totalClients)} sur {totalClients} clients
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
+                background: page <= 1 ? 'var(--bg-3)' : 'var(--bg-2)',
+                border: '0.5px solid var(--line)',
+                color: page <= 1 ? 'var(--txt-3)' : 'var(--txt-1)',
+                cursor: page <= 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <ChevronLeft size={14} /> Précédent
+            </button>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-2)' }}>
+              Page {page} / {Math.max(1, Math.ceil(totalClients / pageSize))}
+            </span>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={page * pageSize >= totalClients}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
+                background: page * pageSize >= totalClients ? 'var(--bg-3)' : 'var(--bg-2)',
+                border: '0.5px solid var(--line)',
+                color: page * pageSize >= totalClients ? 'var(--txt-3)' : 'var(--txt-1)',
+                cursor: page * pageSize >= totalClients ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Suivant <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       )}
 
