@@ -7,7 +7,8 @@ import {
   Calendar, User, Percent, DollarSign, Shield,
   Paperclip, Tag, Clock, ChevronDown, Sparkles
 } from 'lucide-react'
-import { StudioLigneItem, useStudioCalculations } from '@/lib/hooks/useStudioCalculations'
+import { StudioLigneItem, useStudioCalculations, UpcomingPaymentItem } from '@/lib/hooks/useStudioCalculations'
+import { UpcomingPaymentsSection } from './UpcomingPaymentsSection'
 import { formatCad } from '@/lib/format'
 
 export interface QuoteInvoiceEditorProps {
@@ -103,11 +104,45 @@ export function QuoteInvoiceEditor({
   const [appliquerTps, setAppliquerTps] = useState(true)
   const [appliquerTvq, setAppliquerTvq] = useState(true)
 
-  // Section 3 : Échéancier de paiements
-  const [echeances, setEcheances] = useState([
-    { label: 'Acompte à la signature', pourcentage: 30, date: 'À la commande' },
-    { label: 'Début des travaux', pourcentage: 40, date: 'Jour 1' },
-    { label: 'Livraison finale & quittance', pourcentage: 30, date: 'Fin des travaux' },
+  // ── Moteur de Calcul Réactif ──────────────────────────────────
+  const stats = useStudioCalculations(
+    lignes,
+    rabaisValeur,
+    rabaisType,
+    appliquerTps,
+    appliquerTvq,
+    0
+  )
+
+  // Section 3 : Échéancier de paiements interactif
+  const [echeances, setEcheances] = useState<UpcomingPaymentItem[]>([
+    {
+      id: 'p1',
+      label: 'Acompte de départ (Signature du contrat)',
+      pourcentage: 30,
+      montant: 0,
+      date_due: new Date().toISOString().split('T')[0],
+      statut: 'pending',
+      methode: 'virement',
+    },
+    {
+      id: 'p2',
+      label: 'Début des travaux / Approvisionnement matériaux',
+      pourcentage: 40,
+      montant: 0,
+      date_due: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
+      statut: 'pending',
+      methode: 'interac',
+    },
+    {
+      id: 'p3',
+      label: 'Livraison finale & Quittance de chantier',
+      pourcentage: 30,
+      montant: 0,
+      date_due: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      statut: 'pending',
+      methode: 'virement',
+    },
   ])
 
   // Section 4-8 : Notes, Termes & Pièces jointes
@@ -119,16 +154,6 @@ export function QuoteInvoiceEditor({
   )
   const [commentairesInternes, setCommentairesInternes] = useState(
     'Matériaux commandés chez Canac. Livraison prévue mardi matin.'
-  )
-
-  // ── Moteur de Calcul Réactif ──────────────────────────────────
-  const stats = useStudioCalculations(
-    lignes,
-    rabaisValeur,
-    rabaisType,
-    appliquerTps,
-    appliquerTvq,
-    0
   )
 
   function updateLigne(id: string, field: keyof StudioLigneItem, val: any) {
@@ -443,6 +468,18 @@ export function QuoteInvoiceEditor({
                 </div>
               </div>
             </div>
+
+            {/* ── 5. Échéancier de paiements (Upcoming Payments) ── */}
+            <div className="mt-8 pt-6 border-t border-[#222733]">
+              <UpcomingPaymentsSection
+                totalTtc={stats.totalTtc}
+                echeances={echeances}
+                onChange={setEcheances}
+                onInvoicePayment={payment => {
+                  alert(`Génération de la facture d'acompte pour "${payment.label}" (${formatCad(payment.montant)})`)
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -501,24 +538,15 @@ export function QuoteInvoiceEditor({
 
         {/* ONGLET 3: ÉCHÉANCIER */}
         {activeTab === 'schedule' && (
-          <div className="p-4 rounded-xl bg-[#141822] border border-[#222733] space-y-4 text-xs">
-            <h4 className="font-bold text-zinc-200">Échéancier & Tranches de Paiement</h4>
-            <div className="space-y-3">
-              {echeances.map((ech, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-[#0E1015] border border-[#262C3D]">
-                  <div>
-                    <div className="font-semibold text-zinc-200">{ech.label}</div>
-                    <div className="text-[11px] text-zinc-400">Échéance : {ech.date}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-amber-400 text-sm">
-                      {formatCad((stats.totalTtc * ech.pourcentage) / 100)}
-                    </div>
-                    <div className="text-[11px] text-zinc-400">{ech.pourcentage} % du total</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="p-4 rounded-xl bg-[#141822] border border-[#222733]">
+            <UpcomingPaymentsSection
+              totalTtc={stats.totalTtc}
+              echeances={echeances}
+              onChange={setEcheances}
+              onInvoicePayment={payment => {
+                alert(`Génération de la facture d'acompte pour "${payment.label}" (${formatCad(payment.montant)})`)
+              }}
+            />
           </div>
         )}
 

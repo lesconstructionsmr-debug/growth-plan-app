@@ -26,6 +26,35 @@ export interface StudioCalculationResult {
   soldeRestant: number
 }
 
+export type PaymentScheduleStatus = 'pending' | 'paid' | 'overdue'
+
+export type PaymentMethodOption =
+  | 'virement'
+  | 'interac'
+  | 'cheque'
+  | 'carte_credit'
+  | 'financement'
+  | 'especes'
+
+export interface UpcomingPaymentItem {
+  id: string
+  label: string
+  pourcentage: number
+  montant: number
+  date_due: string
+  statut: PaymentScheduleStatus
+  methode: PaymentMethodOption
+  facture_id?: string | null
+}
+
+export interface ScheduleSummaryResult {
+  totalPourcentage: number
+  totalAlloue: number
+  restePourcentage: number
+  resteMontant: number
+  isBalanced: boolean
+}
+
 export function calculateStudioTotals(
   lignes: StudioLigneItem[],
   rabaisValeur: number = 0,
@@ -77,6 +106,32 @@ export function calculateStudioTotals(
     totalTtc,
     totalPaye,
     soldeRestant,
+  }
+}
+
+export function calculateScheduleSummary(
+  echeances: UpcomingPaymentItem[],
+  totalTtc: number
+): ScheduleSummaryResult {
+  let totalPourcentage = 0
+  let totalAlloue = 0
+
+  for (const ech of echeances) {
+    const p = Number(ech.pourcentage) || 0
+    totalPourcentage += p
+    totalAlloue += Math.round(((totalTtc * p) / 100) * 100) / 100
+  }
+
+  const restePourcentage = Math.round((100 - totalPourcentage) * 100) / 100
+  const resteMontant = Math.max(0, Math.round((totalTtc - totalAlloue) * 100) / 100)
+  const isBalanced = totalPourcentage === 100
+
+  return {
+    totalPourcentage,
+    totalAlloue,
+    restePourcentage,
+    resteMontant,
+    isBalanced,
   }
 }
 
