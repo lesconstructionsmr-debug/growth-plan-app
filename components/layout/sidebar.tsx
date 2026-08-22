@@ -13,6 +13,7 @@ import {
 import { useTheme } from './theme-provider'
 import { useLanguage } from './language-provider'
 import { isCompanyAdmin, employeeNavHrefs } from '@/lib/auth/permissions'
+import { canAccessControlCenter } from '@/lib/platform-admin'
 
 // ── Nav construction ───────────────────────────────────────────────
 const NAV_CONSTRUCTION = [
@@ -76,7 +77,8 @@ export default function Sidebar({ role: roleProp = 'owner' }: SidebarProps) {
       .then(r => r.json())
       .then(d => {
         if (d.name) setCompName(d.name)
-        if (d.agence_enabled === true || d.email?.toLowerCase() === 'max@growth-plan.ca') {
+        const userEmail = (d.email || '').toLowerCase().trim()
+        if (d.is_admin === true || d.is_platform_admin === true || d.agence_enabled === true || canAccessControlCenter(userEmail)) {
           setIsAdmin(true)
         }
         if (d.full_name) {
@@ -95,13 +97,13 @@ export default function Sidebar({ role: roleProp = 'owner' }: SidebarProps) {
   const { theme, toggle } = useTheme()
   const { lang, toggleLang, t } = useLanguage()
   const router = useRouter()
-  const isAdminUser = isCompanyAdmin(roleProp)
+  const isAdminUser = isCompanyAdmin(roleProp) || isAdmin
   const allowedHrefs = isAdminUser ? null : new Set(employeeNavHrefs('construction'))
   const NAV = NAV_CONSTRUCTION
     .filter(group => group.section !== 'Admin SaaS' || isAdmin)
     .map(group => ({
       ...group,
-      items: isAdminUser
+      items: (isAdminUser || group.section === 'Admin SaaS')
         ? group.items
         : group.items.filter(item => allowedHrefs!.has(item.href)),
     }))

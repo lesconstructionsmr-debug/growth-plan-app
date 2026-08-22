@@ -44,7 +44,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         }
       }
 
-      userRole = normalizeRole(profile?.role)
+      if (canAccessControlCenter(user.email)) {
+        userRole = 'owner'
+      } else {
+        userRole = normalizeRole(profile?.role)
+      }
 
       if (profile?.company_id) {
         const { data: sub } = await supabase

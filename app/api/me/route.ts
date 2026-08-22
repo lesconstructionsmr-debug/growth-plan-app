@@ -14,11 +14,15 @@ export async function GET() {
       .eq('id', user.id)
       .maybeSingle()
 
+    const isPlatformAdminUser = canAccessControlCenter(user.email)
+
     if (!profile?.company_id) {
       return NextResponse.json({
         email: user.email ?? null,
         vertical: 'construction',
         agence_enabled: canUseAgenceMode(user.email),
+        is_admin: isPlatformAdminUser,
+        is_platform_admin: isPlatformAdminUser,
         role: 'owner',
         full_name: null,
         name: 'Mon Entreprise',
@@ -40,6 +44,8 @@ export async function GET() {
       name:            company?.name     ?? 'Mon Entreprise',
       vertical:        'construction',
       agence_enabled:  agenceEnabled,
+      is_admin:        isPlatformAdminUser,
+      is_platform_admin: isPlatformAdminUser,
       role:            profile.role      ?? 'owner',
       full_name:       profile.full_name ?? null,
     }, {
