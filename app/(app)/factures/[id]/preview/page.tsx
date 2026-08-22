@@ -4,12 +4,7 @@ import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { getBrowserClient } from '@/lib/supabase/browser'
 import { ArrowLeft, Download, Printer } from 'lucide-react'
-
-const fmt = (n: number) =>
-  n.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })
-
-const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })
+import { formatCad as fmt, formatDateFr as fmtDate } from '@/lib/format'
 
 interface FactureDoc {
   numero: string; titre: string; statut: string

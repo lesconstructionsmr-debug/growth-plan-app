@@ -45,8 +45,7 @@ const TYPE_LABELS: Record<TypePaiement,string> = {
   interac:'Interac', especes:'Espèces', autre:'Autre',
 }
 
-const fmt = (n:number) => n.toLocaleString('fr-CA',{style:'currency',currency:'CAD'})
-const fmtDate = (s:string) => new Date(s).toLocaleDateString('fr-CA',{day:'numeric',month:'long',year:'numeric'})
+import { formatCad as fmt, formatDateFr as fmtDate } from '@/lib/format'
 
 function ModalPaiement({totalRestant,onClose,onSave}:{
   totalRestant:number; onClose:()=>void

@@ -5,6 +5,7 @@ import {
   Crown, TrendingUp, Users, DollarSign, AlertCircle,
   CheckCircle2, Clock, XCircle, Search, ExternalLink, Loader2,
 } from 'lucide-react'
+import { formatCadNoDecimals } from '@/lib/format'
 
 type StatutAbo = 'active' | 'trialing' | 'past_due' | 'canceled'
 
@@ -20,18 +21,6 @@ interface Abonne {
   stripe_customer_id: string
 }
 
-// Données mock — désactivées au profit du fetch API
-/*
-const MOCK_ABONNES: Abonne[] = [
-  { id:'1', nom:'Construction Bolduc inc.',    email:'bolduc@constructionbolduc.ca',  plan:'annuel',  statut:'active',   debut:'2026-03-15', prochain_paiement:'2027-03-15', montant:2000, stripe_customer_id:'cus_abc001' },
-  { id:'2', nom:'Réno Experts Saguenay',       email:'info@renoexperts.ca',           plan:'mensuel', statut:'active',   debut:'2026-05-01', prochain_paiement:'2026-07-01', montant:175,  stripe_customer_id:'cus_abc002' },
-  { id:'3', nom:'Tremblay & Fils Ltée',        email:'admin@tremblayetfils.com',      plan:'mensuel', statut:'trialing', debut:'2026-06-10', prochain_paiement:'2026-06-24', montant:175,  stripe_customer_id:'cus_abc003' },
-  { id:'4', nom:'Construction Morin',          email:'morin.construction@gmail.com',  plan:'mensuel', statut:'past_due', debut:'2026-04-20', prochain_paiement:null,          montant:175,  stripe_customer_id:'cus_abc004' },
-  { id:'5', nom:'Rénovations Lapointe',        email:'lapointe.reno@gmail.com',       plan:'annuel',  statut:'active',   debut:'2026-01-10', prochain_paiement:'2027-01-10', montant:2000, stripe_customer_id:'cus_abc005' },
-  { id:'6', nom:'Chantiers Beaulieu inc.',     email:'info@chantiersbeaulieu.ca',     plan:'mensuel', statut:'canceled', debut:'2026-02-01', prochain_paiement:null,          montant:175,  stripe_customer_id:'cus_abc006' },
-]
-*/
-
 const STATUT_CFG: Record<StatutAbo, { label: string; color: string; bg: string; icon: React.ElementType }> = {
   active:   { label: 'Actif',        color: 'var(--green)',  bg: 'var(--green)18',  icon: CheckCircle2 },
   trialing: { label: 'Essai gratuit',color: 'var(--blue)',   bg: 'var(--blue)18',   icon: Clock        },
@@ -39,7 +28,7 @@ const STATUT_CFG: Record<StatutAbo, { label: string; color: string; bg: string; 
   canceled: { label: 'Annulé',       color: 'var(--txt-3)',  bg: 'var(--bg-3)',     icon: XCircle      },
 }
 
-const fmt = (n: number) => n.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+const fmt = formatCadNoDecimals
 
 export default function AdminAbonnesPage() {
   const [search, setSearch] = useState('')

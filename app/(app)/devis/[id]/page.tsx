@@ -55,11 +55,7 @@ const STATUT_CONFIG: Record<StatutDevis, { label: string; color: string; bg: str
   converti:  { label: 'Facturé',    color: 'var(--gold-2)',  bg: 'var(--gold-3)'     },
 }
 
-const fmt = (n: number) =>
-  n.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })
-
-const fmtDate = (s: string) =>
-  new Date(s).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })
+import { formatCad as fmt, formatDateFr as fmtDate } from '@/lib/format'
 
 // ── Modal d'envoi ────────────────────────────────────────────────
 function ModalEnvoi({ devis, onClose, onSent }: {
