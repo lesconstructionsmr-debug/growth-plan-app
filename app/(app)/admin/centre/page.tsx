@@ -29,7 +29,14 @@ interface Task {
   priorite: string
   due_date: string | null
   lead_id: string | null
+  assigned_to?: string | null
 }
+
+const ASSIGNEES = [
+  { id: 'Maxime Rochon', label: '👑 Maxime Rochon (Fondateur)', email: 'max@growth-plan.ca', short: 'Max R.' },
+  { id: 'Natasha Héon', label: '👑 Natasha Héon (Direction)', email: 'natasha.heon@gmail.com', short: 'Natasha H.' },
+  { id: 'Équipe Plan Growth', label: '👥 Équipe Plan Growth', email: null, short: 'Équipe' },
+] as const
 
 interface Lead {
   id: string
@@ -168,7 +175,7 @@ export default function ControlCenterPage() {
   const [saving, setSaving] = useState(false)
 
   // Forms state
-  const [taskForm, setTaskForm] = useState({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '' })
+  const [taskForm, setTaskForm] = useState({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '', assigned_to: 'Maxime Rochon' })
   const [leadForm, setLeadForm] = useState({
     nom: '', email: '', telephone: '', entreprise: '', source: 'manuel',
     besoin: 'les_deux', taille_equipe: '2-5', notes: '',
@@ -298,7 +305,7 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
       return
     }
     setShowTask(false)
-    setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '' })
+    setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '', assigned_to: 'Maxime Rochon' })
     flashSuccess('Tâche créée avec succès !')
     await load(false)
   }
@@ -423,6 +430,7 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
       priorite: (l.score ?? 0) >= 70 ? 'urgente' : 'haute',
       due_date: defaultDate,
       lead_id: l.id,
+      assigned_to: 'Maxime Rochon',
     })
     setShowTask(true)
   }
@@ -514,7 +522,7 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
           <button type="button" onClick={() => setShowRoutine(true)} style={btnGhostAccent}>
             <Sparkles size={14} color="var(--gold-2)" /> Injecter Routine
           </button>
-          <button type="button" onClick={() => { setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '' }); setShowTask(true); }} style={btnGhost}>
+          <button type="button" onClick={() => { setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '', assigned_to: 'Maxime Rochon' }); setShowTask(true); }} style={btnGhost}>
             <Plus size={14} /> Tâche
           </button>
           <button type="button" onClick={() => setShowLead(true)} style={btnGhost}>
@@ -636,9 +644,14 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: '10px', color: 'var(--txt-3)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                             <span style={{ color: PRIORITE[t.priorite]?.color }}>{PRIORITE[t.priorite]?.label}</span>
                             {t.due_date && <span>Échéance: {t.due_date}</span>}
+                            {t.assigned_to && (
+                              <span style={{ background: 'rgba(234, 179, 8, 0.12)', color: 'var(--gold-2)', border: '0.5px solid rgba(234, 179, 8, 0.3)', padding: '0 5px', borderRadius: '4px', fontSize: '9px', fontWeight: 600 }}>
+                                👤 {t.assigned_to}
+                              </span>
+                            )}
                             {linkedLead && <span style={{ color: 'var(--gold-2)', fontWeight: 600 }}>👤 {linkedLead.nom}</span>}
                           </div>
                         </div>
@@ -756,6 +769,11 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
                           <span style={{ color: p.color, fontWeight: 600 }}>{p.label}</span>
                           <span>· {TASK_STATUT[t.statut] ?? t.statut}</span>
                           {t.due_date && <span style={{ color: isOverdue ? 'var(--red)' : 'var(--txt-3)' }}>· Échéance: {t.due_date}</span>}
+                          {t.assigned_to && (
+                            <span style={{ background: 'rgba(234, 179, 8, 0.12)', color: 'var(--gold-2)', border: '0.5px solid rgba(234, 179, 8, 0.3)', padding: '1px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 600 }}>
+                              👤 {t.assigned_to}
+                            </span>
+                          )}
                           {linkedLead && (
                             <span style={{ background: 'var(--bg-2)', color: 'var(--gold-2)', border: '0.5px solid var(--line)', padding: '1px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 600 }}>
                               👤 Lead: {linkedLead.nom} {linkedLead.entreprise ? `(${linkedLead.entreprise})` : ''}
@@ -996,6 +1014,13 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
                 <label style={labelSt}>Échéance</label>
                 <input type="date" value={taskForm.due_date} onChange={e => setTaskForm(f => ({ ...f, due_date: e.target.value }))} style={inp} />
               </div>
+            </div>
+            <div>
+              <label style={labelSt}>Responsable assigné</label>
+              <select value={taskForm.assigned_to} onChange={e => setTaskForm(f => ({ ...f, assigned_to: e.target.value }))} style={inp}>
+                <option value="">— Non assigné —</option>
+                {ASSIGNEES.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+              </select>
             </div>
             <div>
               <label style={labelSt}>Notes et détails de suivi</label>

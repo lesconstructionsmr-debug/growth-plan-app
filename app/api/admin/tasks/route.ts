@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
         priorite,
         due_date: item.due_date || null,
         lead_id: item.lead_id || null,
+        assigned_to: typeof item.assigned_to === 'string' && item.assigned_to.trim() ? item.assigned_to.trim() : null,
       })
     }
 
@@ -91,6 +92,7 @@ export async function PATCH(req: NextRequest) {
     }
     if (body.due_date !== undefined) updates.due_date = body.due_date || null
     if (body.lead_id !== undefined) updates.lead_id = body.lead_id || null
+    if (body.assigned_to !== undefined) updates.assigned_to = typeof body.assigned_to === 'string' && body.assigned_to.trim() ? body.assigned_to.trim() : null
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'Aucun champ à mettre à jour' }, { status: 400 })
