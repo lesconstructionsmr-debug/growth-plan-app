@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Building2, Check, Zap, Shield, FileText,
@@ -48,9 +49,19 @@ const FAQ = [
 type PromoState = { status: 'idle' | 'checking' | 'valid' | 'invalid'; label?: string; days?: number }
 
 export default function TarifsPage() {
+  const router = useRouter()
   const [loadingTier, setLoadingTier] = useState<PricingTierId | null>(null)
   const [promoInput, setPromoInput] = useState('')
   const [promo, setPromo] = useState<PromoState>({ status: 'idle' })
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(r => {
+        if (r.ok) setIsLoggedIn(true)
+      })
+      .catch(() => {})
+  }, [])
 
   async function validatePromo() {
     const code = promoInput.trim().toUpperCase()
@@ -80,6 +91,12 @@ export default function TarifsPage() {
   async function handleCheckout(tierId: PricingTierId) {
     const tier = PRICING_TIERS.find(t => t.id === tierId)
     if (!tier || tier.contactOnly) return
+
+    // Si utilisateur non connecté : redirection vers le flux d'onboarding gratuit
+    if (!isLoggedIn) {
+      router.push(`/onboarding?plan=${tierId}&essai=${trialDays}`)
+      return
+    }
 
     setLoadingTier(tierId)
     try {
@@ -233,7 +250,9 @@ export default function TarifsPage() {
                 >
                   {isLoading
                     ? <><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Redirection…</>
-                    : <>Commencer · essai {trialDays}j <ChevronRight size={14} /></>
+                    : isLoggedIn
+                      ? <>Activer mon abonnement <ChevronRight size={14} /></>
+                      : <>Commencer · essai {trialDays}j <ChevronRight size={14} /></>
                   }
                 </button>
               )}

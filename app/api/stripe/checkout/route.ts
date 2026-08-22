@@ -30,11 +30,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Contactez-nous pour un devis entreprise' }, { status: 400 })
     }
 
-    const { user, companyId } = await requireCompanyAdmin()
+    const { supabase, user, companyId } = await requireCompanyAdmin()
     const quote = computeTierQuote(tier.id)
 
     const promo = promoCode ? PROMO_CODES[promoCode.trim().toUpperCase()] : null
-    const trialDays = promo ? promo.trialDays : 14
+
+    // Vérifier si la compagnie est déjà en cours d'essai ou active
+    const { data: existingSub } = await supabase
+      .from('subscriptions')
+      .select('status, trial_end')
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    // Si déjà inscrit en essai et sans promo spéciale, on applique l'abonnement immédiatement
+    const isAlreadyInTrial = existingSub?.status === 'trialing' || existingSub?.status === 'active'
+    const trialDays = promo ? promo.trialDays : (isAlreadyInTrial ? 0 : 14)
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin || 'https://app.growth-plan.ca'
 
@@ -53,7 +63,6 @@ export async function POST(request: NextRequest) {
       'success_url':                          `${baseUrl}/dashboard?abonnement=succes${promo ? `&promo=${promoCode}` : ''}`,
       'cancel_url':                           `${baseUrl}/tarifs?annule=1`,
       'billing_address_collection':           'auto',
-      'subscription_data[trial_period_days]': String(trialDays),
       'locale':                               'fr-CA',
       'subscription_data[metadata][company_id]': companyId,
       'subscription_data[metadata][user_id]': user.id,
@@ -61,6 +70,10 @@ export async function POST(request: NextRequest) {
       'subscription_data[metadata][trial_days]': String(trialDays),
       'subscription_data[metadata][setup_fee_cad]': String(500),
     })
+
+    if (trialDays > 0) {
+      params.append('subscription_data[trial_period_days]', String(trialDays))
+    }
 
     appendSubscriptionLineItem(params, quote, 0)
     appendSetupFeeLineItem(params, 1)
