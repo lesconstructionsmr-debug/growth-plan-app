@@ -78,8 +78,12 @@ export default function LeadsPage() {
 
   useEffect(() => { loadLeads() }, [loadLeads])
 
-  // ── ÉDITION DIRECTE SUR LA CELLULE ─────────────────────────────
+  // ── ÉDITION DIRECTE SUR LA CELLULE AVEC ROLLBACK SÉCURISÉ ─────
   async function updateInlineField(id: string, field: 'nom' | 'email' | 'telephone' | 'valeur_estimee' | 'statut', value: any) {
+    const previousLead = leads.find(l => l.id === id)
+    if (!previousLead) return
+
+    // Mise à jour optimiste locale
     setLeads(prev => prev.map(l => {
       if (l.id !== id) return l
       if (field === 'valeur_estimee') return { ...l, montant_estime: parseFloat(value) || undefined }
@@ -88,7 +92,15 @@ export default function LeadsPage() {
 
     const dbField = field === 'valeur_estimee' ? 'valeur_estimee' : field
     const valToSave = field === 'valeur_estimee' ? (parseFloat(value) || null) : (value || null)
-    await supabase.from('leads').update({ [dbField]: valToSave }).eq('id', id)
+    
+    try {
+      const { error } = await supabase.from('leads').update({ [dbField]: valToSave }).eq('id', id)
+      if (error) throw error
+    } catch (err) {
+      console.error('[updateInlineField Error - Reverting state]', err)
+      // Rollback vers l'état précédent en cas d'échec
+      setLeads(prev => prev.map(l => l.id === id ? previousLead : l))
+    }
   }
 
   function openCreate() {

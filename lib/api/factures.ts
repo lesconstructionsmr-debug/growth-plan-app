@@ -1,6 +1,7 @@
 import { createClient } from './supabase-server'
 import { requireCompany } from './auth'
 import { calculerTotaux } from './fiscal'
+import { generateNextDocumentNumber } from './sequence'
 
 export interface LigneFacture {
   id?: string
@@ -50,15 +51,7 @@ export async function createFacture(payload: {
 }) {
   const { supabase, companyId } = await requireCompany()
 
-  // Numéro séquentiel sécurisé par company + année
-  const year = new Date().getFullYear()
-  const { count: existingCount } = await supabase
-    .from('factures')
-    .select('id', { count: 'exact', head: true })
-    .eq('company_id', companyId)
-    .like('numero', `FAC-${year}-%`)
-  const seqNum = String((existingCount ?? 0) + 1).padStart(3, '0')
-  const autoNumero = payload.numero || `FAC-${year}-${seqNum}`
+  const autoNumero = await generateNextDocumentNumber(supabase, companyId, 'facture', payload.numero)
 
   const { montant_ht, tps, tvq, montant_ttc } = calculerTotaux(
     payload.lignes, payload.appliquer_tps, payload.appliquer_tvq

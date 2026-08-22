@@ -1,6 +1,7 @@
 import { createClient } from './supabase-server'
 import { requireCompany } from './auth'
 import { calculerTotaux } from './fiscal'
+import { generateNextDocumentNumber } from './sequence'
 
 export interface LigneDevis {
   id?: string
@@ -61,15 +62,7 @@ export async function createDevis(payload: {
 }) {
   const { supabase, companyId } = await requireCompany()
 
-  // Numéro séquentiel sécurisé — filtre par company_id + année pour éviter les doublons
-  const year = new Date().getFullYear()
-  const { count: existingCount } = await supabase
-    .from('devis')
-    .select('id', { count: 'exact', head: true })
-    .eq('company_id', companyId)
-    .like('numero', `DEV-${year}-%`)
-  const seqNum = String((existingCount ?? 0) + 1).padStart(3, '0')
-  const autoNumero = payload.numero || `DEV-${year}-${seqNum}`
+  const autoNumero = await generateNextDocumentNumber(supabase, companyId, 'devis', payload.numero)
 
   const { montant_ht, tps, tvq, montant_ttc } = calculerTotaux(
     payload.lignes, payload.appliquer_tps, payload.appliquer_tvq

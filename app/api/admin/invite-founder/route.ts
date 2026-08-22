@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requirePlatformAdmin, apiError } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,7 @@ export async function POST(req: NextRequest) {
 
 async function handleProvision(req: NextRequest) {
   try {
+    await requirePlatformAdmin()
     const admin = createAdminClient()
     const url = new URL(req.url)
     const email = (url.searchParams.get('email') || 'natasha.heon@gmail.com').trim().toLowerCase()

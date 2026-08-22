@@ -44,49 +44,51 @@ async function handleRelancesAuto() {
       .limit(50)
 
     if (devisAEnlever && devisAEnlever.length > 0) {
-      for (const devis of devisAEnlever) {
+      const devisTasks = devisAEnlever.map(async (devis) => {
         const clientEmail = (devis.clients as any)?.email
         const clientNom = (devis.clients as any)?.nom || 'Client'
         const companyName = (devis.companies as any)?.name || 'Notre Entreprise'
 
-        if (clientEmail) {
-          const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.growth-plan.ca'}/portal/devis/${devis.portal_token}`
-          const message = `Bonjour ${clientNom},\n\nNous nous permettons de vous relancer concernant le devis ${devis.numero} (${devis.titre}) d'un montant de ${devis.montant_ttc} $ TTC.\n\nVous pouvez le consulter et l'approuver directement en ligne ici : ${portalUrl}\n\nN'hésitez pas à nous contacter si vous avez la moindre question.\n\nCordialement,\n${companyName}`
+        if (!clientEmail) return false
 
-          if (process.env.RESEND_API_KEY) {
-            try {
-              await fetch('https://api.resend.com/emails', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-                },
-                body: JSON.stringify({
-                  from: process.env.RESEND_FROM || 'noreply@growth-plan.ca',
-                  to: clientEmail,
-                  subject: `[Rappel 24h] Devis ${devis.numero} — ${companyName}`,
-                  text: message,
-                }),
-              })
-            } catch (e) {
-              console.error('[CRON Relance Devis] Erreur email:', e)
-            }
+        const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.growth-plan.ca'}/portal/devis/${devis.portal_token}`
+        const message = `Bonjour ${clientNom},\n\nNous nous permettons de vous relancer concernant le devis ${devis.numero} (${devis.titre}) d'un montant de ${devis.montant_ttc} $ TTC.\n\nVous pouvez le consulter et l'approuver directement en ligne ici : ${portalUrl}\n\nN'hésitez pas à nous contacter si vous avez la moindre question.\n\nCordialement,\n${companyName}`
+
+        if (process.env.RESEND_API_KEY) {
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+              },
+              body: JSON.stringify({
+                from: process.env.RESEND_FROM || 'noreply@growth-plan.ca',
+                to: clientEmail,
+                subject: `[Rappel 24h] Devis ${devis.numero} — ${companyName}`,
+                text: message,
+              }),
+            })
+          } catch (e) {
+            console.error(`[CRON Relance Devis ${devis.numero}] Erreur email:`, e)
           }
-
-          // Historique
-          await supabase.from('relances').insert({
-            company_id: devis.company_id,
-            devis_id: devis.id,
-            canal: 'email',
-            destinataire: clientEmail,
-            message,
-          })
-
-          // Update timestamp pour ne pas relancer en boucle
-          await supabase.from('devis').update({ updated_at: new Date().toISOString() }).eq('id', devis.id)
-          totalDevisRelances++
         }
-      }
+
+        // Historique & timestamp update
+        await supabase.from('relances').insert({
+          company_id: devis.company_id,
+          devis_id: devis.id,
+          canal: 'email',
+          destinataire: clientEmail,
+          message,
+        })
+
+        await supabase.from('devis').update({ updated_at: new Date().toISOString() }).eq('id', devis.id)
+        return true
+      })
+
+      const devisResults = await Promise.allSettled(devisTasks)
+      totalDevisRelances = devisResults.filter(r => r.status === 'fulfilled' && r.value === true).length
     }
 
     // 2. RELANCE AUTOMATIQUE 24H : Factures impayées en retard
@@ -99,46 +101,49 @@ async function handleRelancesAuto() {
       .limit(50)
 
     if (facturesARelancer && facturesARelancer.length > 0) {
-      for (const fac of facturesARelancer) {
+      const facturesTasks = facturesARelancer.map(async (fac) => {
         const clientEmail = (fac.clients as any)?.email
         const clientNom = (fac.clients as any)?.nom || 'Client'
         const companyName = (fac.companies as any)?.name || 'Notre Entreprise'
 
-        if (clientEmail) {
-          const message = `Bonjour ${clientNom},\n\nSauf erreur de notre part, la facture ${fac.numero} d'un montant de ${fac.montant_ttc} $ arrivait à échéance le ${fac.date_echeance}.\n\nMerci d'effectuer le règlement dans les meilleurs délais.\n\nCordialement,\n${companyName}`
+        if (!clientEmail) return false
 
-          if (process.env.RESEND_API_KEY) {
-            try {
-              await fetch('https://api.resend.com/emails', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-                },
-                body: JSON.stringify({
-                  from: process.env.RESEND_FROM || 'noreply@growth-plan.ca',
-                  to: clientEmail,
-                  subject: `[Rappel Échéance] Facture ${fac.numero} — ${companyName}`,
-                  text: message,
-                }),
-              })
-            } catch (e) {
-              console.error('[CRON Relance Factures] Erreur email:', e)
-            }
+        const message = `Bonjour ${clientNom},\n\nSauf erreur de notre part, la facture ${fac.numero} d'un montant de ${fac.montant_ttc} $ arrivait à échéance le ${fac.date_echeance}.\n\nMerci d'effectuer le règlement dans les meilleurs délais.\n\nCordialement,\n${companyName}`
+
+        if (process.env.RESEND_API_KEY) {
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+              },
+              body: JSON.stringify({
+                from: process.env.RESEND_FROM || 'noreply@growth-plan.ca',
+                to: clientEmail,
+                subject: `[Rappel Échéance] Facture ${fac.numero} — ${companyName}`,
+                text: message,
+              }),
+            })
+          } catch (e) {
+            console.error(`[CRON Relance Facture ${fac.numero}] Erreur email:`, e)
           }
-
-          await supabase.from('relances').insert({
-            company_id: fac.company_id,
-            facture_id: fac.id,
-            canal: 'email',
-            destinataire: clientEmail,
-            message,
-          })
-
-          await supabase.from('factures').update({ updated_at: new Date().toISOString() }).eq('id', fac.id)
-          totalFacturesRelances++
         }
-      }
+
+        await supabase.from('relances').insert({
+          company_id: fac.company_id,
+          facture_id: fac.id,
+          canal: 'email',
+          destinataire: clientEmail,
+          message,
+        })
+
+        await supabase.from('factures').update({ updated_at: new Date().toISOString() }).eq('id', fac.id)
+        return true
+      })
+
+      const facturesResults = await Promise.allSettled(facturesTasks)
+      totalFacturesRelances = facturesResults.filter(r => r.status === 'fulfilled' && r.value === true).length
     }
 
     return NextResponse.json({
