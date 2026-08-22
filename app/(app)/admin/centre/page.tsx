@@ -1,11 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import {
   Crosshair, CheckSquare, Users, Crown, Plus, Loader2,
   AlertCircle, CheckCircle2, Circle, Clock, Trash2, X,
-  Zap, Sparkles, Link2, Copy, Check, Mail, ExternalLink, Filter, Calendar
+  Zap, Sparkles, Link2, Copy, Check, Mail, ExternalLink, Filter, Calendar, Search
 } from 'lucide-react'
 
 type Onglet = 'vue' | 'taches' | 'leads'
@@ -325,6 +325,21 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
       }
     } catch (e) {
       console.warn('patchLead network error:', e)
+    }
+  }
+
+  async function deleteLead(id: string) {
+    if (!confirm('Confirmer la suppression définitive de ce lead ?')) return
+    const prev = [...leads]
+    setLeads(l => l.filter(x => x.id !== id))
+    try {
+      const res = await fetch(`/api/admin/saas-leads?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erreur suppression')
+      flashSuccess('Lead supprimé du pipeline.')
+    } catch (err) {
+      console.error('[deleteLead error]', err)
+      alert('Impossible de supprimer ce lead. Restauration...')
+      setLeads(prev)
     }
   }
 
@@ -774,6 +789,36 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
                         setShowExpressTrial(true)
                       }} style={{ ...btnGhost, padding: '7px 10px', fontSize: '11px' }}>
                         <Zap size={12} color="var(--gold)" /> Lien d&apos;Essai
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteLead(l.id)}
+                        title="Supprimer ce lead"
+                        style={{
+                          background: 'transparent',
+                          border: '0.5px solid rgba(239, 68, 68, 0.25)',
+                          borderRadius: '8px',
+                          padding: '7px 9px',
+                          cursor: 'pointer',
+                          color: '#A1A1AA',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = '#F87171'
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.45)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = '#A1A1AA'
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)'
+                        }}
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
