@@ -23,7 +23,11 @@ const FOUNDER_EMAILS = new Set([
 export function canAccessControlCenter(email: string | null | undefined): boolean {
   if (!email) return false
   const e = email.toLowerCase().trim()
-  return isPlatformAdmin(e) || FOUNDER_EMAILS.has(e) || e.endsWith('@growth-plan.ca')
+  return (
+    isPlatformAdmin(e) ||
+    FOUNDER_EMAILS.has(e) ||
+    e.endsWith('@growth-plan.ca')
+  )
 }
 
 /** @deprecated alias — même garde que le centre de contrôle */

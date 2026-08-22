@@ -41,6 +41,7 @@ const NAV_CONSTRUCTION = [
       { href: '/devis',    label: 'Devis',    icon: FileText },
       { href: '/factures', label: 'Factures', icon: Receipt  },
       { href: '/depenses', label: 'Dépenses', icon: Wallet   },
+      { href: '/tarifs',   label: 'Mon Abonnement', icon: Crown },
     ],
   },
   {

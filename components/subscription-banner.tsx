@@ -22,7 +22,6 @@ export default function SubscriptionBanner({ status, trialDaysLeft = 0 }: Subscr
 
   // Essai gratuit en cours
   if (status === 'trialing') {
-    if (trialDaysLeft > 3) return null  // Pas urgent, pas de bannière
     return (
       <div style={{
         background: 'var(--ga)', borderBottom: '0.5px solid var(--gold-3)',
