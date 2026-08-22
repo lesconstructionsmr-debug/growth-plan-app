@@ -15,4 +15,4 @@
 ## 3. Règle d'or de conversation
 Chaque session traite UNE SEULE sous-tâche. Ne jamais mélanger le code d'un module avec un autre.
 - [x] Phase 1-3 validée : Séquenceur atomique, logs Loi 25 et 120 tests unitaires passés.
-- [x] Phase 4 validée : Assignation Responsable (Max / Natasha / Équipe) sur les tâches fondateur, tri intelligent du pipeline commercial adhésion, suppression instantanée des mauvais leads, checkout Stripe immédiat pour essais actifs.
+- [x] Phase 4 validée : Assignation Responsable & Édition complète des tâches fondateur (titre, priorité, échéance, responsable, notes), tri intelligent du pipeline commercial adhésion, suppression instantanée des mauvais leads, checkout Stripe immédiat pour essais actifs.

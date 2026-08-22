@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Crosshair, CheckSquare, Users, Crown, Plus, Loader2,
   AlertCircle, CheckCircle2, Circle, Clock, Trash2, X,
-  Zap, Sparkles, Link2, Copy, Check, Mail, ExternalLink, Filter, Calendar, Search
+  Zap, Sparkles, Link2, Copy, Check, Mail, ExternalLink, Filter, Calendar, Search, Pencil
 } from 'lucide-react'
 
 type Onglet = 'vue' | 'taches' | 'leads'
@@ -169,6 +169,7 @@ export default function ControlCenterPage() {
   
   // Modals state
   const [showTask, setShowTask] = useState(false)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [showLead, setShowLead] = useState(false)
   const [showRoutine, setShowRoutine] = useState(false)
   const [showExpressTrial, setShowExpressTrial] = useState(false)
@@ -291,23 +292,65 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
     setTimeout(() => setSuccessMsg(''), 4000)
   }
 
-  async function createTask(e: React.FormEvent) {
+  function openEditTask(t: Task) {
+    setEditingTaskId(t.id)
+    setTaskForm({
+      titre: t.titre,
+      notes: t.notes || '',
+      priorite: t.priorite || 'normale',
+      due_date: t.due_date || '',
+      lead_id: t.lead_id || '',
+      assigned_to: t.assigned_to || 'Maxime Rochon',
+    })
+    setShowTask(true)
+  }
+
+  async function saveTask(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const r = await fetch('/api/admin/tasks', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(taskForm),
-    })
-    setSaving(false)
-    if (!r.ok) {
-      const d = await r.json().catch(() => ({}))
-      setError(d.error || 'Impossible de créer la tâche')
-      return
+
+    if (editingTaskId) {
+      // ⚡ Mise à jour optimiste instantanée (0 ms)
+      const prevTasks = [...tasks]
+      setTasks(prev => prev.map(t => t.id === editingTaskId ? { ...t, ...taskForm } : t))
+      setShowTask(false)
+
+      try {
+        const res = await fetch('/api/admin/tasks', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingTaskId, ...taskForm }),
+        })
+        if (!res.ok) throw new Error('Erreur lors de la modification')
+        flashSuccess('Tâche modifiée avec succès !')
+        setEditingTaskId(null)
+        setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '', assigned_to: 'Maxime Rochon' })
+        await load(false)
+      } catch (err) {
+        console.error('[saveTask PATCH error]', err)
+        setTasks(prevTasks)
+        setError('Impossible d\'enregistrer les modifications de la tâche')
+      } finally {
+        setSaving(false)
+      }
+    } else {
+      // Mode Création unitaire (POST)
+      const r = await fetch('/api/admin/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskForm),
+      })
+      setSaving(false)
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        setError(d.error || 'Impossible de créer la tâche')
+        return
+      }
+      setShowTask(false)
+      setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '', assigned_to: 'Maxime Rochon' })
+      flashSuccess('Tâche créée avec succès !')
+      await load(false)
     }
-    setShowTask(false)
-    setTaskForm({ titre: '', notes: '', priorite: 'normale', due_date: '', lead_id: '', assigned_to: 'Maxime Rochon' })
-    flashSuccess('Tâche créée avec succès !')
-    await load(false)
   }
 
   async function patchTask(id: string, patch: Partial<Task>) {
@@ -655,9 +698,14 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
                             {linkedLead && <span style={{ color: 'var(--gold-2)', fontWeight: 600 }}>👤 {linkedLead.nom}</span>}
                           </div>
                         </div>
-                        <button type="button" onClick={() => patchTask(t.id, { statut: 'fait' })} style={{ ...btnGhost, padding: '4px 8px', fontSize: '10px' }}>
-                          Fait
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button type="button" onClick={() => openEditTask(t)} title="Modifier cette tâche" style={{ ...btnGhost, padding: '4px 6px', fontSize: '10px' }}>
+                            <Pencil size={11} />
+                          </button>
+                          <button type="button" onClick={() => patchTask(t.id, { statut: 'fait' })} style={{ ...btnGhost, padding: '4px 8px', fontSize: '10px' }}>
+                            Fait
+                          </button>
+                        </div>
                       </div>
                     )
                   })}
@@ -787,7 +835,36 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
                         style={{ ...inp, width: 'auto', fontSize: '11px', padding: '6px 8px' }}>
                         {Object.entries(TASK_STATUT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                       </select>
-                      <button type="button" onClick={() => deleteTask(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}>
+                      <button
+                        type="button"
+                        onClick={() => openEditTask(t)}
+                        title="Modifier cette tâche"
+                        style={{
+                          background: 'transparent',
+                          border: '0.5px solid rgba(234, 179, 8, 0.25)',
+                          borderRadius: '8px',
+                          padding: '6px 8px',
+                          cursor: 'pointer',
+                          color: '#A1A1AA',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = '#FACC15'
+                          e.currentTarget.style.background = 'rgba(234, 179, 8, 0.15)'
+                          e.currentTarget.style.borderColor = 'rgba(234, 179, 8, 0.5)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = '#A1A1AA'
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.borderColor = 'rgba(234, 179, 8, 0.25)'
+                        }}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button type="button" onClick={() => deleteTask(t.id)} title="Supprimer cette tâche" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -996,8 +1073,11 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
 
       {/* MODAL 1: CRÉER / MODIFIER TÂCHE */}
       {showTask && (
-        <Modal title={taskForm.lead_id ? "Tâche de suivi Lead" : "Nouvelle tâche fondateur"} onClose={() => setShowTask(false)}>
-          <form onSubmit={createTask} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <Modal
+          title={editingTaskId ? "Modifier la tâche fondateur" : (taskForm.lead_id ? "Tâche de suivi Lead" : "Nouvelle tâche fondateur")}
+          onClose={() => { setShowTask(false); setEditingTaskId(null); }}
+        >
+          <form onSubmit={saveTask} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={labelSt}>Titre de la tâche *</label>
               <input required value={taskForm.titre} onChange={e => setTaskForm(f => ({ ...f, titre: e.target.value }))}
@@ -1028,8 +1108,8 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
                 rows={3} placeholder="Numéro à composer, points d'accord, forfaits discutés…" style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
             <button type="submit" disabled={saving} style={btnGold}>
-              {saving ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Plus size={14} />}
-              Créer la tâche
+              {saving ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : (editingTaskId ? <Check size={14} /> : <Plus size={14} />)}
+              {editingTaskId ? "Enregistrer les modifications" : "Créer la tâche"}
             </button>
           </form>
         </Modal>
