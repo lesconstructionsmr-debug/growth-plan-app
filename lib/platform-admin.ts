@@ -11,13 +11,12 @@ export function isPlatformAdmin(email: string | null | undefined): boolean {
   return platformAdminEmails().has(email.toLowerCase())
 }
 
-const FOUNDER_EMAILS = new Set(['max@growth-plan.ca', 'peinture.jtl@gmail.com', 'natasha.heon@gmail.com'])
+const FOUNDER_EMAILS = new Set(['max@growth-plan.ca'])
 
 /** Centre de contrôle Plan Growth (tâches, leads d'adhésion, abonnés) */
 export function canAccessControlCenter(email: string | null | undefined): boolean {
   if (!email) return false
   const e = email.toLowerCase()
-  if (process.env.NODE_ENV === 'development') return true
   return isPlatformAdmin(e) || FOUNDER_EMAILS.has(e) || e.endsWith('@growth-plan.ca')
 }
 

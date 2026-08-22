@@ -455,6 +455,7 @@ export default function ParametresPage() {
   const [vertical, setVertical] = useState<'construction' | 'agence'>('construction')
   const [agenceEnabled, setAgenceEnabled] = useState(false)
   const [updatingVertical, setUpdatingVertical] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const supabase = getBrowserClient()
 
@@ -917,26 +918,52 @@ export default function ParametresPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-1)', borderRadius: '8px', border: '0.5px solid var(--line)' }}>
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Exporter mes données</div>
-                    <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Télécharger toutes vos données en format JSON (droit à la portabilité)</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--txt-1)' }}>Exporter mes données (JSON)</div>
+                    <div style={{ fontSize: '11px', color: 'var(--txt-3)' }}>Télécharger toutes vos données en format JSON (droit à la portabilité — Loi 25)</div>
                   </div>
                   <button
+                    disabled={isExporting}
                     onClick={async () => {
+                      if (isExporting) return
+                      setIsExporting(true)
                       try {
-                        const res = await fetch('/api/admin/export-data')
-                        if (!res.ok) { const e = await res.json(); alert(e.error ?? 'Erreur export'); return }
+                        const res = await fetch('/api/account/export')
+                        if (!res.ok) {
+                          const e = await res.json().catch(() => ({}))
+                          alert(e.error ?? 'Erreur lors de l’exportation des données.')
+                          return
+                        }
                         const blob = await res.blob()
+                        const disposition = res.headers.get('Content-Disposition')
+                        let filename = `export-erp-${new Date().toISOString().split('T')[0]}.json`
+                        if (disposition && disposition.includes('filename=')) {
+                          const match = disposition.match(/filename="?([^";]+)"?/)
+                          if (match && match[1]) filename = match[1]
+                        }
                         const url = URL.createObjectURL(blob)
                         const a = document.createElement('a')
                         a.href = url
-                        a.download = `growth-plan-export-${new Date().toISOString().split('T')[0]}.json`
+                        a.download = filename
+                        document.body.appendChild(a)
                         a.click()
+                        a.remove()
                         URL.revokeObjectURL(url)
-                      } catch { alert('Erreur réseau lors de l\'export') }
+                      } catch {
+                        alert('Erreur réseau lors de l’exportation.')
+                      } finally {
+                        setIsExporting(false)
+                      }
                     }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--blue)18', border: '0.5px solid var(--blue)', borderRadius: '7px', padding: '7px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--blue)', cursor: 'pointer' }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      background: 'var(--blue)18', border: '0.5px solid var(--blue)',
+                      borderRadius: '7px', padding: '7px 12px', fontSize: '11px',
+                      fontWeight: 600, color: 'var(--blue)', cursor: isExporting ? 'default' : 'pointer',
+                      opacity: isExporting ? 0.7 : 1,
+                    }}
                   >
-                    <Download size={12} /> Exporter
+                    {isExporting ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Download size={12} />}
+                    {isExporting ? 'Exportation…' : 'Exporter mes données (JSON)'}
                   </button>
                 </div>
 
