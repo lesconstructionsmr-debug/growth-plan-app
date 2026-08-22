@@ -19,3 +19,4 @@ Chaque session traite UNE SEULE sous-tâche. Ne jamais mélanger le code d'un mo
 - [x] Phase 5 validée : Correction définitive Stripe Checkout (frais uniques d'adhésion sous line_items racines, élimination de add_invoice_items obsolète), suppression du fallback d'essai silencieux, activation et débit immédiat.
 - [x] Phase 6 validée : Facturation Stripe mensuelle avec engagement contractuel de 12 mois (1er versement : 500 $ adhésion + 1er mois, récurrence mensuelle automatique).
 - [x] Phase 7 validée : Refactorisation DRY & Anti-Bloat — Centralisation du formatage CAD et dates dans lib/format.ts, élimination des duplications locales de helpers et suppression des mocks résiduels.
+- [x] Phase 8 validée : Studio Split-Screen — Espace de travail double panneau unifié (Chat Client multi-canal ↔ Éditeur Devis/Facture 8 sections, calcul des marges de profit en temps réel et layout responsive).
