@@ -4,7 +4,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
-const STATUTS = new Set(['incomplet', 'nouveau', 'contacte', 'qualifie', 'essai', 'client', 'perdu'])
+const STATUTS = new Set([
+  'incomplet',
+  'nouveau',
+  'tentative_1',
+  'tentative_2',
+  'contacte',
+  'qualifie',
+  'essai',
+  'en_attente_paiement',
+  'client',
+  'perdu',
+  'sans_suite',
+])
 const BESOINS = new Set(['structure_numerique', 'optimisation', 'les_deux', 'autre'])
 
 function scoreFromAnswers(besoin?: string, taille?: string): number {

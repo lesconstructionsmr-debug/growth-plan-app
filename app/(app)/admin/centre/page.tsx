@@ -60,13 +60,17 @@ const PRIORITE: Record<string, { label: string; color: string }> = {
   urgente: { label: 'Urgente', color: 'var(--red)' },
 }
 const LEAD_STATUT: Record<string, { label: string; color: string }> = {
-  incomplet: { label: 'Incomplet / Abandon ⚠️', color: 'var(--amber)' },
-  nouveau: { label: 'Nouveau', color: 'var(--txt-3)' },
-  contacte: { label: 'Contacté', color: 'var(--blue)' },
-  qualifie: { label: 'Qualifié', color: 'var(--amber)' },
-  essai: { label: 'Essai', color: 'var(--purple, #8B5CF6)' },
-  client: { label: 'Client', color: 'var(--green)' },
-  perdu: { label: 'Perdu', color: 'var(--red)' },
+  incomplet: { label: '⚠️ Abandon formulaire', color: 'var(--amber)' },
+  nouveau: { label: '📥 Nouveau lead', color: 'var(--txt-3)' },
+  tentative_1: { label: '📞 1re tentative d\'appel', color: 'var(--blue)' },
+  tentative_2: { label: '🔄 2e tentative d\'appel', color: '#F97316' },
+  contacte: { label: '💬 Contacté / Échange', color: '#0EA5E9' },
+  qualifie: { label: '🎯 Qualifié / Démo', color: 'var(--gold)' },
+  essai: { label: '🚀 Essai actif (14j)', color: '#8B5CF6' },
+  en_attente_paiement: { label: '💳 En attente paiement', color: '#EC4899' },
+  client: { label: '🎉 Adhésion confirmée', color: 'var(--green)' },
+  perdu: { label: '❌ Perdu / Pas intéressé', color: 'var(--red)' },
+  sans_suite: { label: '💤 Sans suite / Injoignable', color: 'var(--txt-3)' },
 }
 const BESOIN: Record<string, string> = {
   structure_numerique: 'Structure numérique',
@@ -356,7 +360,7 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
 
   const openTasks = tasks.filter(t => t.statut === 'a_faire' || t.statut === 'en_cours')
   const overdueTasks = openTasks.filter(t => t.due_date && t.due_date < todayStr)
-  const pipelineLeads = leads.filter(l => !['client', 'perdu'].includes(l.statut))
+  const pipelineLeads = leads.filter(l => !['client', 'perdu', 'sans_suite'].includes(l.statut))
 
   const filteredTasks = tasks.filter(t => {
     if (taskFilter === 'retard') return t.due_date && t.due_date < todayStr && t.statut !== 'fait'
@@ -730,8 +734,26 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <select value={l.statut} onChange={e => patchLead(l.id, { statut: e.target.value })}
-                        style={{ ...inp, width: '150px', fontSize: '11px', color: st.color, fontWeight: 700 }}>
-                        {Object.entries(LEAD_STATUT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                        style={{ ...inp, width: '185px', fontSize: '11px', color: st.color, fontWeight: 700, cursor: 'pointer' }}>
+                        <optgroup label="📥 Entrée & Incomplets">
+                          <option value="incomplet">{LEAD_STATUT.incomplet?.label || '⚠️ Abandon formulaire'}</option>
+                          <option value="nouveau">{LEAD_STATUT.nouveau?.label || '📥 Nouveau lead'}</option>
+                        </optgroup>
+                        <optgroup label="📞 Prospection & Relances">
+                          <option value="tentative_1">{LEAD_STATUT.tentative_1?.label || '📞 1re tentative d\'appel'}</option>
+                          <option value="tentative_2">{LEAD_STATUT.tentative_2?.label || '🔄 2e tentative d\'appel'}</option>
+                          <option value="contacte">{LEAD_STATUT.contacte?.label || '💬 Contacté / Échange'}</option>
+                        </optgroup>
+                        <optgroup label="🎯 Démo & Essai">
+                          <option value="qualifie">{LEAD_STATUT.qualifie?.label || '🎯 Qualifié / Démo'}</option>
+                          <option value="essai">{LEAD_STATUT.essai?.label || '🚀 Essai actif (14j)'}</option>
+                          <option value="en_attente_paiement">{LEAD_STATUT.en_attente_paiement?.label || '💳 En attente paiement'}</option>
+                        </optgroup>
+                        <optgroup label="🏁 Clôture">
+                          <option value="client">{LEAD_STATUT.client?.label || '🎉 Adhésion confirmée'}</option>
+                          <option value="perdu">{LEAD_STATUT.perdu?.label || '❌ Perdu / Pas intéressé'}</option>
+                          <option value="sans_suite">{LEAD_STATUT.sans_suite?.label || '💤 Sans suite / Injoignable'}</option>
+                        </optgroup>
                       </select>
 
                       <button type="button" onClick={() => openFollowUpTaskForLead(l)} style={btnGhostAccent}>
