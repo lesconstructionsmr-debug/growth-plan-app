@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
       })),
       ...rawPlatform.map((l: any) => ({
         id: l.id,
-        nom: l.entreprise ? `${l.nom} (${l.entreprise})` : l.nom,
-        entreprise: l.source || 'Landing Page — Audit ROI',
+        nom: l.entreprise && !l.nom.includes(`(${l.entreprise})`) ? `${l.nom} (${l.entreprise})` : l.nom,
+        entreprise: l.entreprise || l.source || 'Landing Page — Audit ROI',
         telephone: l.telephone || undefined,
         email: l.email || undefined,
         montant_estime: undefined,
