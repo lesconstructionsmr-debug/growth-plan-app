@@ -309,13 +309,19 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
     // ⚡ Mise à jour optimiste instantanée du statut (0 ms de délai visuel, aucun écran de chargement)
     setLeads(prev => prev.map(l => l.id === id ? { ...l, ...patch } : l))
     try {
-      await fetch('/api/admin/saas-leads', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      const res = await fetch('/api/admin/saas-leads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...patch }),
       })
-      await load(false)
+      if (res.ok) {
+        const updated = await res.json()
+        if (updated && typeof updated === 'object' && 'id' in updated) {
+          setLeads(prev => prev.map(l => l.id === id ? { ...l, ...updated } : l))
+        }
+      }
     } catch (e) {
-      await load(false)
+      console.warn('patchLead network error:', e)
     }
   }
 
