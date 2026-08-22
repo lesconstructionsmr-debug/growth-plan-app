@@ -166,18 +166,46 @@ export default function LeadsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Voulez-vous vraiment supprimer ce lead ?')) return
-    await supabase.from('leads').delete().eq('id', id)
+    if (!confirm('Voulez-vous vraiment supprimer définitivement ce lead ?')) return
+    
+    const previousLeads = [...leads]
+    // Mise à jour optimiste immédiate (0 ms)
+    setLeads(prev => prev.filter(l => l.id !== id))
     setShowModal(false)
-    loadLeads()
+
+    try {
+      const res = await fetch(`/api/leads/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Erreur lors de la suppression')
+    } catch (err) {
+      console.error('[handleDelete Error]', err)
+      alert('Impossible de supprimer ce lead. Restauration...')
+      setLeads(previousLeads)
+    }
   }
 
   async function handleBatchDelete() {
     if (selectedIds.length === 0) return
-    if (!confirm(`Voulez-vous vraiment supprimer les ${selectedIds.length} leads sélectionnés ?`)) return
-    await supabase.from('leads').delete().in('id', selectedIds)
+    if (!confirm(`Voulez-vous vraiment supprimer définitivement les ${selectedIds.length} leads sélectionnés ?`)) return
+    
+    const previousLeads = [...leads]
+    const idsToDelete = [...selectedIds]
+    
+    // Mise à jour optimiste immédiate
+    setLeads(prev => prev.filter(l => !idsToDelete.includes(l.id)))
     setSelectedIds([])
-    loadLeads()
+
+    try {
+      const res = await fetch('/api/leads/batch-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: idsToDelete }),
+      })
+      if (!res.ok) throw new Error('Erreur lors de la suppression multiple')
+    } catch (err) {
+      console.error('[handleBatchDelete Error]', err)
+      alert('Impossible de supprimer les leads sélectionnés. Restauration...')
+      setLeads(previousLeads)
+    }
   }
 
   const filtered = leads.filter(l =>
