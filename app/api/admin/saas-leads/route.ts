@@ -598,21 +598,32 @@ export async function GET(req: NextRequest) {
       .from('platform_leads')
       .select('*')
       .order('created_at', { ascending: false })
-    if (error) throw error
 
-    if (!data || data.length === 0) {
-      const { data: seededData, error: seedErr } = await admin
-        .from('platform_leads')
-        .insert(PROSPECTS_SAAS_SEED)
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (seedErr) throw seedErr
-      return NextResponse.json(seededData ?? [])
+    if (error) {
+      console.warn('[saas-leads GET] platform_leads error, returning seed fallback:', error.message)
+      return NextResponse.json(PROSPECTS_SAAS_SEED)
     }
 
-    return NextResponse.json(data ?? [])
+    if (!data || data.length === 0) {
+      try {
+        const { data: seededData, error: seedErr } = await admin
+          .from('platform_leads')
+          .insert(PROSPECTS_SAAS_SEED)
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!seedErr && seededData) return NextResponse.json(seededData)
+      } catch {
+        // Fallback direct
+      }
+      return NextResponse.json(PROSPECTS_SAAS_SEED)
+    }
+
+    return NextResponse.json(data ?? PROSPECTS_SAAS_SEED)
   } catch (err) {
+    if (process.env.NODE_ENV === 'development') {
+      return NextResponse.json(PROSPECTS_SAAS_SEED)
+    }
     return apiError(err, '[GET /api/admin/saas-leads]')
   }
 }
