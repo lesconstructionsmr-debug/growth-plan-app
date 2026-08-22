@@ -61,9 +61,12 @@ const PRIORITE: Record<string, { label: string; color: string }> = {
 }
 const LEAD_STATUT: Record<string, { label: string; color: string }> = {
   incomplet: { label: '⚠️ Abandon formulaire', color: 'var(--amber)' },
+  abandon: { label: '⚠️ Abandon formulaire', color: 'var(--amber)' },
   nouveau: { label: '📥 Nouveau lead', color: 'var(--txt-3)' },
   tentative_1: { label: '📞 1re tentative d\'appel', color: 'var(--blue)' },
+  essai_1: { label: '📞 1re tentative d\'appel', color: 'var(--blue)' },
   tentative_2: { label: '🔄 2e tentative d\'appel', color: '#F97316' },
+  essai_2: { label: '🔄 2e tentative d\'appel', color: '#F97316' },
   contacte: { label: '💬 Contacté / Échange', color: '#0EA5E9' },
   qualifie: { label: '🎯 Qualifié / Démo', color: 'var(--gold)' },
   essai: { label: '🚀 Essai actif (14j)', color: '#8B5CF6' },
@@ -740,25 +743,25 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <select value={l.statut} onChange={e => patchLead(l.id, { statut: e.target.value })}
-                        style={{ ...inp, width: '185px', fontSize: '11px', color: st.color, fontWeight: 700, cursor: 'pointer' }}>
-                        <optgroup label="📥 Entrée & Incomplets">
-                          <option value="incomplet">{LEAD_STATUT.incomplet?.label || '⚠️ Abandon formulaire'}</option>
-                          <option value="nouveau">{LEAD_STATUT.nouveau?.label || '📥 Nouveau lead'}</option>
+                        style={{ ...inp, width: '205px', fontSize: '11px', color: st.color, fontWeight: 700, cursor: 'pointer', background: 'var(--bg-2, #18181B)' }}>
+                        <optgroup label="📥 Entrée & Incomplets" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                          <option value="incomplet" style={{ background: '#18181B', color: '#F59E0B' }}>{LEAD_STATUT.incomplet?.label || '⚠️ Abandon formulaire'}</option>
+                          <option value="nouveau" style={{ background: '#18181B', color: '#A1A1AA' }}>{LEAD_STATUT.nouveau?.label || '📥 Nouveau lead'}</option>
                         </optgroup>
-                        <optgroup label="📞 Prospection & Relances">
-                          <option value="tentative_1">{LEAD_STATUT.tentative_1?.label || '📞 1re tentative d\'appel'}</option>
-                          <option value="tentative_2">{LEAD_STATUT.tentative_2?.label || '🔄 2e tentative d\'appel'}</option>
-                          <option value="contacte">{LEAD_STATUT.contacte?.label || '💬 Contacté / Échange'}</option>
+                        <optgroup label="📞 Prospection & Relances" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                          <option value="tentative_1" style={{ background: '#18181B', color: '#60A5FA' }}>{LEAD_STATUT.tentative_1?.label || '📞 1re tentative d\'appel'}</option>
+                          <option value="tentative_2" style={{ background: '#18181B', color: '#FB923C' }}>{LEAD_STATUT.tentative_2?.label || '🔄 2e tentative d\'appel'}</option>
+                          <option value="contacte" style={{ background: '#18181B', color: '#38BDF8' }}>{LEAD_STATUT.contacte?.label || '💬 Contacté / Échange'}</option>
                         </optgroup>
-                        <optgroup label="🎯 Démo & Essai">
-                          <option value="qualifie">{LEAD_STATUT.qualifie?.label || '🎯 Qualifié / Démo'}</option>
-                          <option value="essai">{LEAD_STATUT.essai?.label || '🚀 Essai actif (14j)'}</option>
-                          <option value="en_attente_paiement">{LEAD_STATUT.en_attente_paiement?.label || '💳 En attente paiement'}</option>
+                        <optgroup label="🎯 Démo & Essai" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                          <option value="qualifie" style={{ background: '#18181B', color: '#FACC15' }}>{LEAD_STATUT.qualifie?.label || '🎯 Qualifié / Démo'}</option>
+                          <option value="essai" style={{ background: '#18181B', color: '#C084FC' }}>{LEAD_STATUT.essai?.label || '🚀 Essai actif (14j)'}</option>
+                          <option value="en_attente_paiement" style={{ background: '#18181B', color: '#F472B6' }}>{LEAD_STATUT.en_attente_paiement?.label || '💳 En attente paiement'}</option>
                         </optgroup>
-                        <optgroup label="🏁 Clôture">
-                          <option value="client">{LEAD_STATUT.client?.label || '🎉 Adhésion confirmée'}</option>
-                          <option value="perdu">{LEAD_STATUT.perdu?.label || '❌ Perdu / Pas intéressé'}</option>
-                          <option value="sans_suite">{LEAD_STATUT.sans_suite?.label || '💤 Sans suite / Injoignable'}</option>
+                        <optgroup label="🏁 Clôture" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                          <option value="client" style={{ background: '#18181B', color: '#4ADE80' }}>{LEAD_STATUT.client?.label || '🎉 Adhésion confirmée'}</option>
+                          <option value="perdu" style={{ background: '#18181B', color: '#F87171' }}>{LEAD_STATUT.perdu?.label || '❌ Perdu / Pas intéressé'}</option>
+                          <option value="sans_suite" style={{ background: '#18181B', color: '#71717A' }}>{LEAD_STATUT.sans_suite?.label || '💤 Sans suite / Injoignable'}</option>
                         </optgroup>
                       </select>
 

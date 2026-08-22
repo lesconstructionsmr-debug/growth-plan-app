@@ -6,9 +6,12 @@ export const dynamic = 'force-dynamic'
 
 const STATUTS = new Set([
   'incomplet',
+  'abandon',
   'nouveau',
   'tentative_1',
+  'essai_1',
   'tentative_2',
+  'essai_2',
   'contacte',
   'qualifie',
   'essai',
