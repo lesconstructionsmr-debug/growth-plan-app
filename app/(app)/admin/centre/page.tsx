@@ -43,6 +43,7 @@ interface Lead {
   taille_equipe: string | null
   score: number | null
   notes: string | null
+  created_at?: string | null
   utm_source?: string | null
   utm_medium?: string | null
   utm_campaign?: string | null
@@ -81,6 +82,25 @@ const BESOIN: Record<string, string> = {
   les_deux: 'Les deux',
   autre: 'Autre',
 }
+
+const PIPELINE_PRIORITY: Record<string, number> = {
+  qualifie: 1,              // 🎯 Qualifié / Démo (closing imminent)
+  contacte: 2,              // 💬 Contacté / Échange
+  tentative_1: 2,           // 📞 1re tentative
+  essai_1: 2,
+  tentative_2: 2,           // 🔄 2e tentative
+  essai_2: 2,
+  nouveau: 3,               // 📥 Nouveau lead
+  incomplet: 3,             // ⚠️ Abandon formulaire
+  abandon: 3,
+  essai: 4,                 // 🚀 Essai actif (14j)
+  en_attente_paiement: 4,   // 💳 En attente paiement
+  client: 5,                // 🎉 Adhésion confirmée / Client
+  perdu: 6,                 // ❌ Perdu
+  sans_suite: 6,            // 💤 Sans suite
+}
+
+type LeadFilterCategory = 'tous' | 'qualifie' | 'contacte' | 'nouveau' | 'essai' | 'client' | 'perdu'
 
 // Templates de routines pré-configurées pour le fondateur
 const ROUTINE_TEMPLATES = [
@@ -163,7 +183,59 @@ export default function ControlCenterPage() {
   // Filter tasks
   const [taskFilter, setTaskFilter] = useState<'toutes' | 'retard' | 'urgente' | 'faites'>('toutes')
 
+  // Filter & Search leads
+  const [leadFilter, setLeadFilter] = useState<LeadFilterCategory>('tous')
+  const [leadSearch, setLeadSearch] = useState('')
+
   const todayStr = new Date().toISOString().split('T')[0]
+
+  // Compteurs dynamiques par catégorie de statut
+  const leadCategoryCounts = useMemo(() => {
+    return {
+      tous: leads.length,
+      qualifie: leads.filter(l => l.statut === 'qualifie').length,
+      contacte: leads.filter(l => ['contacte', 'tentative_1', 'tentative_2', 'essai_1', 'essai_2'].includes(l.statut)).length,
+      nouveau: leads.filter(l => ['nouveau', 'incomplet', 'abandon'].includes(l.statut)).length,
+      essai: leads.filter(l => ['essai', 'en_attente_paiement'].includes(l.statut)).length,
+      client: leads.filter(l => l.statut === 'client').length,
+      perdu: leads.filter(l => ['perdu', 'sans_suite'].includes(l.statut)).length,
+    }
+  }, [leads])
+
+  // Tri strict par pipeline + score + date et filtre dynamique
+  const sortedAndFilteredLeads = useMemo(() => {
+    let list = [...leads]
+
+    if (leadFilter === 'qualifie') list = list.filter(l => l.statut === 'qualifie')
+    else if (leadFilter === 'contacte') list = list.filter(l => ['contacte', 'tentative_1', 'tentative_2', 'essai_1', 'essai_2'].includes(l.statut))
+    else if (leadFilter === 'nouveau') list = list.filter(l => ['nouveau', 'incomplet', 'abandon'].includes(l.statut))
+    else if (leadFilter === 'essai') list = list.filter(l => ['essai', 'en_attente_paiement'].includes(l.statut))
+    else if (leadFilter === 'client') list = list.filter(l => l.statut === 'client')
+    else if (leadFilter === 'perdu') list = list.filter(l => ['perdu', 'sans_suite'].includes(l.statut))
+
+    if (leadSearch.trim()) {
+      const q = leadSearch.toLowerCase().trim()
+      list = list.filter(l =>
+        l.nom.toLowerCase().includes(q) ||
+        (l.entreprise || '').toLowerCase().includes(q) ||
+        (l.email || '').toLowerCase().includes(q) ||
+        (l.telephone || '').toLowerCase().includes(q) ||
+        (l.notes || '').toLowerCase().includes(q)
+      )
+    }
+
+    return list.sort((a, b) => {
+      const pA = PIPELINE_PRIORITY[a.statut] ?? 99
+      const pB = PIPELINE_PRIORITY[b.statut] ?? 99
+      if (pA !== pB) return pA - pB
+      const sA = a.score ?? 0
+      const sB = b.score ?? 0
+      if (sA !== sB) return sB - sA
+      const dA = new Date(a.created_at || '').getTime() || 0
+      const dB = new Date(b.created_at || '').getTime() || 0
+      return dB - dA
+    })
+  }, [leads, leadFilter, leadSearch])
 
 const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
 
@@ -709,121 +781,196 @@ const DEFAULT_RBQ_LEADS_FALLBACK: Lead[] = []
 
           {/* ONGLET 3: LEADS ADHÉSION */}
           {onglet === 'leads' && (
-            <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
-              {leads.length === 0 ? <Empty text="Aucun lead d'adhésion pour le moment. Utilise le générer d'essai express pour en créer un." pad /> : leads.map(l => {
-                const st = LEAD_STATUT[l.statut] ?? LEAD_STATUT.nouveau
-                return (
-                  <div key={l.id} style={{
-                    padding: '16px 18px', borderBottom: '0.5px solid var(--line)',
-                    display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap',
-                    background: l.statut === 'incomplet' ? 'rgba(245,158,11,0.03)' : 'transparent'
-                  }}>
-                    <div style={{ flex: 1, minWidth: '220px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)' }}>{l.nom}</span>
-                        {l.entreprise && <span style={{ fontSize: '12px', color: 'var(--txt-3)' }}>— {l.entreprise}</span>}
-                        {l.statut === 'incomplet' && (
-                          <span style={{
-                            background: 'rgba(245,158,11,0.15)', color: 'var(--amber)',
-                            border: '0.5px solid rgba(245,158,11,0.4)', borderRadius: '6px',
-                            padding: '1px 6px', fontSize: '9px', fontWeight: 800
-                          }}>
-                            ⚠️ ABANDON FORMULAIRE
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '3px' }}>
-                        {[l.email, l.telephone].filter(Boolean).join(' · ')}
-                      </div>
-
-                      {/* UTM Parameters & Source Badges */}
-                      <div style={{ fontSize: '10px', color: 'var(--txt-2)', marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span>Besoin: {l.besoin ? BESOIN[l.besoin] || l.besoin : '—'}</span>
-                        {l.taille_equipe && <span>Équipe: {l.taille_equipe}</span>}
-                        {l.score != null && <span style={{ color: 'var(--gold-2)', fontWeight: 700 }}>Score: {l.score}/100</span>}
-                        {l.source && <span style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', padding: '1px 6px', borderRadius: '4px' }}>Source: {l.source}</span>}
-                        {l.utm_source && (
-                          <span style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue)', border: '0.5px solid rgba(59,130,246,0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                            📱 Ads: {l.utm_source}{l.utm_campaign ? ` (${l.utm_campaign})` : ''}
-                          </span>
-                        )}
-                        {l.abandoned_at && (
-                          <span style={{ color: 'var(--amber)', fontSize: '10px' }}>
-                            · Abandonné le {new Date(l.abandoned_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                      {l.notes && <div style={{ fontSize: '11px', color: 'var(--txt-2)', marginTop: '4px' }}>{l.notes}</div>}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <select value={l.statut} onChange={e => patchLead(l.id, { statut: e.target.value })}
-                        style={{ ...inp, width: '205px', fontSize: '11px', color: st.color, fontWeight: 700, cursor: 'pointer', background: 'var(--bg-2, #18181B)' }}>
-                        <optgroup label="📥 Entrée & Incomplets" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
-                          <option value="incomplet" style={{ background: '#18181B', color: '#F59E0B' }}>{LEAD_STATUT.incomplet?.label || '⚠️ Abandon formulaire'}</option>
-                          <option value="nouveau" style={{ background: '#18181B', color: '#A1A1AA' }}>{LEAD_STATUT.nouveau?.label || '📥 Nouveau lead'}</option>
-                        </optgroup>
-                        <optgroup label="📞 Prospection & Relances" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
-                          <option value="tentative_1" style={{ background: '#18181B', color: '#60A5FA' }}>{LEAD_STATUT.tentative_1?.label || '📞 1re tentative d\'appel'}</option>
-                          <option value="tentative_2" style={{ background: '#18181B', color: '#FB923C' }}>{LEAD_STATUT.tentative_2?.label || '🔄 2e tentative d\'appel'}</option>
-                          <option value="contacte" style={{ background: '#18181B', color: '#38BDF8' }}>{LEAD_STATUT.contacte?.label || '💬 Contacté / Échange'}</option>
-                        </optgroup>
-                        <optgroup label="🎯 Démo & Essai" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
-                          <option value="qualifie" style={{ background: '#18181B', color: '#FACC15' }}>{LEAD_STATUT.qualifie?.label || '🎯 Qualifié / Démo'}</option>
-                          <option value="essai" style={{ background: '#18181B', color: '#C084FC' }}>{LEAD_STATUT.essai?.label || '🚀 Essai actif (14j)'}</option>
-                          <option value="en_attente_paiement" style={{ background: '#18181B', color: '#F472B6' }}>{LEAD_STATUT.en_attente_paiement?.label || '💳 En attente paiement'}</option>
-                        </optgroup>
-                        <optgroup label="🏁 Clôture" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
-                          <option value="client" style={{ background: '#18181B', color: '#4ADE80' }}>{LEAD_STATUT.client?.label || '🎉 Adhésion confirmée'}</option>
-                          <option value="perdu" style={{ background: '#18181B', color: '#F87171' }}>{LEAD_STATUT.perdu?.label || '❌ Perdu / Pas intéressé'}</option>
-                          <option value="sans_suite" style={{ background: '#18181B', color: '#71717A' }}>{LEAD_STATUT.sans_suite?.label || '💤 Sans suite / Injoignable'}</option>
-                        </optgroup>
-                      </select>
-
-                      <button type="button" onClick={() => openFollowUpTaskForLead(l)} style={btnGhostAccent}>
-                        <Clock size={12} /> ⚡ Tâche de suivi
-                      </button>
-
-                      <button type="button" onClick={() => {
-                        setTrialProspect({ nom: l.nom, email: l.email || '', entreprise: l.entreprise || '' })
-                        setShowExpressTrial(true)
-                      }} style={{ ...btnGhost, padding: '7px 10px', fontSize: '11px' }}>
-                        <Zap size={12} color="var(--gold)" /> Lien d&apos;Essai
-                      </button>
-
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              
+              {/* Barre de Filtres & Recherche */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                
+                {/* Pilules de filtres par statut */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {[
+                    { id: 'tous',     label: 'Tous',                     count: leadCategoryCounts.tous,     color: 'var(--gold)' },
+                    { id: 'qualifie', label: '🎯 Qualifiés / Démos',     count: leadCategoryCounts.qualifie, color: 'var(--gold)' },
+                    { id: 'contacte', label: '💬 En discussion',          count: leadCategoryCounts.contacte, color: '#38BDF8' },
+                    { id: 'nouveau',  label: '📥 Nouveaux & Abandons',    count: leadCategoryCounts.nouveau,  color: '#FB923C' },
+                    { id: 'essai',    label: '🚀 Essais & Closing',       count: leadCategoryCounts.essai,    color: '#C084FC' },
+                    { id: 'client',   label: '🎉 Clients',               count: leadCategoryCounts.client,   color: '#4ADE80' },
+                    { id: 'perdu',    label: '💤 Clôturés',              count: leadCategoryCounts.perdu,    color: '#A1A1AA' },
+                  ].map(f => {
+                    const active = leadFilter === f.id
+                    return (
                       <button
+                        key={f.id}
                         type="button"
-                        onClick={() => deleteLead(l.id)}
-                        title="Supprimer ce lead"
+                        onClick={() => setLeadFilter(f.id as LeadFilterCategory)}
                         style={{
-                          background: 'transparent',
-                          border: '0.5px solid rgba(239, 68, 68, 0.25)',
-                          borderRadius: '8px',
-                          padding: '7px 9px',
-                          cursor: 'pointer',
-                          color: '#A1A1AA',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.15s ease',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.color = '#F87171'
-                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
-                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.45)'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = '#A1A1AA'
-                          e.currentTarget.style.background = 'transparent'
-                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)'
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: active ? 700 : 500,
+                          cursor: 'pointer', transition: 'all 0.15s ease',
+                          background: active ? `${f.color}22` : 'var(--bg-1)',
+                          color: active ? f.color : 'var(--txt-2)',
+                          border: active ? `1px solid ${f.color}66` : '0.5px solid var(--line)',
                         }}
                       >
-                        <Trash2 size={13} />
+                        <span>{f.label}</span>
+                        <span style={{
+                          background: active ? f.color : 'var(--bg-2)',
+                          color: active ? '#0A0A0A' : 'var(--txt-3)',
+                          padding: '1px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: 800
+                        }}>
+                          {f.count}
+                        </span>
                       </button>
-                    </div>
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                </div>
+
+                {/* Recherche instantanée */}
+                <div style={{ position: 'relative', minWidth: '240px' }}>
+                  <Search size={13} color="var(--txt-3)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    value={leadSearch}
+                    onChange={e => setLeadSearch(e.target.value)}
+                    placeholder="Rechercher par nom, entreprise, ville…"
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      background: 'var(--bg-1)', border: '0.5px solid var(--line)',
+                      borderRadius: '8px', padding: '6px 10px 6px 30px',
+                      fontSize: '11px', color: 'var(--txt-1)', outline: 'none',
+                    }}
+                  />
+                  {leadSearch && (
+                    <button type="button" onClick={() => setLeadSearch('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt-3)' }}>
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Tableau / Cartes des leads triés par priorité */}
+              <div style={{ background: 'var(--bg-1)', border: '0.5px solid var(--line)', borderRadius: '12px', overflow: 'hidden' }}>
+                {sortedAndFilteredLeads.length === 0 ? (
+                  <Empty text={leadSearch || leadFilter !== 'tous' ? "Aucun lead ne correspond aux filtres sélectionnés." : "Aucun lead d'adhésion pour le moment. Utilise le générateur d'essai express pour en créer un."} pad />
+                ) : (
+                  sortedAndFilteredLeads.map(l => {
+                    const st = LEAD_STATUT[l.statut] ?? LEAD_STATUT.nouveau
+                    return (
+                      <div key={l.id} style={{
+                        padding: '16px 18px', borderBottom: '0.5px solid var(--line)',
+                        display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap',
+                        background: l.statut === 'incomplet' ? 'rgba(245,158,11,0.03)' : 'transparent'
+                      }}>
+                        <div style={{ flex: 1, minWidth: '220px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--txt-1)' }}>{l.nom}</span>
+                            {l.entreprise && <span style={{ fontSize: '12px', color: 'var(--txt-3)' }}>— {l.entreprise}</span>}
+                            {l.statut === 'incomplet' && (
+                              <span style={{
+                                background: 'rgba(245,158,11,0.15)', color: 'var(--amber)',
+                                border: '0.5px solid rgba(245,158,11,0.4)', borderRadius: '6px',
+                                padding: '1px 6px', fontSize: '9px', fontWeight: 800
+                              }}>
+                                ⚠️ ABANDON FORMULAIRE
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--txt-3)', marginTop: '3px' }}>
+                            {[l.email, l.telephone].filter(Boolean).join(' · ')}
+                          </div>
+
+                          {/* UTM Parameters & Source Badges */}
+                          <div style={{ fontSize: '10px', color: 'var(--txt-2)', marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span>Besoin: {l.besoin ? BESOIN[l.besoin] || l.besoin : '—'}</span>
+                            {l.taille_equipe && <span>Équipe: {l.taille_equipe}</span>}
+                            {l.score != null && <span style={{ color: 'var(--gold-2)', fontWeight: 700 }}>Score: {l.score}/100</span>}
+                            {l.source && <span style={{ background: 'var(--bg-2)', border: '0.5px solid var(--line)', padding: '1px 6px', borderRadius: '4px' }}>Source: {l.source}</span>}
+                            {l.utm_source && (
+                              <span style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--blue)', border: '0.5px solid rgba(59,130,246,0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                📱 Ads: {l.utm_source}{l.utm_campaign ? ` (${l.utm_campaign})` : ''}
+                              </span>
+                            )}
+                            {l.abandoned_at && (
+                              <span style={{ color: 'var(--amber)', fontSize: '10px' }}>
+                                · Abandonné le {new Date(l.abandoned_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
+                          {l.notes && <div style={{ fontSize: '11px', color: 'var(--txt-2)', marginTop: '4px' }}>{l.notes}</div>}
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <select value={l.statut} onChange={e => patchLead(l.id, { statut: e.target.value })}
+                            style={{ ...inp, width: '205px', fontSize: '11px', color: st.color, fontWeight: 700, cursor: 'pointer', background: 'var(--bg-2, #18181B)' }}>
+                            <optgroup label="📥 Entrée & Incomplets" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                              <option value="incomplet" style={{ background: '#18181B', color: '#F59E0B' }}>{LEAD_STATUT.incomplet?.label || '⚠️ Abandon formulaire'}</option>
+                              <option value="nouveau" style={{ background: '#18181B', color: '#A1A1AA' }}>{LEAD_STATUT.nouveau?.label || '📥 Nouveau lead'}</option>
+                            </optgroup>
+                            <optgroup label="📞 Prospection & Relances" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                              <option value="tentative_1" style={{ background: '#18181B', color: '#60A5FA' }}>{LEAD_STATUT.tentative_1?.label || '📞 1re tentative d\'appel'}</option>
+                              <option value="tentative_2" style={{ background: '#18181B', color: '#FB923C' }}>{LEAD_STATUT.tentative_2?.label || '🔄 2e tentative d\'appel'}</option>
+                              <option value="contacte" style={{ background: '#18181B', color: '#38BDF8' }}>{LEAD_STATUT.contacte?.label || '💬 Contacté / Échange'}</option>
+                            </optgroup>
+                            <optgroup label="🎯 Démo & Essai" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                              <option value="qualifie" style={{ background: '#18181B', color: '#FACC15' }}>{LEAD_STATUT.qualifie?.label || '🎯 Qualifié / Démo'}</option>
+                              <option value="essai" style={{ background: '#18181B', color: '#C084FC' }}>{LEAD_STATUT.essai?.label || '🚀 Essai actif (14j)'}</option>
+                              <option value="en_attente_paiement" style={{ background: '#18181B', color: '#F472B6' }}>{LEAD_STATUT.en_attente_paiement?.label || '💳 En attente paiement'}</option>
+                            </optgroup>
+                            <optgroup label="🏁 Clôture" style={{ background: '#18181B', color: '#A1A1AA', fontWeight: 600 }}>
+                              <option value="client" style={{ background: '#18181B', color: '#4ADE80' }}>{LEAD_STATUT.client?.label || '🎉 Adhésion confirmée'}</option>
+                              <option value="perdu" style={{ background: '#18181B', color: '#F87171' }}>{LEAD_STATUT.perdu?.label || '❌ Perdu / Pas intéressé'}</option>
+                              <option value="sans_suite" style={{ background: '#18181B', color: '#71717A' }}>{LEAD_STATUT.sans_suite?.label || '💤 Sans suite / Injoignable'}</option>
+                            </optgroup>
+                          </select>
+
+                          <button type="button" onClick={() => openFollowUpTaskForLead(l)} style={btnGhostAccent}>
+                            <Clock size={12} /> ⚡ Tâche de suivi
+                          </button>
+
+                          <button type="button" onClick={() => {
+                            setTrialProspect({ nom: l.nom, email: l.email || '', entreprise: l.entreprise || '' })
+                            setShowExpressTrial(true)
+                          }} style={{ ...btnGhost, padding: '7px 10px', fontSize: '11px' }}>
+                            <Zap size={12} color="var(--gold)" /> Lien d&apos;Essai
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteLead(l.id)}
+                            title="Supprimer ce lead"
+                            style={{
+                              background: 'transparent',
+                              border: '0.5px solid rgba(239, 68, 68, 0.25)',
+                              borderRadius: '8px',
+                              padding: '7px 9px',
+                              cursor: 'pointer',
+                              color: '#A1A1AA',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.color = '#F87171'
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+                              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.45)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.color = '#A1A1AA'
+                              e.currentTarget.style.background = 'transparent'
+                              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)'
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
             </div>
           )}
         </>
