@@ -58,13 +58,15 @@ export default function FacturesPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = getBrowserClient()
-    supabase
-      .from('factures')
-      .select('id, numero, titre, statut, date_emission, date_echeance, montant_ttc, clients(nom)')
-      .order('created_at', { ascending: false })
-      .limit(100)
-      .then(({ data, error }) => {
+    async function loadFactures() {
+      try {
+        const supabase = getBrowserClient()
+        const { data, error } = await supabase
+          .from('factures')
+          .select('id, numero, titre, statut, date_emission, date_echeance, montant_ttc, clients(nom)')
+          .order('created_at', { ascending: false })
+          .limit(100)
+
         if (error) {
           console.error('[FacturesPage load error]', error)
           const isAuthError = error.message?.toLowerCase().includes('jwt') || 
@@ -92,12 +94,14 @@ export default function FacturesPage() {
             solde_restant: total - paye,
           }
         }))
-        setLoading(false)
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('[FacturesPage catch error]', err)
+      } finally {
         setLoading(false)
-      })
+      }
+    }
+
+    loadFactures()
   }, [router])
 
   const filtered = factures.filter(f => {

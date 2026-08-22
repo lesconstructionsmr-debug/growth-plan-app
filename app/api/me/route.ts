@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, requireCompanyAdmin, apiError } from '@/lib/api/auth'
-import { canUseAgenceMode } from '@/lib/platform-admin'
+import { canUseAgenceMode, canAccessControlCenter } from '@/lib/platform-admin'
 
 export const dynamic = 'force-dynamic'
 
