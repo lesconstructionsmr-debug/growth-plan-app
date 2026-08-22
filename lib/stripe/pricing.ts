@@ -92,7 +92,7 @@ export type PricingQuote = {
   billedCad: number
   displayMonthlyCad: number
   checkoutCents: number
-  interval: 'year'
+  interval: 'month'
   productName: string
 }
 
@@ -116,11 +116,11 @@ export function computeTierQuote(tierId: PricingTierId): PricingQuote {
   return {
     tier,
     monthlyCad: tier.monthlyDisplayCad,
-    billedCad: tier.annualTotalCad,
+    billedCad: tier.monthlyDisplayCad,
     displayMonthlyCad: tier.monthlyDisplayCad,
-    checkoutCents: Math.round(tier.annualTotalCad * 100),
-    interval: 'year',
-    productName: `Plan Growth — ${tier.name}`,
+    checkoutCents: Math.round(tier.monthlyDisplayCad * 100),
+    interval: 'month',
+    productName: `Plan Growth — ${tier.name} (Mensuel · Engagement 12 mois)`,
   }
 }
 
@@ -189,7 +189,9 @@ export function appendQuoteMetadata(
     max_users: quote.tier.maxUsers != null ? String(quote.tier.maxUsers) : 'unlimited',
     monthly_display_cad: String(quote.displayMonthlyCad),
     billed_cad: String(quote.billedCad),
-    billing_period: 'annuel',
+    billing_period: 'mensuel',
+    billing_commitment: '12_mois',
+    annual_contract_value_cad: String(quote.tier.annualTotalCad),
     ...extra,
   }
 

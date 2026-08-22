@@ -34,7 +34,7 @@ const FAQ = [
   },
   {
     q: 'Puis-je annuler en tout temps ?',
-    a: 'Les forfaits sont sur abonnement annuel avec engagement de 12 mois. Contactez le support pour toute question de renouvellement ou changement de palier.',
+    a: 'Les forfaits sont facturés mensuellement avec un engagement contractuel de 12 mois. Contactez le support pour toute question de renouvellement ou changement de palier.',
   },
   {
     q: 'Est-ce que Google Ads, Facebook et Instagram sont branchés ?',
@@ -147,7 +147,7 @@ export default function TarifsPage() {
           Des tarifs clairs pour chaque niveau d&apos;entreprise
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--txt-3)', maxWidth: '560px', margin: '0 auto 16px', lineHeight: 1.6 }}>
-          Abonnement annuel · engagement de 12 mois · + {SETUP_FEE_CAD} $ d&apos;adhésion (site, Google Ads, Meta/Instagram)
+          Facturation mensuelle · engagement de 12 mois · + {SETUP_FEE_CAD} $ d&apos;adhésion (site, Google Ads, Meta/Instagram)
         </p>
         <p style={{ fontSize: '13px', color: 'var(--txt-3)', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
           Un utilisateur = personne avec accès à l&apos;app (propriétaire ou employé qui pointe). Les sous-traitants du répertoire ne comptent pas.
@@ -208,8 +208,8 @@ export default function TarifsPage() {
                     <span style={{ fontSize: '13px', color: 'var(--txt-3)', paddingBottom: '6px' }}>/ mois</span>
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--txt-3)', lineHeight: 1.5, marginBottom: '20px' }}>
-                    Abonnement annuel · engagement de 12 mois.<br />
-                    Paiement unique de {formatPriceCad(tier.annualTotalCad)} $ / an
+                    Facturé mensuellement · Engagement 12 mois.<br />
+                    1er versement : {formatPriceCad(SETUP_FEE_CAD)} $ (adhésion) + {formatPriceCad(tier.monthlyDisplayCad)} $ (mois 1)
                   </div>
                 </>
               )}

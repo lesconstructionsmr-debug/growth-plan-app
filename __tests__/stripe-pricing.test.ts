@@ -18,23 +18,25 @@ describe('stripe tier pricing', () => {
     expect(getPricingTier('entreprise')?.contactOnly).toBe(true)
   })
 
-  it('calcule la quote annuelle pour ÉQUIPE', () => {
+  it('calcule la quote mensuelle pour ÉQUIPE avec engagement', () => {
     const quote = computeTierQuote('equipe')
     expect(quote.tier.name).toBe('ÉQUIPE')
     expect(quote.displayMonthlyCad).toBe(300)
-    expect(quote.billedCad).toBe(3600)
-    expect(quote.checkoutCents).toBe(360000)
-    expect(quote.interval).toBe('year')
+    expect(quote.billedCad).toBe(300)
+    expect(quote.checkoutCents).toBe(30000)
+    expect(quote.interval).toBe('month')
   })
 
   it('refuse le forfait entreprise au checkout', () => {
     expect(() => computeTierQuote('entreprise')).toThrow(/devis/)
   })
 
-  it('aligne autonome sur 2100$/an', () => {
+  it('aligne autonome sur 175$/mois', () => {
     const quote = computeTierQuote('autonome')
-    expect(quote.billedCad).toBe(2100)
+    expect(quote.billedCad).toBe(175)
+    expect(quote.checkoutCents).toBe(17500)
     expect(quote.displayMonthlyCad).toBe(175)
+    expect(quote.interval).toBe('month')
   })
 })
 
