@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
 import {
   appendQuoteMetadata,
-  appendSetupFeeLineItem,
+  appendSetupFeeInvoiceItem,
   appendSubscriptionLineItem,
   computeTierQuote,
   getPricingTier,
@@ -42,25 +42,22 @@ export async function POST(request: NextRequest) {
       .eq('company_id', companyId)
       .maybeSingle()
 
-    // Si déjà inscrit en essai et sans promo spéciale, on applique l'abonnement immédiatement
-    const isAlreadyInTrial = existingSub?.status === 'trialing' || existingSub?.status === 'active'
+    // Si déjà inscrit en essai et sans promo spéciale, on applique l'abonnement immédiatement (débit carte instantané)
+    const isAlreadyInTrial = existingSub?.status === 'trialing' || existingSub?.status === 'active' || existingSub?.status === 'trial_expired'
     const trialDays = promo ? promo.trialDays : (isAlreadyInTrial ? 0 : 14)
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || request.nextUrl.origin || 'https://app.growth-plan.ca'
 
     if (!process.env.STRIPE_SECRET_KEY) {
+      console.warn('[checkout] STRIPE_SECRET_KEY non configurée sur ce serveur.')
       return NextResponse.json({
-        url: `${baseUrl}/dashboard?abonnement=essai_actif&trial=${trialDays}`,
-        trialDays,
-        promoApplied: !!promo,
-        fallbackTrial: true,
-        quote,
-      })
+        error: 'La passerelle de paiement Stripe n\'est pas encore configurée. Contactez le support.',
+      }, { status: 500 })
     }
 
     const params = new URLSearchParams({
       'mode':                                 'subscription',
-      'success_url':                          `${baseUrl}/dashboard?abonnement=succes${promo ? `&promo=${promoCode}` : ''}`,
+      'success_url':                          `${baseUrl}/parametres?session_id={CHECKOUT_SESSION_ID}&success=true`,
       'cancel_url':                           `${baseUrl}/tarifs?annule=1`,
       'billing_address_collection':           'auto',
       'locale':                               'fr-CA',
@@ -75,8 +72,10 @@ export async function POST(request: NextRequest) {
       params.append('subscription_data[trial_period_days]', String(trialDays))
     }
 
+    // Line item d'abonnement récurrent (annuel)
     appendSubscriptionLineItem(params, quote, 0)
-    appendSetupFeeLineItem(params, 1)
+    // Frais d'adhésion uniques (500$) passés via add_invoice_items pour compatibilité Stripe Checkout
+    appendSetupFeeInvoiceItem(params, 0)
     appendQuoteMetadata(params, quote)
 
     if (!promo) params.append('allow_promotion_codes', 'true')
@@ -94,14 +93,9 @@ export async function POST(request: NextRequest) {
     const session = await res.json()
 
     if (!res.ok) {
+      const errorMsg = session.error?.message || 'Erreur lors de la création de la session Stripe Checkout'
       console.error('[checkout] Stripe error:', session)
-      return NextResponse.json({
-        url: `${baseUrl}/dashboard?abonnement=essai_actif&trial=${trialDays}`,
-        trialDays,
-        promoApplied: !!promo,
-        fallbackTrial: true,
-        quote,
-      })
+      return NextResponse.json({ error: errorMsg }, { status: 400 })
     }
 
     return NextResponse.json({

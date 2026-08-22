@@ -105,11 +105,15 @@ export default function TarifsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier: tierId, promoCode: appliedCode }),
       })
-      const { url, error } = await res.json()
-      if (error) { alert(error); setLoadingTier(null); return }
-      window.location.href = url
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.error || !data.url) {
+        alert(data.error || 'Impossible d\'ouvrir la session de paiement. Vérifiez la configuration Stripe.')
+        setLoadingTier(null)
+        return
+      }
+      window.location.href = data.url
     } catch {
-      alert('Erreur réseau. Réessayez.')
+      alert('Erreur réseau lors de la communication avec Stripe. Réessayez.')
       setLoadingTier(null)
     }
   }
