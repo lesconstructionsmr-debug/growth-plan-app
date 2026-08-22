@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCompanyAdmin, apiError } from '@/lib/api/auth'
+import { formatCad } from '@/lib/format'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,11 +9,11 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { supabase, companyId } = await requireCompanyAdmin()
+    const { supabase, companyId, user } = await requireCompanyAdmin()
 
     const { data: devis } = await supabase
       .from('devis')
-      .select('id, numero, titre, statut, montant_ttc, valide_jusqu_au, portal_token, clients(nom, email), companies(name)')
+      .select('id, client_id, numero, titre, statut, montant_ttc, valide_jusqu_au, portal_token, clients(nom, email), companies(name)')
       .eq('id', params.id)
       .eq('company_id', companyId)
       .maybeSingle()
@@ -70,12 +71,24 @@ export async function POST(
       }
     }
 
-    // Mettre à jour le statut à 'envoye' seulement si le courriel est parti
-    if (emailSent && devis.statut === 'brouillon') {
-      await supabase
-        .from('devis')
-        .update({ statut: 'envoye', updated_at: new Date().toISOString() })
-        .eq('id', params.id)
+    // Mettre à jour le statut à 'envoye' et insérer la note dans le fil de discussion
+    if (emailSent) {
+      if (devis.statut === 'brouillon') {
+        await supabase
+          .from('devis')
+          .update({ statut: 'envoye', updated_at: new Date().toISOString() })
+          .eq('id', params.id)
+      }
+
+      if (devis.client_id) {
+        await supabase.from('notes').insert({
+          company_id: companyId,
+          client_id: devis.client_id,
+          type: 'email',
+          contenu: `📄 [DEVIS ENVOYÉ] Soumission #${devis.numero} (${devis.titre || 'Travaux'})\nMontant total : ${formatCad(devis.montant_ttc)}\nEnvoyé à : ${cli.email}\nLien d'approbation portail transmis.`,
+          auteur_id: user.id,
+        })
+      }
     }
 
     if (!emailSent) {

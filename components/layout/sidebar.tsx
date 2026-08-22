@@ -38,6 +38,7 @@ const NAV_CONSTRUCTION = [
   {
     section: 'Facturation',
     items: [
+      { href: '/studio',   label: 'Studio Devis & Chat', icon: Sparkles },
       { href: '/devis',    label: 'Devis',    icon: FileText },
       { href: '/factures', label: 'Factures', icon: Receipt  },
       { href: '/depenses', label: 'Dépenses', icon: Wallet   },
