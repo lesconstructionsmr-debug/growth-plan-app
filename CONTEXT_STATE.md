@@ -14,3 +14,4 @@
 
 ## 3. Règle d'or de conversation
 Chaque session traite UNE SEULE sous-tâche. Ne jamais mélanger le code d'un module avec un autre.
+- [x] Phase 1-3 validée : Séquenceur atomique, logs Loi 25 et 120 tests unitaires passés.
